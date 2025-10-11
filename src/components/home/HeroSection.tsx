@@ -1,0 +1,82 @@
+import React from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Sparkles, Users, Star, TrendingUp } from "lucide-react";
+
+interface User { id: string; name?: string; email?: string; }
+interface HeroSectionProps { user: User | null; }
+
+export default function HeroSection({ user }: HeroSectionProps) {
+  return (
+    <section id="hero" className="relative overflow-hidden bg-slate-950 -mt-17 pt-17">
+      {/* Background image */}
+      <div className="absolute inset-0">
+        <div
+          className="h-full w-full bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/images/dog.png')" }}
+          aria-hidden
+        />
+        {/* Blue overlay + vignette */}
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/70 via-blue-900/50 to-slate-950/90 mix-blend-multiply" />
+        <div className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_50%_-10%,rgba(255,255,255,.15),transparent_60%)]" />
+      </div>
+
+      <div className="relative mx-auto max-w-7xl px-4 py-20 text-center md:py-28">
+        <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 backdrop-blur-md ring-1 ring-white/20 shadow-sm">
+          <Sparkles className="h-4 w-4 text-blue-300" aria-hidden />
+          <span className="text-sm font-medium text-white/90">TeenOp — Where Teens Thrive</span>
+        </div>
+
+        <h1 className="mx-auto mt-6 max-w-4xl text-balance text-4xl font-extrabold tracking-tight text-white drop-shadow md:text-6xl lg:text-7xl">
+          {user ? `Welcome back, ${user.name || "there"}!` : "Find Help in Your Neighborhood"}
+        </h1>
+
+        <p className="mx-auto mt-4 max-w-3xl text-lg leading-relaxed text-white/90 md:text-2xl">
+          {user
+            ? "Ready to discover amazing services or start your own teen hustle?"
+            : "Connect with talented teens for pet care, tutoring, yard work, and more—right nearby."}
+        </p>
+
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link href="/services">
+            <Button className="h-auto px-6 py-3 text-lg bg-white text-blue-700 hover:bg-slate-100 shadow-md focus-visible:ring-2 focus-visible:ring-blue-200">
+              <Users className="mr-2 h-5 w-5" aria-hidden />
+              Browse Services
+            </Button>
+          </Link>
+          <Link href="/signup">
+            <Button className="h-auto px-6 py-3 text-lg bg-blue-600 text-white hover:bg-blue-700 shadow-md focus-visible:ring-2 focus-visible:ring-white/60">
+              <TrendingUp className="mr-2 h-5 w-5" aria-hidden />
+              Start Earning
+            </Button>
+          </Link>
+        </div>
+
+        {/* Highlights */}
+        <div className="mx-auto mt-12 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="rounded-2xl bg-white/10 p-6 text-white backdrop-blur-md ring-1 ring-white/15 shadow-md">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-300/20">
+              <Users className="h-7 w-7 text-blue-200" aria-hidden />
+            </div>
+            <h3 className="mb-1 font-semibold">Trusted Teens</h3>
+            <p className="text-sm text-white/85">Verified young entrepreneurs in your community</p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-6 text-white backdrop-blur-md ring-1 ring-white/15 shadow-md">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-amber-300/20">
+              <Star className="h-7 w-7 text-amber-200" aria-hidden />
+            </div>
+            <h3 className="mb-1 font-semibold">Quality Service</h3>
+            <p className="text-sm text-white/85">Rated and reviewed by real customers</p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-6 text-white backdrop-blur-md ring-1 ring-white/15 shadow-md">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-300/20">
+              <TrendingUp className="h-7 w-7 text-blue-200" aria-hidden />
+            </div>
+            <h3 className="mb-1 font-semibold">Fair Prices</h3>
+            <p className="text-sm text-white/85">Affordable rates that work for everyone</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
