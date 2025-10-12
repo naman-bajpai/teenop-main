@@ -14,85 +14,39 @@ import CategoryFilter from "@/components/services/CategoryFilter";
 import HeroSection from "@/components/home/HeroSection";
 import FeaturedServices from "@/components/home/FeaturedServices";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-
-// Mock data
-const mockServices = [
-  {
-    id: "1",
-    title: "Dog Walking Service",
-    description: "Professional dog walking for your furry friends. Available weekdays and weekends.",
-    price: 15,
-    location: "Downtown Area",
-    category: "pet_care",
-    rating: 4.8,
-    provider_name: "Sarah Johnson",
-    created_date: "2024-01-15"
-  },
-  {
-    id: "2",
-    title: "Lawn Mowing & Yard Work",
-    description: "Complete lawn care including mowing, edging, and basic landscaping.",
-    price: 25,
-    location: "Suburbs",
-    category: "lawn_care",
-    rating: 4.9,
-    provider_name: "Mike Chen",
-    created_date: "2024-01-14"
-  },
-  {
-    id: "3",
-    title: "Math & Science Tutoring",
-    description: "High school math and science tutoring. Specializing in algebra, geometry, and chemistry.",
-    price: 20,
-    location: "Online",
-    category: "tutoring",
-    rating: 4.7,
-    provider_name: "Alex Rodriguez",
-    created_date: "2024-01-13"
-  },
-  {
-    id: "4",
-    title: "House Cleaning Service",
-    description: "Thorough house cleaning including bathrooms, kitchens, and living areas.",
-    price: 30,
-    location: "City Center",
-    category: "cleaning",
-    rating: 4.6,
-    provider_name: "Emma Wilson",
-    created_date: "2024-01-12"
-  },
-  {
-    id: "5",
-    title: "Tech Support & Setup",
-    description: "Computer setup, software installation, and basic tech troubleshooting.",
-    price: 18,
-    location: "Various Locations",
-    category: "tech_support",
-    rating: 4.8,
-    provider_name: "David Kim",
-    created_date: "2024-01-11"
-  },
-  {
-    id: "6",
-    title: "Grocery & Package Delivery",
-    description: "Reliable delivery service for groceries, packages, and other items.",
-    price: 12,
-    location: "Local Area",
-    category: "delivery",
-    rating: 4.5,
-    provider_name: "Lisa Thompson",
-    created_date: "2024-01-10"
-  }
-];
+import { Service } from "@/types/service";
 
 export default function HomePage() {
   const { user, loading: userLoading, error: userError } = useUser();
-  const [services, setServices] = useState(mockServices);
-  const [filteredServices, setFilteredServices] = useState(mockServices);
+  const [services, setServices] = useState<Service[]>([]);
+  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Fetch all services from the API
+  const fetchServices = useCallback(async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/services?all=true');
+      if (!response.ok) {
+        throw new Error('Failed to fetch services');
+      }
+      
+      const data = await response.json();
+      setServices(data.services || []);
+    } catch (err) {
+      console.error('Error fetching services:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch services');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
 
   const filterServices = useCallback(() => {
     let filtered = services;
@@ -111,6 +65,10 @@ export default function HomePage() {
     
     setFilteredServices(filtered);
   }, [services, searchTerm, selectedCategory]);
+
+  useEffect(() => {
+    fetchServices();
+  }, [fetchServices]);
 
   useEffect(() => {
     filterServices();
@@ -161,9 +119,26 @@ export default function HomePage() {
         )}
 
         <div id="services-section" className="max-w-7xl mx-auto px-4 py-12">
+          {error && (
+            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-center">
+                {error}
+              </p>
+              <div className="text-center mt-2">
+                <Button 
+                  onClick={fetchServices}
+                  variant="outline"
+                  size="sm"
+                  className="border-red-200 text-red-600 hover:bg-red-50"
+                >
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          )}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">
+            <h2 className="text-3xl font-bold text-gray-700 mb-2">
               Find Help in Your Neighborhood
             </h2>
             <p className="text-slate-600">
@@ -233,7 +208,7 @@ export default function HomePage() {
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search className="w-8 h-8 text-blue-500" />
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">
                   No services found
                 </h3>
                 <p className="text-slate-600 mb-6">

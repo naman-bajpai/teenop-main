@@ -3,28 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Star, ChevronRight } from "lucide-react";
-
-type Category =
-  | "pet_care"
-  | "lawn_care"
-  | "tutoring"
-  | "cleaning"
-  | "tech_support"
-  | "delivery"
-  | "other";
-
-interface Service {
-  id: string;
-  title: string;
-  description: string;
-  price: number;            // dollars (v_services.price)
-  location?: string | null;
-  category: Category | string;
-  rating?: number | null;   // avg rating or null
-  provider_name?: string | null;
-  created_at?: string;      // ISO timestamp
-  status?: string;          // service status (active, paused, etc.)
-}
+import { Service, ServiceCategory } from "@/types/service";
 
 interface ServiceCardProps {
   service: Service;
@@ -158,7 +137,9 @@ export default function ServiceCard({ service }: ServiceCardProps) {
             <span className="text-3xl font-bold text-gray-900">
               {formatPrice(service.price)}
             </span>
-            <span className="text-sm text-gray-500 font-medium">/service</span>
+            <span className="text-sm text-gray-500 font-medium">
+              /{service.pricing_model === 'per_hour' ? 'hour' : 'service'}
+            </span>
           </div>
 
           <Button

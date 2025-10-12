@@ -10,25 +10,12 @@ import CategoryFilter from "@/components/services/CategoryFilter";
 import ServiceCard from "@/components/services/ServiceCard";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
-type NeighborhoodService = {
-  id: string;
-  title: string;
-  description: string;
-  price: number; // dollars
-  location: string;
-  category: string;
-  rating: number | null;
-  status: string;
-  banner_url: string | null;
-  created_at: string; // ISO timestamp
-  total_bookings: number;
-  user_id: string;
-};
+import { Service } from "@/types/service";
 
 export default function NeighborhoodPage() {
   const { user, loading: userLoading } = useUser();
-  const [services, setServices] = React.useState<NeighborhoodService[]>([]);
-  const [filteredServices, setFilteredServices] = React.useState<NeighborhoodService[]>([]);
+  const [services, setServices] = React.useState<Service[]>([]);
+  const [filteredServices, setFilteredServices] = React.useState<Service[]>([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState("all");
   const [loading, setLoading] = React.useState(true);
@@ -49,8 +36,8 @@ export default function NeighborhoodPage() {
 
         if (error) throw error;
 
-        setServices((data ?? []) as NeighborhoodService[]);
-        setFilteredServices((data ?? []) as NeighborhoodService[]);
+        setServices((data ?? []) as Service[]);
+        setFilteredServices((data ?? []) as Service[]);
       } catch (err: any) {
         console.error("Failed to load services:", err);
         setLoadError(err?.message || "Failed to load services.");
@@ -89,7 +76,7 @@ export default function NeighborhoodPage() {
         <div className="p-6">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Neighborhood</h1>
+            <h1 className="text-3xl font-bold text-gray-700 mb-2">Neighborhood</h1>
             <p className="text-slate-600">Discover services offered by talented teens in your area</p>
           </div>
 
@@ -128,7 +115,7 @@ export default function NeighborhoodPage() {
           {/* Services Grid */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-slate-900">Available Services</h2>
+              <h2 className="text-xl font-semibold text-gray-700">Available Services</h2>
               <Badge variant="secondary" className="text-sm bg-blue-100 text-blue-700">
                 {loading ? "Loading..." : `${filteredServices.length} services found`}
               </Badge>
@@ -136,7 +123,7 @@ export default function NeighborhoodPage() {
 
             {loadError ? (
               <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl border border-red-200">
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">Couldn't load services</h3>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Couldn't load services</h3>
                 <p className="text-slate-600 mb-4">{loadError}</p>
                 <Button 
                   onClick={() => location.reload()}
@@ -166,7 +153,7 @@ export default function NeighborhoodPage() {
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search className="w-8 h-8 text-blue-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">No services found</h3>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">No services found</h3>
                 <p className="text-slate-600 mb-4">Try adjusting your search or browse different categories</p>
                 <Button
                   variant="orange"
@@ -190,7 +177,7 @@ export default function NeighborhoodPage() {
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Average Rating</p>
-                  <p className="text-lg font-semibold text-slate-900">4.7</p>
+                  <p className="text-lg font-semibold text-gray-700">4.7</p>
                 </div>
               </div>
             </div>
@@ -201,7 +188,7 @@ export default function NeighborhoodPage() {
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Active Providers</p>
-                  <p className="text-lg font-semibold text-slate-900">24</p>
+                  <p className="text-lg font-semibold text-gray-700">24</p>
                 </div>
               </div>
             </div>
@@ -212,7 +199,7 @@ export default function NeighborhoodPage() {
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Service Areas</p>
-                  <p className="text-lg font-semibold text-slate-900">8</p>
+                  <p className="text-lg font-semibold text-gray-700">8</p>
                 </div>
               </div>
             </div>

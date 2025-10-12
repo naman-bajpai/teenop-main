@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sparkles, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 export default function SignupPage() {
   const router = useRouter();
   
@@ -124,9 +124,9 @@ export default function SignupPage() {
 
       if (data.user) {
         try {
-          const { error: updateError } = await supabase
+          const { error: updateError } = await (supabase as any)
             .from('profiles')
-            .update({ status: 'active' })
+            .update({ status: 'active' }) 
             .eq('id', data.user.id);
 
           if (updateError) {

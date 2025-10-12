@@ -108,7 +108,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
           )} aria-hidden />
           <span className={clsx(
             "text-xl font-bold tracking-tight transition-colors",
-            overHero ? "text-white" : "text-slate-900"
+            overHero ? "text-white" : "text-gray-700"
           )}>
             TeenOp
           </span>
@@ -146,7 +146,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
               <div className="text-right">
                 <p className={clsx(
                   "text-sm font-medium transition-colors",
-                  overHero ? "text-white" : "text-slate-900"
+                  overHero ? "text-white" : "text-gray-700"
                 )}>
                   {user.first_name && user.last_name 
                     ? `${user.first_name} ${user.last_name}`

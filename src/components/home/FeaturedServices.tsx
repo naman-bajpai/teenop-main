@@ -2,18 +2,7 @@ import React from 'react';
 import ServiceCard from '@/components/services/ServiceCard';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Star } from 'lucide-react';
-
-interface Service {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  location?: string;
-  category: string;
-  rating?: number;
-  provider_name?: string;
-  created_date?: string;
-}
+import { Service } from '@/types/service';
 
 interface FeaturedServicesProps {
   services: Service[];

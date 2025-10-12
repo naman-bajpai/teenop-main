@@ -49,23 +49,7 @@
   --radius: var(--radius);
 }
 
-/* Respect dark preference properly */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b1220;            /* deep blue-slate */
-    --foreground: #e5e7eb;            /* slate-200 */
-    --card: #0f172a;
-    --card-foreground: #e5e7eb;
-    --popover: #0f172a;
-    --popover-foreground: #e5e7eb;
-    --secondary: #0b1220;
-    --secondary-foreground: #e5e7eb;
-    --muted: #111827;
-    --muted-foreground: #9ca3af;
-    --border: #1f2937;
-    --input: #ffffff;                 /* Keep inputs white even in dark mode */
-  }
-}
+/* Light mode only - no dark colors */
 
 /* Global base */
 html, body {

@@ -196,13 +196,18 @@ export type Database = {
       }
       services: {
         Row: {
+          address: string | null
           banner_url: string | null
           category: string
           created_at: string
           description: string
+          duration: number
+          education: string | null
           id: string
           location: string
           price: number
+          pricing_model: Database["public"]["Enums"]["pricing_model"]
+          qualifications: string | null
           rating: number | null
           status: string
           title: string
@@ -210,13 +215,18 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          address?: string | null
           banner_url?: string | null
           category: string
           created_at?: string
           description: string
+          duration?: number
+          education?: string | null
           id?: string
           location: string
           price: number
+          pricing_model?: Database["public"]["Enums"]["pricing_model"]
+          qualifications?: string | null
           rating?: number | null
           status?: string
           title: string
@@ -224,13 +234,18 @@ export type Database = {
           user_id: string
         }
         Update: {
+          address?: string | null
           banner_url?: string | null
           category?: string
           created_at?: string
           description?: string
+          duration?: number
+          education?: string | null
           id?: string
           location?: string
           price?: number
+          pricing_model?: Database["public"]["Enums"]["pricing_model"]
+          qualifications?: string | null
           rating?: number | null
           status?: string
           title?: string
@@ -279,13 +294,18 @@ export type Database = {
     Views: {
       v_services: {
         Row: {
+          address: string | null
           banner_url: string | null
           category: string | null
           created_at: string | null
           description: string | null
+          duration: number | null
+          education: string | null
           id: string | null
           location: string | null
           price: number | null
+          pricing_model: Database["public"]["Enums"]["pricing_model"] | null
+          qualifications: string | null
           rating: number | null
           status: string | null
           title: string | null
@@ -293,13 +313,18 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          address?: string | null
           banner_url?: string | null
           category?: string | null
           created_at?: string | null
           description?: string | null
+          duration?: number | null
+          education?: string | null
           id?: string | null
           location?: string | null
           price?: number | null
+          pricing_model?: Database["public"]["Enums"]["pricing_model"] | null
+          qualifications?: string | null
           rating?: number | null
           status?: string | null
           title?: string | null
@@ -307,13 +332,18 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          address?: string | null
           banner_url?: string | null
           category?: string | null
           created_at?: string | null
           description?: string | null
+          duration?: number | null
+          education?: string | null
           id?: string | null
           location?: string | null
           price?: number | null
+          pricing_model?: Database["public"]["Enums"]["pricing_model"] | null
+          qualifications?: string | null
           rating?: number | null
           status?: string | null
           title?: string | null
@@ -350,6 +380,7 @@ export type Database = {
       }
     }
     Enums: {
+      pricing_model: "per_job" | "per_hour"
       service_category:
         | "pet_care"
         | "lawn_care"
@@ -487,6 +518,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      pricing_model: ["per_job", "per_hour"],
       service_category: [
         "pet_care",
         "lawn_care",

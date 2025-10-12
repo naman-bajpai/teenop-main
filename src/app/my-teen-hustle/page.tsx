@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/hooks/useUser";
 
 
 export type Service = {
@@ -54,6 +55,11 @@ export type Service = {
   status: "active" | "paused";
   banner_url: string | null;
   created_at: string;
+  duration?: number;
+  education?: string | null;
+  qualifications?: string | null;
+  address?: string | null;
+  pricing_model?: "per_job" | "per_hour";
 };
 
 export type Booking = {
@@ -86,7 +92,7 @@ const getStatusColor = (status: string) => {
   }
 };
 
-function ServiceCard({ service }: { service: Service }) {
+function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: (service: Service) => void; onDelete: (serviceId: string) => void }) {
   return (
     <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
       <div className="flex gap-4">
@@ -113,15 +119,16 @@ function ServiceCard({ service }: { service: Service }) {
             </Badge>
           </div>
           <div className="grid grid-cols-2 gap-3 mb-4 text-sm text-gray-600">
-            <div className="flex items-center gap-2"><DollarSign className="w-4 h-4" /><span className="font-semibold">${service.price}</span></div>
+            <div className="flex items-center gap-2"><DollarSign className="w-4 h-4" /><span className="font-semibold">${service.price}</span> <span className="text-xs text-gray-500">/{service.pricing_model === 'per_hour' ? 'hr' : 'job'}</span></div>
             <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{service.location}</div>
+            <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{service.duration || 60} min</div>
             <div className="flex items-center gap-2"><Star className="w-4 h-4" />{service.rating ? `${service.rating}/5` : "—"}</div>
             <div className="flex items-center gap-2"><Users className="w-4 h-4" />{service.total_bookings} bookings</div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm"><Eye className="w-4 h-4 mr-1" />View</Button>
-            <Button variant="outline" size="sm"><Edit className="w-4 h-4 mr-1" />Edit</Button>
-            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700"><Trash2 className="w-4 h-4 mr-1" />Delete</Button>
+            <Button variant="outline" size="sm" onClick={() => onEdit(service)}><Edit className="w-4 h-4 mr-1" />Edit</Button>
+            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => onDelete(service.id)}><Trash2 className="w-4 h-4 mr-1" />Delete</Button>
           </div>
         </div>
       </div>
@@ -165,6 +172,7 @@ function BookingCard({ booking }: { booking: Booking }) {
 }
 
 export default function TeenHustlePage() {
+  const { user, loading: userLoading, error: userError } = useUser();
   const supabase = useMemo(() => createClient(), []);
   const { toast } = useToast();
   const router = useRouter();
@@ -172,59 +180,22 @@ export default function TeenHustlePage() {
   const [services, setServices] = useState<Service[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [userLoading, setUserLoading] = useState(true);
 
   // Add Service dialog state
   const [open, setOpen] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState<number>(10);
   const [location, setLocation] = useState("Online");
   const [category, setCategory] = useState("tutoring");
   const [status, setStatus] = useState<"active" | "paused">("active");
+  const [duration, setDuration] = useState<number>(60);
+  const [education, setEducation] = useState("");
+  const [qualifications, setQualifications] = useState("");
+  const [address, setAddress] = useState("");
+  const [pricingModel, setPricingModel] = useState<"per_job" | "per_hour">("per_hour");
 
-  // Load user data
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          router.push('/login');
-          return;
-        }
-
-        if (!session) {
-          router.push('/login');
-          return;
-        }
-
-        // Get user profile
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profileError || !profile) {
-          console.error('Profile error:', profileError);
-          router.push('/login');
-          return;
-        }
-
-        setUser(profile);
-      } catch (error) {
-        console.error('Error loading user:', error);
-        router.push('/login');
-      } finally {
-        setUserLoading(false);
-      }
-    };
-
-    loadUser();
-  }, [supabase, router]);
 
   useEffect(() => {
     const init = async () => {
@@ -263,21 +234,56 @@ export default function TeenHustlePage() {
   }
 
   // Show error state if no user data
-  if (!user) {
+  if (!userLoading && (!user || userError)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">Unable to load user data. Please try logging in again.</p>
+          <p className="text-gray-600">
+            {userError === 'Profile not found. Please complete your profile setup.' 
+              ? 'Please complete your profile setup to continue.'
+              : 'Unable to load user data. Please try logging in again.'}
+          </p>
           <Button 
-            onClick={() => router.push('/login')} 
+            onClick={() => window.location.href = userError === 'Profile not found. Please complete your profile setup.' ? '/profile' : '/login'} 
             className="mt-4"
           >
-            Go to Login
+            {userError === 'Profile not found. Please complete your profile setup.' ? 'Complete Profile' : 'Go to Login'}
           </Button>
         </div>
       </div>
     );
   }
+
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setPrice(10);
+    setLocation("Online");
+    setCategory("tutoring");
+    setStatus("active");
+    setDuration(60);
+    setEducation("");
+    setQualifications("");
+    setAddress("");
+    setPricingModel("per_hour");
+    setEditingService(null);
+  };
+
+  const openEditDialog = (service: Service) => {
+    setEditingService(service);
+    setTitle(service.title);
+    setDescription(service.description);
+    setPrice(service.price);
+    setLocation(service.location);
+    setCategory(service.category);
+    setStatus(service.status);
+    setDuration(service.duration || 60);
+    setEducation(service.education || "");
+    setQualifications(service.qualifications || "");
+    setAddress(service.address || "");
+    setPricingModel(service.pricing_model || "per_hour");
+    setOpen(true);
+  };
 
   async function handleCreateService() {
     try {
@@ -285,32 +291,86 @@ export default function TeenHustlePage() {
       const user = userRes.data.user;
       if (!user) throw new Error("You must be signed in to create a service.");
 
+      const isEditing = editingService !== null;
+      const url = "/api/services";
+      const method = isEditing ? "PUT" : "POST";
+      const body = isEditing 
+        ? { 
+            id: editingService.id, 
+            title, 
+            description, 
+            price: Number(price), 
+            location, 
+            category, 
+            status,
+            duration: Number(duration),
+            education: education.trim() || null,
+            qualifications: qualifications.trim() || null,
+            address: address.trim() || null,
+            pricing_model: pricingModel
+          }
+        : { 
+            title, 
+            description, 
+            price: Number(price), 
+            location, 
+            category, 
+            status,
+            duration: Number(duration),
+            education: education.trim() || null,
+            qualifications: qualifications.trim() || null,
+            address: address.trim() || null,
+            pricing_model: pricingModel
+          };
+
       // Persist service via API (server validates & RLS protects)
-      const res = await fetch("/api/services", {
-        method: "POST",
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description,
-          price: Number(price),
-          location,
-          category,
-          status,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || "Failed to create service");
+        throw new Error(err.error || `Failed to ${isEditing ? 'update' : 'create'} service`);
       }
 
       const { service } = await res.json();
-      setServices((prev) => [service, ...prev]);
+      
+      if (isEditing) {
+        setServices((prev) => prev.map(s => s.id === service.id ? service : s));
+        toast({ title: "Service updated", description: `"${service.title}" has been updated.` });
+      } else {
+        setServices((prev) => [service, ...prev]);
+        toast({ title: "Service added", description: `"${service.title}" is now ${service.status}.` });
+      }
+      
       setOpen(false);
-      setTitle(""); setDescription(""); setPrice(10); setLocation("Online"); setCategory("tutoring"); setStatus("active");
-      toast({ title: "Service added", description: `“${service.title}” is now ${service.status}.` });
+      resetForm();
     } catch (e: any) {
-      toast({ title: "Could not add service", description: e.message, variant: "destructive" });
+      toast({ title: `Could not ${editingService ? 'update' : 'add'} service`, description: e.message, variant: "destructive" });
+    }
+  }
+
+  async function handleDeleteService(serviceId: string) {
+    if (!confirm("Are you sure you want to delete this service?")) return;
+    
+    try {
+      const res = await fetch("/api/services", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: serviceId }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || "Failed to delete service");
+      }
+
+      setServices((prev) => prev.filter(s => s.id !== serviceId));
+      toast({ title: "Service deleted", description: "The service has been removed." });
+    } catch (e: any) {
+      toast({ title: "Could not delete service", description: e.message, variant: "destructive" });
     }
   }
 
@@ -330,61 +390,184 @@ export default function TeenHustlePage() {
                   <Plus className="w-4 h-4 mr-2" /> Add New Service
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add a Service</DialogTitle>
+              <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto mx-auto p-8">
+                <DialogHeader className="text-center pb-6">
+                  <DialogTitle className="text-2xl font-bold text-gray-800">{editingService ? 'Edit Service' : 'Add a Service'}</DialogTitle>
+                  <p className="text-sm text-gray-600 mt-2">Fill in the details below to {editingService ? 'update your service' : 'create your new service'}</p>
                 </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <Label htmlFor="title">Title</Label>
-                      <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Math Tutoring" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea id="description" value={description} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} placeholder="What's included, your experience, availability…" rows={5} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="price">Price (USD)</Label>
-                        <Input id="price" type="number" min={0} value={price} onChange={(e) => setPrice(Number(e.target.value))} />
+                
+                <div className="space-y-8">
+                  {/* Basic Information Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      Basic Information
+                    </h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="title" className="text-sm font-medium">Service Title *</Label>
+                        <Input 
+                          id="title" 
+                          value={title} 
+                          onChange={(e) => setTitle(e.target.value)} 
+                          placeholder="e.g., Math Tutoring" 
+                          className="w-full"
+                        />
                       </div>
-                      <div className="space-y-1">
-                        <Label>Category</Label>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Category *</Label>
                         <Select value={category} onValueChange={(v : any ) => setCategory(v)}>
-                          <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                          <SelectTrigger className="w-full"><SelectValue placeholder="Select a category" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="tutoring">Tutoring</SelectItem>
                             <SelectItem value="pet_care">Pet Care</SelectItem>
+                            <SelectItem value="lawn_care">Lawn Care</SelectItem>
+                            <SelectItem value="cleaning">Cleaning</SelectItem>
+                            <SelectItem value="tech_support">Tech Support</SelectItem>
                             <SelectItem value="delivery">Delivery</SelectItem>
-                            <SelectItem value="yard_work">Yard Work</SelectItem>
-                            <SelectItem value="tech_help">Tech Help</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="location">Location</Label>
-                        <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Online / Local Area / Address" />
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
+                      <Textarea 
+                        id="description" 
+                        value={description} 
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} 
+                        placeholder="Describe what you offer, your experience, availability, and what makes you unique..." 
+                        rows={3}
+                        className="w-full resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pricing & Duration Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      Pricing & Duration
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="price" className="text-sm font-medium">Price (USD) *</Label>
+                        <Input 
+                          id="price" 
+                          type="number" 
+                          min={0} 
+                          value={price} 
+                          onChange={(e) => setPrice(Number(e.target.value))} 
+                          placeholder="25"
+                          className="w-full"
+                        />
                       </div>
-                      <div className="space-y-1">
-                        <Label>Status</Label>
-                        <Select value={status} onValueChange={(v: any) => setStatus(v)}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Pricing Model *</Label>
+                        <Select value={pricingModel} onValueChange={(v: any) => setPricingModel(v)}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="paused">Paused</SelectItem>
+                            <SelectItem value="per_hour">Per Hour</SelectItem>
+                            <SelectItem value="per_job">Per Job</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="duration" className="text-sm font-medium">Duration (minutes) *</Label>
+                        <Input 
+                          id="duration" 
+                          type="number" 
+                          min={15} 
+                          value={duration} 
+                          onChange={(e) => setDuration(Number(e.target.value))} 
+                          placeholder="60"
+                          className="w-full"
+                        />
                       </div>
                     </div>
                   </div>
 
+                  {/* Location & Status Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      Location & Status
+                    </h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
+                        <Input 
+                          id="location" 
+                          value={location} 
+                          onChange={(e) => setLocation(e.target.value)} 
+                          placeholder="Online / Local Area / Address" 
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="address" className="text-sm font-medium">Specific Address (Optional)</Label>
+                        <Input 
+                          id="address" 
+                          value={address} 
+                          onChange={(e) => setAddress(e.target.value)} 
+                          placeholder="123 Main St, City, State" 
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Status *</Label>
+                      <Select value={status} onValueChange={(v: any) => setStatus(v)}>
+                        <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="paused">Paused</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Background & Qualifications Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      Background & Qualifications
+                    </h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="education" className="text-sm font-medium">Education/Background (Optional)</Label>
+                        <Textarea 
+                          id="education" 
+                          value={education} 
+                          onChange={(e) => setEducation(e.target.value)} 
+                          placeholder="High school student, college courses, certifications..." 
+                          rows={3}
+                          className="w-full resize-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="qualifications" className="text-sm font-medium">Qualifications/Skills (Optional)</Label>
+                        <Textarea 
+                          id="qualifications" 
+                          value={qualifications} 
+                          onChange={(e) => setQualifications(e.target.value)} 
+                          placeholder="Years of experience, special skills, certifications..." 
+                          rows={3}
+                          className="w-full resize-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                  <Button onClick={handleCreateService} variant="orange">Save Service</Button>
+                <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                  <Button variant="outline" onClick={() => { setOpen(false); resetForm(); }} className="px-6">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreateService} variant="orange" className="px-6">
+                    {editingService ? 'Update Service' : 'Save Service'}
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -452,7 +635,7 @@ export default function TeenHustlePage() {
                 <div className="text-center py-12 bg-white rounded-xl border">Loading…</div>
               ) : services.length > 0 ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {services.map((s) => <ServiceCard key={s.id} service={s} />)}
+                  {services.map((s) => <ServiceCard key={s.id} service={s} onEdit={openEditDialog} onDelete={handleDeleteService} />)}  
                 </div>
               ) : (
                 <div className="text-center py-12 bg-white rounded-xl border border-gray-200">

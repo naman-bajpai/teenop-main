@@ -8,7 +8,7 @@ import Navbar from "@/components/navbar";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="min-h-screen bg-white text-gray-700">
       <Navbar />
 
       {/* Hero Section */}
@@ -96,7 +96,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 py-12 text-white">
+      <footer className="bg-gray-100 py-12 text-gray-900">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
             <div className="col-span-1 md:col-span-2">
@@ -104,31 +104,31 @@ export default function Home() {
                 <Sparkles className="h-7 w-7 text-blue-400" aria-hidden />
                 <span className="text-xl font-bold">TeenOps</span>
               </div>
-              <p className="mb-4 text-slate-300">
+              <p className="mb-4 text-gray-600">
                 Empowering teens to build their future through community service and entrepreneurship.
               </p>
             </div>
 
             <div>
               <h3 className="mb-3 text-lg font-semibold">For Teens</h3>
-              <ul className="space-y-2 text-slate-300">
-                <li><Link href="/signup" className="hover:text-white">Start Earning</Link></li>
-                <li><Link href="/dashboard" className="hover:text-white">Dashboard</Link></li>
-                <li><Link href="#" className="hover:text-white">Resources</Link></li>
+              <ul className="space-y-2 text-gray-600">
+                <li><Link href="/signup" className="hover:text-gray-900">Start Earning</Link></li>
+                <li><Link href="/dashboard" className="hover:text-gray-900">Dashboard</Link></li>
+                <li><Link href="#" className="hover:text-gray-900">Resources</Link></li>
               </ul>
             </div>
 
             <div>
               <h3 className="mb-3 text-lg font-semibold">For Families</h3>
-              <ul className="space-y-2 text-slate-300">
-                <li><Link href="#" className="hover:text-white">Find Services</Link></li>
-                <li><Link href="#" className="hover:text-white">Safety</Link></li>
-                <li><Link href="#" className="hover:text-white">Support</Link></li>
+              <ul className="space-y-2 text-gray-600">
+                <li><Link href="#" className="hover:text-gray-900">Find Services</Link></li>
+                <li><Link href="#" className="hover:text-gray-900">Safety</Link></li>
+                <li><Link href="#" className="hover:text-gray-900">Support</Link></li>
               </ul>
             </div>
           </div>
 
-          <div className="mt-8 border-t border-white/10 pt-8 text-center text-slate-400">
+          <div className="mt-8 border-t border-gray-300 pt-8 text-center text-gray-500">
             <p>&copy; {new Date().getFullYear()} TeenOps. All rights reserved.</p>
           </div>
         </div>

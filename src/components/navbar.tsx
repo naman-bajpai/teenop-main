@@ -50,7 +50,7 @@ export default function Navbar() {
           <span
             className={clsx(
               "text-xl font-bold tracking-tight",
-              overHero ? "text-white" : "text-slate-900"
+              overHero ? "text-white" : "text-gray-700"
             )}
           >
             TeenOps

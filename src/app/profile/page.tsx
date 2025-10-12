@@ -16,8 +16,7 @@ import {
   X,
   Camera,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase";
-import { Database } from "@/lib/database.types";
+import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
 
 
@@ -38,7 +37,7 @@ type Profile = {
 
 export default function ProfilePage() {
   const { user: navbarUser } = useUser();
-  const supabase = React.useMemo(() => createClient(), []);
+  const supabase = createClient();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -127,7 +126,7 @@ export default function ProfilePage() {
         const { count: svcCount } = await supabase
           .from("services")
           .select("*", { count: "exact", head: true })
-          .eq("provider_id", authUser.id);
+          .eq("user_id", authUser.id);
         totalServices.current = svcCount ?? 0;
 
         // TODO: replace with real bookings count when you add a bookings table
@@ -160,7 +159,8 @@ export default function ProfilePage() {
         updated_at: new Date().toISOString(),
       };
 
-      const { data, error: upErr } = await supabase
+      // Use a more direct approach to avoid TypeScript issues
+      const { data, error: upErr } = await (supabase as any)
         .from("profiles")
         .update(update) 
         .eq("id", profile.id)
