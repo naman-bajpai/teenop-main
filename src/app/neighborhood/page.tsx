@@ -27,17 +27,15 @@ export default function NeighborhoodPage() {
       try {
         setLoading(true);
         setLoadError(null);
-        const supabase = createClient();
-
-        const { data, error } = await supabase
-          .from("services")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-
-        setServices((data ?? []) as Service[]);
-        setFilteredServices((data ?? []) as Service[]);
+  
+        const res = await fetch("/api/services/public");
+        if (!res.ok) throw new Error("Failed to fetch services");
+  
+        const json = await res.json();
+        const list = (json?.services ?? []) as Service[];
+  
+        setServices(list);
+        setFilteredServices(list);
       } catch (err: any) {
         console.error("Failed to load services:", err);
         setLoadError(err?.message || "Failed to load services.");
@@ -45,7 +43,6 @@ export default function NeighborhoodPage() {
         setLoading(false);
       }
     };
-
     load();
   }, []);
 

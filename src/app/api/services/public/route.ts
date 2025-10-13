@@ -1,21 +1,45 @@
-import { NextRequest, NextResponse } from "next/server";
+// app/api/services/public/route.ts
+import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
-export async function GET(request: NextRequest) {
+type ServiceRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  location: string | null;
+  category: string;
+  status: "active" | "paused" | string;
+  duration: number | null;
+  education: string | null;
+  qualifications: string | null;
+  address: string | null;
+  pricing_model: "per_hour" | "per_service" | string | null;
+  banner_url: string | null;
+  created_at: string;
+  rating: number | null;
+  total_bookings: number | null;
+};
+
+export async function GET(request: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
 
-    // Get query parameters
+    // Query params
     const url = new URL(request.url);
-    const category = url.searchParams.get('category');
-    const limit = url.searchParams.get('limit');
-    const search = url.searchParams.get('search');
+    const category = url.searchParams.get("category");
+    const limit = url.searchParams.get("limit");
+    const rawSearch = url.searchParams.get("search");
 
-    // Build the query
+    const search = (rawSearch ?? "").trim();
+
+    // Build base query
     let query = supabase
       .from("services")
-      .select(`
+      .select(
+        `
         id,
         user_id,
         title,
@@ -33,24 +57,30 @@ export async function GET(request: NextRequest) {
         created_at,
         rating,
         total_bookings
-      `)
-      .eq("status", "active") // Only show active services
+      `
+      )
+      .eq("status", "active")
       .order("created_at", { ascending: false });
 
-    // Apply category filter if provided
+    // Category filter
     if (category && category !== "all") {
       query = query.eq("category", category);
     }
 
-    // Apply search filter if provided
-    if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,location.ilike.%${search}%`);
+    // Search filter
+    if (search.length > 0) {
+      // PostgREST `or` expects the operator/value syntax
+      // title/description/location ILIKE %search%
+      const like = `%${search}%`;
+      query = query.or(
+        `title.ilike.${like},description.ilike.${like},location.ilike.${like}`
+      );
     }
 
-    // Apply limit if provided
+    // Limit (guard against NaN and large values)
     if (limit) {
-      const limitNum = parseInt(limit);
-      if (limitNum > 0 && limitNum <= 100) {
+      const limitNum = Number(limit);
+      if (Number.isFinite(limitNum) && limitNum > 0 && limitNum <= 100) {
         query = query.limit(limitNum);
       }
     }
@@ -59,57 +89,77 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("Error fetching public services:", error);
-      return NextResponse.json({ error: "Failed to fetch services" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to fetch services" },
+        { status: 500 }
+      );
     }
 
-    // Get unique user IDs to fetch profile names
-    const userIds = [...new Set(services?.map(service => service.user_id) || [])];
-    
-    // Fetch profile names for all users
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, first_name, last_name")
-      .in("id", userIds);
+    const svc = (services ?? []) as ServiceRow[];
 
-    // Create a map of user_id to profile name
-    const profileMap = new Map();
-    profiles?.forEach(profile => {
-      profileMap.set(profile.id, `${profile.first_name} ${profile.last_name}`);
-    });
+    // Collect unique user_ids
+    const userIds = Array.from(new Set(svc.map((s) => s.user_id))).filter(
+      Boolean
+    );
 
-    // Transform the data to match the expected format
-    const transformedServices = services?.map(service => ({
+    // Fetch profiles only if we have user IDs
+    let profileMap = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: profiles, error: profErr } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", userIds);
+
+      if (profErr) {
+        // Don't fail the whole request—just log and continue without names
+        console.warn("Warning: failed to fetch profiles:", profErr);
+      } else {
+        for (const p of profiles ?? []) {
+          const fullName = [p.first_name, p.last_name]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+          profileMap.set(p.id, fullName || "");
+        }
+      }
+    }
+
+    // Transform
+    const transformedServices = svc.map((service) => ({
       id: service.id,
       user_id: service.user_id,
       title: service.title,
-      description: service.description,
-      price: service.price,
-      location: service.location,
+      description: service.description ?? "",
+      price: service.price ?? 0,
+      location: service.location ?? "",
       category: service.category,
       status: service.status,
-      duration: service.duration || 60,
-      education: service.education || null,
-      qualifications: service.qualifications || null,
-      address: service.address || null,
-      pricing_model: service.pricing_model || "per_hour",
-      banner_url: service.banner_url,
+      duration: service.duration ?? 60,
+      education: service.education ?? null,
+      qualifications: service.qualifications ?? null,
+      address: service.address ?? null,
+      pricing_model: (service.pricing_model as "per_hour" | "per_service") ?? "per_hour",
+      banner_url: service.banner_url ?? null,
       created_at: service.created_at,
-      rating: service.rating || null,
-      total_bookings: service.total_bookings || 0,
-      provider_name: profileMap.get(service.user_id) || null
-    })) || [];
+      rating: service.rating ?? null,
+      total_bookings: service.total_bookings ?? 0,
+      provider_name: profileMap.get(service.user_id) || null,
+    }));
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       services: transformedServices,
       total: transformedServices.length,
       filters: {
         category: category || "all",
         search: search || "",
-        limit: limit || "unlimited"
-      }
+        limit: limit || "unlimited",
+      },
     });
-  } catch (error) {
-    console.error("Unexpected error in GET /api/services/public:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (err) {
+    console.error("Unexpected error in GET /api/services/public:", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

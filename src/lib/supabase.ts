@@ -13,7 +13,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createSupabaseClient<Database>(supabaseUrl, supabaseAnonKey);
 
 
-// Use the singleton instance instead of creating new ones
 export function createClient() {
   return supabase;
 }
