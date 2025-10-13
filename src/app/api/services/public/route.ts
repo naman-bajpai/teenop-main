@@ -69,15 +69,12 @@ export async function GET(request: Request) {
 
     // Search filter
     if (search.length > 0) {
-      // PostgREST `or` expects the operator/value syntax
-      // title/description/location ILIKE %search%
       const like = `%${search}%`;
       query = query.or(
         `title.ilike.${like},description.ilike.${like},location.ilike.${like}`
       );
     }
 
-    // Limit (guard against NaN and large values)
     if (limit) {
       const limitNum = Number(limit);
       if (Number.isFinite(limitNum) && limitNum > 0 && limitNum <= 100) {
@@ -97,7 +94,6 @@ export async function GET(request: Request) {
 
     const svc = (services ?? []) as ServiceRow[];
 
-    // Collect unique user_ids
     const userIds = Array.from(new Set(svc.map((s) => s.user_id))).filter(
       Boolean
     );

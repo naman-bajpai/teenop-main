@@ -65,13 +65,22 @@ export type Service = {
 export type Booking = {
   id: string;
   service_id: string;
-  service_title: string;
-  customer_name: string;
-  date: string; // ISO
-  time_label: string; // e.g. "3:00 PM"
-  status: "pending" | "confirmed" | "completed";
-  price: number;
-  message: string;
+  status: string;
+  requested_date: string;
+  requested_time: string;
+  duration: number;
+  total_price: number;
+  special_instructions: string;
+  created_at: string;
+  updated_at: string;
+  service: {
+    id: string;
+    title: string;
+    pricing_model: string;
+    location: string;
+    category: string;
+  };
+  customer_name?: string;
 };
 
 
@@ -137,21 +146,51 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
 }
 
 function BookingCard({ booking }: { booking: Booking }) {
+  const formatTime = (timeString: string) => {
+    try {
+      const [hours, minutes] = timeString.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}:${minutes} ${ampm}`;
+    } catch {
+      return timeString;
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl p-6 border border-gray-200">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">{booking.service_title}</h3>
-          <p className="text-sm text-gray-600">Requested by {booking.customer_name}</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">{booking.service.title}</h3>
+          <p className="text-sm text-gray-600">
+            {booking.customer_name ? `Requested by ${booking.customer_name}` : 'Customer request'}
+          </p>
         </div>
         <Badge className={getStatusColor(booking.status)}>
           {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
         </Badge>
       </div>
-      <p className="text-gray-700 mb-4">{booking.message}</p>
+      {booking.special_instructions && (
+        <p className="text-gray-700 mb-4">{booking.special_instructions}</p>
+      )}
       <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600"><Calendar className="w-4 h-4" />{new Date(booking.date).toLocaleDateString()} at {booking.time_label}</div>
-        <div className="flex items-center gap-2 text-sm text-gray-600"><DollarSign className="w-4 h-4" /><span className="font-semibold">${booking.price}</span></div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Calendar className="w-4 h-4" />
+          {new Date(booking.requested_date).toLocaleDateString()} at {formatTime(booking.requested_time)}
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <DollarSign className="w-4 h-4" />
+          <span className="font-semibold">${booking.total_price}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Clock className="w-4 h-4" />
+          {booking.duration} minutes
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <MapPin className="w-4 h-4" />
+          {booking.service.location}
+        </div>
       </div>
       <div className="flex gap-2">
         {booking.status === "pending" && (
@@ -201,16 +240,28 @@ export default function TeenHustlePage() {
     const init = async () => {
       try {
         setLoading(true);
-        // fetch services via API to avoid exposing RLS mistakes in client
-        const res = await fetch("/api/services", { cache: "no-store" });
-        if (!res.ok) throw new Error("Failed to load services");
-        const data = await res.json();
-        setServices(data.services ?? []);
+        
+        // Fetch services via API
+        const servicesRes = await fetch("/api/services", { cache: "no-store" });
+        if (!servicesRes.ok) throw new Error("Failed to load services");
+        const servicesData = await servicesRes.json();
+        setServices(servicesData.services ?? []);
 
-        // (Optional) fetch bookings (stubbed)
-        setBookings([]);
+        // Fetch bookings via API
+        const bookingsRes = await fetch("/api/bookings", { cache: "no-store" });
+        if (!bookingsRes.ok) throw new Error("Failed to load bookings");
+        const bookingsData = await bookingsRes.json();
+        
+        if (bookingsData.success) {
+          // Combine incoming bookings (where user is provider) and my requests (where user is customer)
+          const allBookings = [...(bookingsData.incoming || []), ...(bookingsData.myRequests || [])];
+          setBookings(allBookings);
+        } else {
+          setBookings([]);
+        }
       } catch (e: any) {
         toast({ title: "Load failed", description: e.message, variant: "destructive" });
+        setBookings([]);
       } finally {
         setLoading(false);
       }
@@ -220,6 +271,32 @@ export default function TeenHustlePage() {
 
   const activeServices = services.filter((s) => s.status === "active");
   const pausedServices = services.filter((s) => s.status === "paused");
+  
+  // Separate bookings by type
+  const [incomingBookings, setIncomingBookings] = useState<Booking[]>([]);
+  const [myRequests, setMyRequests] = useState<Booking[]>([]);
+  
+  // Update booking arrays when bookings change
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const bookingsRes = await fetch("/api/bookings", { cache: "no-store" });
+        if (bookingsRes.ok) {
+          const bookingsData = await bookingsRes.json();
+          if (bookingsData.success) {
+            setIncomingBookings(bookingsData.incoming || []);
+            setMyRequests(bookingsData.myRequests || []);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch bookings:", e);
+      }
+    };
+    
+    if (user) {
+      fetchBookings();
+    }
+  }, [user]);
 
   // Show loading state while user data is being fetched
   if (userLoading) {
@@ -616,9 +693,10 @@ export default function TeenHustlePage() {
 
         {/* Tabs */}
         <Tabs defaultValue="services" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="services">My Services ({services.length})</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings ({bookings.length})</TabsTrigger>
+            <TabsTrigger value="incoming">Incoming ({incomingBookings.length})</TabsTrigger>
+            <TabsTrigger value="my-requests">My Requests ({myRequests.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="services" className="mt-6">
@@ -650,20 +728,41 @@ export default function TeenHustlePage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="bookings" className="mt-6">
+          <TabsContent value="incoming" className="mt-6">
             <div className="mb-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Recent Bookings</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Incoming Bookings</h2>
+                <p className="text-sm text-gray-600">Requests for your services</p>
               </div>
-              {bookings.length > 0 ? (
-                <div className="space-y-4">{bookings.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
+              {incomingBookings.length > 0 ? (
+                <div className="space-y-4">{incomingBookings.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
               ) : (
                 <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Calendar className="w-8 h-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No bookings yet</h3>
-                  <p className="text-gray-600">Bookings for your services will appear here</p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No incoming bookings yet</h3>
+                  <p className="text-gray-600">When customers book your services, they'll appear here</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="my-requests" className="mt-6">
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">My Requests</h2>
+                <p className="text-sm text-gray-600">Services you've requested</p>
+              </div>
+              {myRequests.length > 0 ? (
+                <div className="space-y-4">{myRequests.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
+              ) : (
+                <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Calendar className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No requests yet</h3>
+                  <p className="text-gray-600">When you book services from other providers, they'll appear here</p>
                 </div>
               )}
             </div>
