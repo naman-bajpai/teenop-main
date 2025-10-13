@@ -12,7 +12,6 @@ import {
   MoreVertical,
   Phone,
   Video,
-  Star
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
