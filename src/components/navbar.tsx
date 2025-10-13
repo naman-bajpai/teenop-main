@@ -53,7 +53,7 @@ export default function Navbar() {
               overHero ? "text-white" : "text-gray-700"
             )}
           >
-            TeenOps
+            TeenOp
           </span>
         </Link>
 

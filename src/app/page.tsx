@@ -19,7 +19,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-14 text-center">
             <h2 className="mb-3 text-3xl font-bold tracking-tight md:text-4xl">
-              Why Choose TeenOps?
+              Why Choose TeenOp?
             </h2>
             <p className="mx-auto max-w-3xl text-lg text-slate-600">
               We’re building a community where teens can thrive, learn, and earn—while helping neighbors with trusted, local services.
@@ -86,7 +86,7 @@ export default function Home() {
               <Button
                 size="lg"
                 variant="outline"
-                className="h-auto px-8 py-4 text-lg border-white text-white hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60"
+                className="h-auto px-8 py-4 text-lg border-white text-gray-700 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60"
               >
                 Already have an account?
               </Button>
@@ -102,7 +102,7 @@ export default function Home() {
             <div className="col-span-1 md:col-span-2">
               <div className="mb-4 flex items-center gap-2">
                 <Sparkles className="h-7 w-7 text-blue-400" aria-hidden />
-                <span className="text-xl font-bold">TeenOps</span>
+                <span className="text-xl font-bold">TeenOp</span>
               </div>
               <p className="mb-4 text-gray-600">
                 Empowering teens to build their future through community service and entrepreneurship.
@@ -129,7 +129,7 @@ export default function Home() {
           </div>
 
           <div className="mt-8 border-t border-gray-300 pt-8 text-center text-gray-500">
-            <p>&copy; {new Date().getFullYear()} TeenOps. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} TeenOp. All rights reserved.</p>
           </div>
         </div>
       </footer>

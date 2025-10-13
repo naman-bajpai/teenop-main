@@ -316,8 +316,6 @@ export async function PUT(request: NextRequest) {
     if (!service) {
       return NextResponse.json({ error: "Service not found or you don't have permission to update it" }, { status: 404 });
     }
-
-    // Return the updated service with default values for rating and bookings
     const responseService = {
       ...service,
       rating: service.rating || null,
@@ -356,7 +354,7 @@ export async function DELETE(request: NextRequest) {
       .from("services")
       .delete()
       .eq("id", id)
-      .eq("user_id", user.id); // Ensure user can only delete their own services
+      .eq("user_id", user.id);
 
     if (error) {
       console.error("Error deleting service:", error);

@@ -165,147 +165,156 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-8 h-8 text-sky-600" />
-            <span className="text-2xl font-bold text-gray-900">TeenOps</span>
-          </div>
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-          Create your account
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Or{' '}
-          <Link href="/login" className="font-medium text-sky-600 hover:text-sky-500">
-            sign in to your existing account
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-orange-400/20 to-yellow-400/20 rounded-full blur-3xl"></div>
+      </div>
+      
+      <div className="relative sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center mb-8">
+          <Link href="/" className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-2xl shadow-lg border border-white/20 hover:bg-white/90 transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-xl">
+            <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              TeenOp
+            </span>
           </Link>
-        </p>
+        </div>
+        
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">
+            Join TeenOp!  
+          </h1>
+          <p className="text-lg text-gray-600">
+            Start your teen hustle journey today
+          </p>
+        </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <div className="relative sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white/80 backdrop-blur-sm py-10 px-6 shadow-2xl sm:rounded-3xl sm:px-10 border border-white/20 max-h-[80vh] overflow-y-auto">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-500" />
-              <span className="text-sm text-red-700">{error}</span>
+            <div className="mb-6 p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-2 duration-300">
+              <div className="p-1 bg-red-100 rounded-full">
+                <AlertCircle className="w-4 h-4 text-red-500" />
+              </div>
+              <span className="text-sm text-red-700 font-medium">{error}</span>
             </div>
           )}
           
           {success && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              <span className="text-sm text-green-700">{success}</span>
+            <div className="mb-6 p-4 bg-green-50/80 backdrop-blur-sm border border-green-200/50 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-2 duration-300">
+              <div className="p-1 bg-green-100 rounded-full">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+              </div>
+              <span className="text-sm text-green-700 font-medium">{success}</span>
             </div>
           )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+              <div className="space-y-2">
+                <label htmlFor="firstName" className="block text-sm font-semibold text-gray-700">
                   First name
                 </label>
-                <div className="mt-1">
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    type="text"
-                    autoComplete="given-name"
-                    required
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className="w-full"
-                    disabled={isSubmitting}
-                  />
-                </div>
+                <Input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  autoComplete="given-name"
+                  required
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  placeholder="John"
+                  disabled={isSubmitting}
+                />
               </div>
 
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+              <div className="space-y-2">
+                <label htmlFor="lastName" className="block text-sm font-semibold text-gray-700">
                   Last name
                 </label>
-                <div className="mt-1">
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    autoComplete="family-name"
-                    required
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    className="w-full"
-                    disabled={isSubmitting}
-                  />
-                </div>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  autoComplete="family-name"
+                  required
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  placeholder="Doe"
+                  disabled={isSubmitting}
+                />
               </div>
             </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-sm font-semibold text-gray-700">
                 Email address
               </label>
-              <div className="mt-1">
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full"
-                  disabled={isSubmitting}
-                />
-              </div>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={formData.email}
+                onChange={handleInputChange}
+                className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                placeholder="john@example.com"
+                disabled={isSubmitting}
+              />
             </div>
 
-            <div>
-              <label htmlFor="age" className="block text-sm font-medium text-gray-700">
+            <div className="space-y-2">
+              <label htmlFor="age" className="block text-sm font-semibold text-gray-700">
                 Age
               </label>
-              <div className="mt-1">
-                <Input
-                  id="age"
-                  name="age"
-                  type="number"
-                  min="13"
-                  max="19"
-                  required
-                  value={formData.age}
-                  onChange={handleInputChange}
-                  className="w-full"
-                  disabled={isSubmitting}
-                />
-              </div>
+              <Input
+                id="age"
+                name="age"
+                type="number"
+                min="13"
+                max="22"
+                required
+                value={formData.age}
+                onChange={handleInputChange}
+                className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                placeholder="16"
+                disabled={isSubmitting}
+              />
             </div>
 
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+            <div className="space-y-2">
+              <label htmlFor="role" className="block text-sm font-semibold text-gray-700">
                 Account Type
               </label>
-              <div className="mt-1">
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500"
-                  disabled={isSubmitting}
-                >
-                  <option value="teen">Teen (13-19 years old)</option>
-                  <option value="parent">Parent/Guardian</option>
-                </select>
-              </div>
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                className="w-full h-11 px-4 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                disabled={isSubmitting}
+              >
+                <option value="teen">Teen (13-22 years old)</option>
+                <option value="parent">Parent/Guardian</option>
+              </select>
             </div>
 
             {formData.role === "teen" && (
-              <>
-                <div>
-                  <label htmlFor="parentEmail" className="block text-sm font-medium text-gray-700">
-                    Parent/Guardian Email
-                  </label>
-                  <div className="mt-1">
+              <div className="space-y-4 p-4 bg-purple-50/50 rounded-xl border border-purple-200/50">
+                <h3 className="text-sm font-semibold text-purple-800">Parent/Guardian Information</h3>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="parentEmail" className="block text-sm font-semibold text-gray-700">
+                      Parent/Guardian Email
+                    </label>
                     <Input
                       id="parentEmail"
                       name="parentEmail"
@@ -314,38 +323,36 @@ export default function SignupPage() {
                       required
                       value={formData.parentEmail}
                       onChange={handleInputChange}
-                      className="w-full"
+                      className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
                       disabled={isSubmitting}
                       placeholder="parent@example.com"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label htmlFor="parentPhone" className="block text-sm font-medium text-gray-700">
-                    Parent/Guardian Phone (Optional)
-                  </label>
-                  <div className="mt-1">
+                  <div className="space-y-2">
+                    <label htmlFor="parentPhone" className="block text-sm font-semibold text-gray-700">
+                      Parent/Guardian Phone (Optional)
+                    </label>
                     <Input
                       id="parentPhone"
                       name="parentPhone"
                       type="tel"
                       value={formData.parentPhone}
                       onChange={handleInputChange}
-                      className="w-full"
+                      className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
                       disabled={isSubmitting}
                       placeholder="+1 (555) 123-4567"
                     />
                   </div>
                 </div>
-              </>
+              </div>
             )}
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <div className="space-y-2">
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
                 Password
               </label>
-              <div className="mt-1 relative">
+              <div className="relative">
                 <Input
                   id="password"
                   name="password"
@@ -354,29 +361,30 @@ export default function SignupPage() {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full pr-10"
+                  className="w-full h-11 px-4 pr-12 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  placeholder="Create a strong password"
                   disabled={isSubmitting}
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-gray-50 rounded-r-xl transition-colors duration-200"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isSubmitting}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
+                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
+                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                   )}
                 </button>
               </div>
             </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700">
                 Confirm password
               </label>
-              <div className="mt-1 relative">
+              <div className="relative">
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -385,25 +393,26 @@ export default function SignupPage() {
                   required
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  className="w-full pr-10"
+                  className="w-full h-11 px-4 pr-12 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  placeholder="Confirm your password"
                   disabled={isSubmitting}
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-gray-50 rounded-r-xl transition-colors duration-200"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   disabled={isSubmitting}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
+                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
+                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                   )}
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center">
+            <div className="flex items-start gap-3 p-4 bg-gray-50/50 rounded-xl border border-gray-200/50">
               <input
                 id="terms"
                 name="terms"
@@ -411,32 +420,52 @@ export default function SignupPage() {
                 required
                 checked={formData.terms}
                 onChange={handleInputChange}
-                className="h-4 w-4 text-sky-600 focus:ring-sky-500 border-gray-300 rounded"
+                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-0.5 transition-colors duration-200"
                 disabled={isSubmitting}
               />
-              <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
+              <label htmlFor="terms" className="text-sm text-gray-700 leading-relaxed">
                 I agree to the{' '}
-                <a href="#" className="text-sky-600 hover:text-sky-500">
+                <a href="#" className="text-purple-600 hover:text-purple-700 font-semibold transition-colors duration-200">
                   Terms of Service
                 </a>{' '}
                 and{' '}
-                <a href="#" className="text-sky-600 hover:text-sky-500">
+                <a href="#" className="text-purple-600 hover:text-purple-700 font-semibold transition-colors duration-200">
                   Privacy Policy
                 </a>
               </label>
             </div>
 
-            <div>
+            <div className="pt-4">
               <Button 
                 type="submit" 
-                className="w-full bg-sky-600 hover:bg-sky-700"
+                className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 disabled:transform-none disabled:opacity-50"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Creating account..." : "Create account"}
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Creating account...
+                  </div>
+                ) : (
+                  "Create account"
+                )}
               </Button>
             </div>
           </form>
 
+        </div>
+        
+        {/* Login link */}
+        <div className="mt-8 text-center">
+          <p className="text-gray-600">
+            Already have an account?{' '}
+            <Link 
+              href="/login" 
+              className="font-semibold text-purple-600 hover:text-purple-700 transition-colors duration-200"
+            >
+              Sign in here
+            </Link>
+          </p>
         </div>
       </div>
     </div>
