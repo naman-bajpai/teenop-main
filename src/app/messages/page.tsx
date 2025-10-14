@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useUser } from "@/hooks/useUser";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,7 @@ export default function MessagesPage() {
   };
 
   // Fetch conversations
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("/api/messages/conversations", {
@@ -107,13 +107,13 @@ export default function MessagesPage() {
       } finally {
         setLoading(false);
       }
-  };
+  }, [toast]);
 
   useEffect(() => {
     if (user) {
       fetchConversations();
     }
-  }, [user, toast]);
+  }, [user, fetchConversations]);
 
   // Listen for messages sent from other components (like MessageDialog)
   useEffect(() => {
@@ -140,7 +140,7 @@ export default function MessagesPage() {
     return () => {
       window.removeEventListener('messageSent', handleMessageSent as EventListener);
     };
-  }, [selectedConversation, toast]);
+  }, [selectedConversation, toast, fetchConversations]);
 
   // Fetch messages for selected conversation
   useEffect(() => {
@@ -167,8 +167,41 @@ export default function MessagesPage() {
       }
     };
 
+    const markMessagesAsRead = async () => {
+      if (!selectedConversation) return;
+      
+      try {
+        // Immediately update the local state to remove unread badge
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === selectedConversation.id 
+              ? { ...conv, unread_count: 0 }
+              : conv
+          )
+        );
+        
+        await fetch("/api/messages/mark-read", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            booking_id: selectedConversation.booking_id,
+          }),
+        });
+        
+        // Refresh conversations to get the latest state from server
+        fetchConversations();
+      } catch (error) {
+        console.error("Failed to mark messages as read:", error);
+        // If the API call fails, revert the local state change
+        fetchConversations();
+      }
+    };
+
     fetchMessages();
-  }, [selectedConversation]);
+    markMessagesAsRead();
+  }, [selectedConversation, fetchConversations]);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
