@@ -96,6 +96,10 @@ const getStatusColor = (status: string) => {
       return "bg-green-100 text-green-800";
     case "completed":
       return "bg-gray-100 text-gray-800";
+    case "rejected":
+      return "bg-red-100 text-red-800";
+    case "cancelled":
+      return "bg-gray-100 text-gray-800";
     default:
       return "bg-gray-100 text-gray-800";
   }
@@ -145,7 +149,7 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
   );
 }
 
-function BookingCard({ booking }: { booking: Booking }) {
+function BookingCard({ booking, onStatusUpdate }: { booking: Booking; onStatusUpdate: (bookingId: string, status: string) => Promise<void> }) {
   const formatTime = (timeString: string) => {
     try {
       const [hours, minutes] = timeString.split(':');
@@ -156,6 +160,18 @@ function BookingCard({ booking }: { booking: Booking }) {
     } catch {
       return timeString;
     }
+  };
+
+  const handleAccept = async () => {
+    await onStatusUpdate(booking.id, "confirmed");
+  };
+
+  const handleDecline = async () => {
+    await onStatusUpdate(booking.id, "rejected");
+  };
+
+  const handleViewDetails = () => {
+    window.location.href = `/booking/${booking.id}`;
   };
 
   return (
@@ -195,15 +211,28 @@ function BookingCard({ booking }: { booking: Booking }) {
       <div className="flex gap-2">
         {booking.status === "pending" && (
           <>
-            <Button size="sm" className="bg-green-600 hover:bg-green-700">Accept</Button>
-            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">Decline</Button>
+            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleAccept}>
+              Accept
+            </Button>
+            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={handleDecline}>
+              Decline
+            </Button>
           </>
         )}
         {booking.status === "confirmed" && (
-          <Button variant="outline" size="sm"><MessageCircle className="w-4 h-4 mr-1" />Message</Button>
+          <Button variant="outline" size="sm" onClick={handleViewDetails}>
+            <MessageCircle className="w-4 h-4 mr-1" />View Details
+          </Button>
         )}
         {booking.status === "completed" && (
-          <Button variant="outline" size="sm">View Details</Button>
+          <Button variant="outline" size="sm" onClick={handleViewDetails}>
+            View Details
+          </Button>
+        )}
+        {booking.status === "rejected" && (
+          <Button variant="outline" size="sm" onClick={handleViewDetails}>
+            View Details
+          </Button>
         )}
       </div>
     </div>
@@ -448,6 +477,44 @@ export default function TeenHustlePage() {
       toast({ title: "Service deleted", description: "The service has been removed." });
     } catch (e: any) {
       toast({ title: "Could not delete service", description: e.message, variant: "destructive" });
+    }
+  }
+
+  async function handleBookingStatusUpdate(bookingId: string, newStatus: string) {
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || "Failed to update booking");
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        // Update the booking in the state
+        setIncomingBookings((prev) => 
+          prev.map((booking) => 
+            booking.id === bookingId 
+              ? { ...booking, status: newStatus }
+              : booking
+          )
+        );
+        
+        toast({ 
+          title: "Booking updated", 
+          description: `Booking ${newStatus} successfully.` 
+        });
+      }
+    } catch (e: any) {
+      toast({ 
+        title: "Could not update booking", 
+        description: e.message, 
+        variant: "destructive" 
+      });
     }
   }
 
@@ -735,7 +802,7 @@ export default function TeenHustlePage() {
                 <p className="text-sm text-gray-600">Requests for your services</p>
               </div>
               {incomingBookings.length > 0 ? (
-                <div className="space-y-4">{incomingBookings.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
+                <div className="space-y-4">{incomingBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
               ) : (
                 <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -755,7 +822,7 @@ export default function TeenHustlePage() {
                 <p className="text-sm text-gray-600">Services you've requested</p>
               </div>
               {myRequests.length > 0 ? (
-                <div className="space-y-4">{myRequests.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
+                <div className="space-y-4">{myRequests.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
               ) : (
                 <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

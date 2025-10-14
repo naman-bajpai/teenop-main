@@ -10,7 +10,7 @@ export async function GET() {
   const { data: profile, error } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", session.user.id)
+    .eq("id", session.user.id as any)  
     .single();
 
   if (error || !profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 });

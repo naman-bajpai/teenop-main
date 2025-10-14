@@ -105,6 +105,47 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          booking_id: string
+          content: string
+          created_at: string | null
+          id: string
+          read_at: string | null
+          receiver_id: string
+          sender_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          booking_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          read_at?: string | null
+          receiver_id: string
+          sender_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          booking_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          read_at?: string | null
+          receiver_id?: string
+          sender_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       password_reset_tokens: {
         Row: {
           created_at: string | null
@@ -316,7 +357,15 @@ export type Database = {
           total_bookings?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "services_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_sessions: {
         Row: {
@@ -414,7 +463,15 @@ export type Database = {
           total_bookings?: number | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "services_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

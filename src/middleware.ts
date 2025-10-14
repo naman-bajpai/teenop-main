@@ -20,6 +20,8 @@ export async function middleware(req: NextRequest) {
     "/my-teen-hustle",
     "/neighborhood",
     "/provider",
+    "/booking/",
+    "/services/"
   ];
 
   const isProtected = protectedRoutes.some((r) => req.nextUrl.pathname.startsWith(r));

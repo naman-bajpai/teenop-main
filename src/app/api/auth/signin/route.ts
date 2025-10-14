@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
-    const { email, password, rememberMe } = await request.json();
+    const { email, password } = await request.json();
     
     console.log('Signin attempt for:', { email });
 

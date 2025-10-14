@@ -157,7 +157,9 @@ export default function SignupPage() {
           router.push("/login");
         }, 2000);
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Signup error:', error);
+      setError(error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.');
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);

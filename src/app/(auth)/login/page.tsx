@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sparkles, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { createServerClient } from "@/lib/supabase/server";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -230,12 +229,12 @@ export default function LoginPage() {
         {/* Sign up link */}
         <div className="mt-8 text-center">
           <p className="text-gray-600">
-            Don't have an account?{' '}
+            Don&apos;t have an account yet?{' '}
             <Link 
               href="/signup" 
               className="font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-200"
             >
-              Create one now
+              Create one
             </Link>
           </p>
         </div>
