@@ -85,7 +85,6 @@ export async function POST(request: Request) {
 
     if (authError) {
       console.error('Auth signup error:', authError);
-      // Provide more specific error messages
       if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
         return NextResponse.json(
           { error: 'This email is already registered. Please try logging in instead, or use a different email address.' },

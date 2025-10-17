@@ -15,8 +15,6 @@ import {
   ArrowLeft,
   Send,
   MoreVertical,
-  Phone,
-  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -120,12 +118,20 @@ export default function MessagesPage() {
     const handleMessageSent = (event: CustomEvent) => {
       const { bookingId, message } = event.detail;
       
-      // Refresh conversations to show the new message
-      fetchConversations();
-      
       // If the current conversation matches the booking, add the message to the current view
       if (selectedConversation && selectedConversation.booking_id === bookingId) {
         addMessageSafely(message);
+        // Update the last message in the current conversation
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === selectedConversation.id 
+              ? { ...conv, last_message: message }
+              : conv
+          )
+        );
+      } else {
+        // Only refresh conversations if it's a different conversation
+        fetchConversations();
       }
       
       // Show a toast notification about the new message
@@ -171,16 +177,8 @@ export default function MessagesPage() {
       if (!selectedConversation) return;
       
       try {
-        // Immediately update the local state to remove unread badge
-        setConversations(prev => 
-          prev.map(conv => 
-            conv.id === selectedConversation.id 
-              ? { ...conv, unread_count: 0 }
-              : conv
-          )
-        );
-        
-        await fetch("/api/messages/mark-read", {
+        // Call the API to mark messages as read
+        const response = await fetch("/api/messages/mark-read", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -190,18 +188,24 @@ export default function MessagesPage() {
           }),
         });
         
-        // Refresh conversations to get the latest state from server
-        fetchConversations();
+        if (response.ok) {
+          // Only update local state if API call was successful
+          setConversations(prev => 
+            prev.map(conv => 
+              conv.id === selectedConversation.id 
+                ? { ...conv, unread_count: 0 }
+                : conv
+            )
+          );
+        }
       } catch (error) {
         console.error("Failed to mark messages as read:", error);
-        // If the API call fails, revert the local state change
-        fetchConversations();
       }
     };
 
     fetchMessages();
     markMessagesAsRead();
-  }, [selectedConversation, fetchConversations]);
+  }, [selectedConversation]);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
@@ -397,8 +401,8 @@ export default function MessagesPage() {
                             {conversation.other_person.first_name} {conversation.other_person.last_name}
                           </h3>
                           {conversation.unread_count > 0 && (
-                            <Badge className="bg-blue-600 text-white text-xs">
-                              {conversation.unread_count}
+                            <Badge className="bg-blue-600 text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full px-2">
+                              {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
                             </Badge>
                           )}
                         </div>
@@ -467,12 +471,6 @@ export default function MessagesPage() {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm">
-                      <Phone className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Video className="w-4 h-4" />
-                    </Button>
                     <Button variant="ghost" size="sm">
                       <MoreVertical className="w-4 h-4" />
                     </Button>

@@ -4,9 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Star, ChevronRight } from "lucide-react";
 import { Service, ServiceCategory } from "@/types/service";
+import ImageUpload from "@/components/ui/image-upload";
 
 interface ServiceCardProps {
   service: Service;
+  showImageUpload?: boolean;
+  onImageUploaded?: (url: string) => void;
+  onImageRemoved?: () => void;
 }
 
 const toTitle = (s: string) =>
@@ -25,7 +29,12 @@ const formatDate = (dateString?: string) => {
   });
 };
 
-export default function ServiceCard({ service }: ServiceCardProps) {
+export default function ServiceCard({ 
+  service, 
+  showImageUpload = false, 
+  onImageUploaded, 
+  onImageRemoved 
+}: ServiceCardProps) {
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "pet_care": return "🐕";
@@ -42,9 +51,9 @@ export default function ServiceCard({ service }: ServiceCardProps) {
     switch (category) {
       case "pet_care": return "from-amber-100 to-orange-100";
       case "lawn_care": return "from-green-100 to-emerald-100";
-      case "tutoring": return "from-blue-100 to-indigo-100";
+      case "tutoring": return "from-[#96cbc3]/20 to-[#23a699]/20";
       case "cleaning": return "from-purple-100 to-pink-100";
-      case "tech_support": return "from-cyan-100 to-blue-100";
+      case "tech_support": return "from-[#96cbc3]/20 to-[#434c9d]/20";
       case "delivery": return "from-yellow-100 to-amber-100";
       default: return "from-gray-100 to-slate-100";
     }
@@ -54,9 +63,9 @@ export default function ServiceCard({ service }: ServiceCardProps) {
     switch (category) {
       case "pet_care": return "bg-amber-100 text-amber-800 border-amber-200";
       case "lawn_care": return "bg-green-100 text-green-800 border-green-200";
-      case "tutoring": return "bg-blue-100 text-blue-800 border-blue-200";
+      case "tutoring": return "bg-[#96cbc3]/20 text-[#434c9d] border-[#96cbc3]/40";
       case "cleaning": return "bg-purple-100 text-purple-800 border-purple-200";
-      case "tech_support": return "bg-cyan-100 text-cyan-800 border-cyan-200";
+      case "tech_support": return "bg-[#96cbc3]/20 text-[#434c9d] border-[#96cbc3]/40";
       case "delivery": return "bg-yellow-100 text-yellow-800 border-yellow-200";
       default: return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -68,12 +77,25 @@ export default function ServiceCard({ service }: ServiceCardProps) {
 
   return (
     <div className="group bg-white rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
-      {/* Header with gradient background */}
-      <div className={`relative h-40 bg-gradient-to-br ${gradient} flex items-center justify-center overflow-hidden`}>
-        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
-        <div className="relative text-7xl opacity-30 transform group-hover:scale-110 transition-transform duration-300">
-          {icon}
-        </div>
+      {/* Header with gradient background or image */}
+      <div className={`relative h-40 overflow-hidden ${
+        service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient}`
+      }`}>
+        {service.banner_url ? (
+          <img
+            src={service.banner_url}
+            alt={service.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+            <div className="relative text-7xl opacity-30 transform group-hover:scale-110 transition-transform duration-300 flex items-center justify-center h-full">
+              {icon}
+            </div>
+          </>
+        )}
+        
         {/* Status indicator */}
         <div className="absolute top-3 right-3">
           <Badge 
@@ -93,7 +115,7 @@ export default function ServiceCard({ service }: ServiceCardProps) {
       <div className="p-6">
         {/* Title and description */}
         <div className="mb-4">
-          <h3 className="font-bold text-gray-900 text-xl mb-2 line-clamp-1 group-hover:text-blue-600 transition-colors">
+          <h3 className="font-bold text-gray-900 text-xl mb-2 line-clamp-1 group-hover:text-[#434c9d] transition-colors">
             {service.title}
           </h3>
           <p className="text-gray-600 text-sm line-clamp-2 leading-relaxed">
@@ -145,7 +167,7 @@ export default function ServiceCard({ service }: ServiceCardProps) {
           <Button
             asChild
             size="sm"
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2 rounded-xl font-medium"
+            className="bg-gradient-to-r from-[#ff725a] to-[#434c9d] hover:from-[#ff725a]/90 hover:to-[#434c9d]/90 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2 rounded-xl font-medium"
           >
             <Link href={`/services/${service.id}`}>
               View Details
@@ -162,6 +184,20 @@ export default function ServiceCard({ service }: ServiceCardProps) {
                 {service.provider_name}
               </span>
             </p>
+          </div>
+        )}
+
+        {/* Image Upload Section */}
+        {showImageUpload && onImageUploaded && onImageRemoved && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Service Image</h4>
+            <ImageUpload
+              serviceId={service.id}
+              userId={service.user_id}
+              currentImageUrl={service.banner_url || undefined}
+              onImageUploaded={onImageUploaded}
+              onImageRemoved={onImageRemoved}
+            />
           </div>
         )}
       </div>

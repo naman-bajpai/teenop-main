@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Sparkles, LogOut, Menu, X, MessageCircle, User, Home, Briefcase } from "lucide-react";
+import { LogOut, Menu, X, MessageCircle, User, Home, Briefcase } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
 import clsx from "clsx";
 
 interface User {
@@ -93,22 +94,25 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
         "sticky top-0 z-50 transition-all duration-300",
         overHero
           ? "bg-transparent backdrop-blur-0 border-b border-transparent"
-          : "bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm"
+          : "bg-white/98 backdrop-blur-md border-b border-slate-200 shadow-sm"
       )}
     >
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand */}
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+          className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#434c9d]"
         >
-          <Sparkles className={clsx(
-            "h-7 w-7 transition-colors",
-            overHero ? "text-white" : "text-blue-600"
-          )} aria-hidden />
+          <Image
+            src="/images/teenop_logo.png"
+            alt="TeenOp Logo"
+            width={28}
+            height={28}
+            className="h-7 w-7"
+          />
           <span className={clsx(
             "text-xl font-bold tracking-tight transition-colors",
-            overHero ? "text-white" : "text-gray-700"
+            overHero ? "text-white" : "text-[#434c9d]"
           )}>
             TeenOp
           </span>
@@ -125,10 +129,10 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                   className={clsx(
                     "flex items-center gap-2 transition-colors",
                     isActive(item.href)
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      ? "bg-[#ff725a] text-white hover:bg-[#ff725a]/90"
                       : overHero
                         ? "text-white/90 hover:text-white hover:bg-white/10"
-                        : "text-slate-700 hover:text-blue-700 hover:bg-slate-100"
+                        : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-[#96cbc3]/20"
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -146,7 +150,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
               <div className="text-right">
                 <p className={clsx(
                   "text-sm font-medium transition-colors",
-                  overHero ? "text-white" : "text-gray-700"
+                  overHero ? "text-white" : "text-[#434c9d]"
                 )}>
                   {user.first_name && user.last_name 
                     ? `${user.first_name} ${user.last_name}`
@@ -162,7 +166,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
               </div>
               <div className={clsx(
                 "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                overHero ? "bg-white/20" : "bg-blue-500"
+                overHero ? "bg-white/20" : "bg-[#23a699]"
               )}>
                 <span className={clsx(
                   "font-semibold text-sm transition-colors",
@@ -180,7 +184,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
               "flex items-center gap-2 transition-colors",
               overHero
                 ? "text-white/90 hover:text-white hover:bg-white/10"
-                : "text-slate-700 hover:text-red-700 hover:bg-red-50"
+                : "text-[#434c9d] hover:text-red-700 hover:bg-red-50"
             )}
           >
             <LogOut className="h-4 w-4" />
@@ -193,7 +197,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
           {user && (
             <div className={clsx(
               "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-              overHero ? "bg-white/20" : "bg-blue-500"
+              overHero ? "bg-white/20" : "bg-[#23a699]"
             )}>
               <span className="text-white font-semibold text-sm">
                 {(user.first_name?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase()}
@@ -208,7 +212,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
               "transition-colors",
               overHero
                 ? "text-white hover:text-white/80"
-                : "text-slate-700 hover:text-blue-700"
+                : "text-[#434c9d] hover:text-[#434c9d]/80"
             )}
           >
             {isMobileMenuOpen ? (
@@ -236,8 +240,8 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                     variant={isActive(item.href) ? "default" : "ghost"}
                     className={`w-full justify-start gap-2 ${
                       isActive(item.href)
-                        ? "bg-blue-600 text-white hover:bg-blue-700"
-                        : "text-slate-700 hover:text-blue-700 hover:bg-slate-100"
+                        ? "bg-[#ff725a] text-white hover:bg-[#ff725a]/90"
+                        : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-[#96cbc3]/20"
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -248,14 +252,14 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
             })}
             <div className="pt-2 border-t border-slate-200">
               {user && (
-                <div className="px-3 py-2 text-sm text-slate-600">
+                <div className="px-3 py-2 text-sm text-[#434c9d]">
                   <p className="font-medium">
                     {user.first_name && user.last_name 
                       ? `${user.first_name} ${user.last_name}`
                       : user.name || "User"
                     }
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[#434c9d]/70">
                     {user.role || "Customer & Provider"}
                   </p>
                 </div>
@@ -263,7 +267,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
               <Button
                 onClick={handleLogout}
                 variant="ghost"
-                className="w-full justify-start gap-2 text-slate-700 hover:text-red-700 hover:bg-red-50"
+                className="w-full justify-start gap-2 text-[#434c9d] hover:text-red-700 hover:bg-red-50"
               >
                 <LogOut className="h-4 w-4" />
                 Logout

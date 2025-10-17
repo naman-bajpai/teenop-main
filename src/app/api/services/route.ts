@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { title, description, price, location, category, status, duration, education, qualifications, address, pricing_model } = body;
+    const { title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, banner_url } = body;
 
     // Validate required fields
     if (!title || !description || price === undefined || !location || !category || !status) {
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
         qualifications: qualifications || null,
         address: address || null,
         pricing_model: pricing_model || "per_hour",
-        banner_url: null // No image upload for now
+        banner_url: banner_url || null
       })
       .select(`
         id,
@@ -226,7 +226,7 @@ export async function PUT(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { id, title, description, price, location, category, status, duration, education, qualifications, address, pricing_model } = body;
+    const { id, title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, banner_url } = body;
 
     // Validate required fields
     if (!id || !title || !description || price === undefined || !location || !category || !status) {
@@ -286,6 +286,7 @@ export async function PUT(request: NextRequest) {
         qualifications: qualifications || null,
         address: address || null,
         pricing_model: pricing_model || "per_hour",
+        banner_url: banner_url || null,
       })
       .eq("id", id)
       .eq("user_id", user.id) // Ensure user can only update their own services

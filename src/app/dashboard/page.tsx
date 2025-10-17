@@ -81,7 +81,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#434c9d] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -111,7 +111,7 @@ export default function HomePage() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-orange-50 to-white">
+      <div className="min-h-screen bg-gradient-to-br from-[#96cbc3]/10 via-[#ff725a]/10 to-white">
         <HeroSection user={user} />
         
         {featuredServices.length > 0 && (
@@ -153,11 +153,11 @@ export default function HomePage() {
                 placeholder="Search dog walking, mowing..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white/80 border-blue-200 focus:border-blue-400"
+                className="pl-10 bg-white/80 border-[#96cbc3] focus:border-[#434c9d]"
               />
             </div>
             <Link href={createPageUrl("Provider")}>
-              <Button className="bg-gradient-to-r from-blue-600 to-orange-500 hover:from-blue-700 hover:to-orange-600 text-white shadow-lg">
+              <Button className="bg-gradient-to-r from-[#ff725a] to-[#434c9d] hover:from-[#ff725a]/90 hover:to-[#434c9d]/90 text-white shadow-lg">
                 <Sparkles className="w-4 h-4 mr-2" />
                 Start Your Teen Hustle
               </Button>
@@ -190,7 +190,7 @@ export default function HomePage() {
                 <Button
                   variant="ghost"
                   onClick={() => setSelectedCategory("all")}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-[#434c9d] hover:text-[#434c9d]/80"
                 >
                   Clear filters
                 </Button>
@@ -205,8 +205,8 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="text-center py-16">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-8 h-8 text-blue-500" />
+                <div className="w-16 h-16 bg-[#96cbc3]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-[#434c9d]" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-700 mb-2">
                   No services found
@@ -220,7 +220,7 @@ export default function HomePage() {
                     setSearchTerm("");
                     setSelectedCategory("all");
                   }}
-                  className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                  className="border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10"
                 >
                   Clear all filters
                 </Button>

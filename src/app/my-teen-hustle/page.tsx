@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast"; 
 import { cn } from "@/lib/utils";
+import ImageUpload from "@/components/ui/image-upload";
 import {
   Plus,
   Edit,
@@ -263,6 +264,7 @@ export default function TeenHustlePage() {
   const [qualifications, setQualifications] = useState("");
   const [address, setAddress] = useState("");
   const [pricingModel, setPricingModel] = useState<"per_job" | "per_hour">("per_hour");
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -372,6 +374,7 @@ export default function TeenHustlePage() {
     setQualifications("");
     setAddress("");
     setPricingModel("per_hour");
+    setBannerUrl(null);
     setEditingService(null);
   };
 
@@ -388,6 +391,7 @@ export default function TeenHustlePage() {
     setQualifications(service.qualifications || "");
     setAddress(service.address || "");
     setPricingModel(service.pricing_model || "per_hour");
+    setBannerUrl(service.banner_url);
     setOpen(true);
   };
 
@@ -413,7 +417,8 @@ export default function TeenHustlePage() {
             education: education.trim() || null,
             qualifications: qualifications.trim() || null,
             address: address.trim() || null,
-            pricing_model: pricingModel
+            pricing_model: pricingModel,
+            banner_url: bannerUrl
           }
         : { 
             title, 
@@ -426,7 +431,8 @@ export default function TeenHustlePage() {
             education: education.trim() || null,
             qualifications: qualifications.trim() || null,
             address: address.trim() || null,
-            pricing_model: pricingModel
+            pricing_model: pricingModel,
+            banner_url: bannerUrl
           };
 
       // Persist service via API (server validates & RLS protects)
@@ -584,6 +590,25 @@ export default function TeenHustlePage() {
                         placeholder="Describe what you offer, your experience, availability, and what makes you unique..." 
                         rows={3}
                         className="w-full resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Service Image Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                      Service Image
+                    </h3>
+                    <div className="max-w-md">
+                      <Label className="text-sm font-medium">Service Banner Image (Optional)</Label>
+                      <p className="text-xs text-gray-500 mb-3">Upload an image to showcase your service</p>
+                      <ImageUpload
+                        serviceId={editingService?.id || "new"}
+                        userId={user?.id || ""}
+                        currentImageUrl={bannerUrl || undefined}
+                        onImageUploaded={(url) => setBannerUrl(url)}
+                        onImageRemoved={() => setBannerUrl(null)}
                       />
                     </div>
                   </div>

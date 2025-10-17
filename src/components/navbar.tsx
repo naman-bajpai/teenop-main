@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Sparkles } from "lucide-react";
+import Image from "next/image";
 import clsx from "clsx";
 
 export default function Navbar() {
@@ -30,7 +30,7 @@ export default function Navbar() {
         "sticky top-0 z-50 transition-all",
         overHero
           ? "bg-transparent backdrop-blur-0 border-b border-transparent"
-          : "bg-white/70 backdrop-blur-md border-b border-slate-200 shadow-sm"
+          : "bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm"
       )}
       role="banner"
     >
@@ -41,16 +41,19 @@ export default function Navbar() {
         {/* Brand */}
         <Link
           href="/"
-          className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+          className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#434c9d]"
         >
-          <Sparkles
-            className={clsx("h-7 w-7", overHero ? "text-white" : "text-blue-600")}
-            aria-hidden
+          <Image
+            src="/images/teenop_logo.png"
+            alt="TeenOp Logo"
+            width={28}
+            height={28}
+            className="h-7 w-7"
           />
           <span
             className={clsx(
               "text-xl font-bold tracking-tight",
-              overHero ? "text-white" : "text-gray-700"
+              overHero ? "text-white" : "text-[#434c9d]"
             )}
           >
             TeenOp
@@ -64,10 +67,10 @@ export default function Navbar() {
               <Button
                 variant="ghost"
                 className={clsx(
-                  "cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-600",
+                  "cursor-pointer focus-visible:ring-2 focus-visible:ring-[#434c9d]",
                   overHero
                     ? "text-white hover:text-white/90 hover:bg-white/10"
-                    : "text-slate-700 hover:text-blue-700 hover:bg-slate-100/60"
+                    : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-[#96cbc3]/20"
                 )}
               >
                 Log In
@@ -78,8 +81,8 @@ export default function Navbar() {
                 className={clsx(
                   "cursor-pointer focus-visible:ring-2 focus-visible:ring-offset-2",
                   overHero
-                    ? "bg-white text-blue-700 hover:bg-slate-100"
-                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                    ? "bg-white text-[#434c9d] hover:bg-slate-100"
+                    : "bg-[#ff725a] hover:bg-[#ff725a]/90 text-white"
                 )}
               >
                 Sign Up
@@ -95,10 +98,10 @@ export default function Navbar() {
               variant="ghost"
               size="sm"
               className={clsx(
-                "cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-600",
+                "cursor-pointer focus-visible:ring-2 focus-visible:ring-[#434c9d]",
                 overHero
                   ? "text-white hover:text-white/90 hover:bg-white/10"
-                  : "text-slate-700 hover:text-blue-700 hover:bg-slate-100/60"
+                  : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-[#96cbc3]/20"
               )}
             >
               Log In
@@ -110,8 +113,8 @@ export default function Navbar() {
               className={clsx(
                 "cursor-pointer focus-visible:ring-2 focus-visible:ring-offset-2",
                 overHero
-                  ? "bg-white text-blue-700 hover:bg-slate-100"
-                  : "bg-blue-600 hover:bg-blue-700 text-white"
+                  ? "bg-white text-[#434c9d] hover:bg-slate-100"
+                  : "bg-[#ff725a] hover:bg-[#ff725a]/90 text-white"
               )}
             >
               Sign Up
