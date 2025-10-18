@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/hooks/useUser";
 import MessageDialog from "@/components/messaging/MessageDialog";
+import { PaymentModal } from "@/components/payments/PaymentModal";
 import {
   ArrowLeft,
   Calendar,
@@ -21,6 +22,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  CreditCard,
 } from "lucide-react";
 
 interface BookingDetails {
@@ -82,6 +84,8 @@ const getStatusColor = (status: string) => {
       return "bg-red-100 text-red-800";
     case "completed":
       return "bg-gray-100 text-gray-800";
+    case "paid":
+      return "bg-green-100 text-green-800";
     case "cancelled":
       return "bg-gray-100 text-gray-800";
     default:
@@ -98,6 +102,8 @@ const getStatusIcon = (status: string) => {
     case "rejected":
       return <XCircle className="w-4 h-4" />;
     case "completed":
+      return <CheckCircle className="w-4 h-4" />;
+    case "paid":
       return <CheckCircle className="w-4 h-4" />;
     case "cancelled":
       return <XCircle className="w-4 h-4" />;
@@ -116,6 +122,7 @@ export default function BookingDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   const bookingId = params.id as string;
 
@@ -393,6 +400,50 @@ export default function BookingDetailsPage() {
                 </div>
               </div>
             )}
+
+            {booking.status === "completed" && isCustomer && (
+              <div className="bg-white rounded-xl p-6 border border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Required</h2>
+                <div className="space-y-4">
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                      <span className="font-medium text-green-800">Service Completed</span>
+                    </div>
+                    <p className="text-green-700 text-sm">
+                      The service has been completed successfully. Please complete your payment to finalize the booking.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">Total Amount</p>
+                      <p className="text-2xl font-bold text-green-600">${booking.total_price.toFixed(2)}</p>
+                    </div>
+                    <Button
+                      onClick={() => setPaymentModalOpen(true)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Pay Now
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {booking.status === "paid" && (
+              <div className="bg-white rounded-xl p-6 border border-gray-200">
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="flex items-center mb-2">
+                    <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                    <span className="font-medium text-green-800">Payment Completed</span>
+                  </div>
+                  <p className="text-green-700 text-sm">
+                    Your payment of ${booking.total_price.toFixed(2)} has been processed successfully. Thank you for using TeenOps!
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -517,6 +568,21 @@ export default function BookingDetailsPage() {
             bookingId={booking.id}
             otherPerson={otherPerson}
             currentUserId={user.id}
+          />
+        )}
+
+        {/* Payment Modal */}
+        {booking && (
+          <PaymentModal
+            isOpen={paymentModalOpen}
+            onClose={() => setPaymentModalOpen(false)}
+            bookingId={booking.id}
+            amount={booking.total_price}
+            serviceTitle={booking.service?.title || 'Service'}
+            onPaymentSuccess={() => {
+              // Refresh the booking data after successful payment
+              window.location.reload();
+            }}
           />
         )}
       </div>

@@ -13,11 +13,13 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  CreditCard
 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useUser } from "@/hooks/useUser";
 import { Booking } from "@/types/booking";
+import { PaymentModal } from "@/components/payments/PaymentModal";
 
 export default function MyBookingsPage() {
   const { user, loading: userLoading } = useUser();
@@ -25,6 +27,8 @@ export default function MyBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -93,6 +97,7 @@ export default function MyBookingsPage() {
       case "confirmed": return "bg-blue-100 text-blue-800 border-blue-200";
       case "in_progress": return "bg-purple-100 text-purple-800 border-purple-200";
       case "completed": return "bg-green-100 text-green-800 border-green-200";
+      case "paid": return "bg-green-100 text-green-800 border-green-200";
       case "cancelled": return "bg-gray-100 text-gray-800 border-gray-200";
       case "rejected": return "bg-red-100 text-red-800 border-red-200";
       default: return "bg-gray-100 text-gray-800 border-gray-200";
@@ -105,6 +110,7 @@ export default function MyBookingsPage() {
       case "confirmed": return <CheckCircle className="w-4 h-4" />;
       case "in_progress": return <Loader2 className="w-4 h-4 animate-spin" />;
       case "completed": return <CheckCircle className="w-4 h-4" />;
+      case "paid": return <CheckCircle className="w-4 h-4" />;
       case "cancelled": return <XCircle className="w-4 h-4" />;
       case "rejected": return <XCircle className="w-4 h-4" />;
       default: return <AlertCircle className="w-4 h-4" />;
@@ -240,6 +246,29 @@ export default function MyBookingsPage() {
                           {updating === booking.id ? "Cancelling..." : "Cancel Request"}
                         </Button>
                       )}
+
+                      {booking.status === "completed" && (
+                        <Button
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setPaymentModalOpen(true);
+                          }}
+                          size="sm"
+                          className="w-full bg-green-600 hover:bg-green-700"
+                        >
+                          <CreditCard className="w-4 h-4 mr-2" />
+                          Pay Now - {formatPrice(booking.total_price)}
+                        </Button>
+                      )}
+
+                      {booking.status === "paid" && (
+                        <div className="w-full p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+                          <div className="flex items-center justify-center text-green-700">
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            <span className="text-sm font-medium">Payment Completed</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -367,6 +396,26 @@ export default function MyBookingsPage() {
           </Tabs>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {selectedBooking && (
+        <PaymentModal
+          isOpen={paymentModalOpen}
+          onClose={() => {
+            setPaymentModalOpen(false);
+            setSelectedBooking(null);
+          }}
+          bookingId={selectedBooking.id}
+          amount={selectedBooking.total_price}
+          serviceTitle={selectedBooking.service?.title || 'Service'}
+          onPaymentSuccess={() => {
+            // Refresh the bookings data after successful payment
+            fetchBookings();
+            setPaymentModalOpen(false);
+            setSelectedBooking(null);
+          }}
+        />
+      )}
     </DashboardLayout>
   );
 }

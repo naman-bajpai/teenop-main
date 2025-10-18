@@ -181,7 +181,7 @@ export async function PATCH(
     const { status } = body;
 
     // Validate status
-    if (!status || !["confirmed", "rejected", "completed", "cancelled"].includes(status)) {
+    if (!status || !["confirmed", "rejected", "completed", "paid", "cancelled"].includes(status)) {
       return NextResponse.json(
         { success: false, error: "Invalid status" },
         { status: 400 }
@@ -235,6 +235,14 @@ export async function PATCH(
       if (bookingData.services?.user_id !== user.id) {
         return NextResponse.json(
           { success: false, error: "Only service provider can mark booking as completed" },
+          { status: 403 }
+        );
+      }
+    } else if (status === "paid") {
+      // Only customer can mark as paid (though this should typically be done via payment webhook)
+      if (bookingData.user_id !== user.id) {
+        return NextResponse.json(
+          { success: false, error: "Only customer can mark booking as paid" },
           { status: 403 }
         );
       }

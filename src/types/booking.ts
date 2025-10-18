@@ -8,6 +8,8 @@ export interface Booking {
   duration: number;
   total_price: number;
   special_instructions?: string | null;
+  payment_intent_id?: string | null;
+  payment_completed_at?: string | null;
   created_at: string;
   updated_at: string;
   // Service details (joined)
@@ -34,6 +36,7 @@ export type BookingStatus =
   | "confirmed"
   | "in_progress"
   | "completed"
+  | "paid"
   | "cancelled"
   | "rejected";
 

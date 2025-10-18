@@ -1,7 +1,6 @@
 // app/api/services/public/route.ts
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createServerClient } from "@/lib/supabase/server";
 
 type ServiceRow = {
   id: string;
@@ -25,7 +24,7 @@ type ServiceRow = {
 
 export async function GET(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createServerClient();
 
     // Query params
     const url = new URL(request.url);
@@ -36,7 +35,7 @@ export async function GET(request: Request) {
     const search = (rawSearch ?? "").trim();
 
     // Build base query
-    let query = supabase
+    let query = (supabase as any)
       .from("services")
       .select(
         `
@@ -101,7 +100,7 @@ export async function GET(request: Request) {
     // Fetch profiles only if we have user IDs
     let profileMap = new Map<string, string>();
     if (userIds.length > 0) {
-      const { data: profiles, error: profErr } = await supabase
+      const { data: profiles, error: profErr } = await (supabase as any)
         .from("profiles")
         .select("id, first_name, last_name")
         .in("id", userIds);

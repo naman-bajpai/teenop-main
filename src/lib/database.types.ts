@@ -19,6 +19,8 @@ export type Database = {
           created_at: string
           duration: number
           id: string
+          payment_completed_at: string | null
+          payment_intent_id: string | null
           requested_date: string
           requested_time: string
           service_id: string
@@ -32,6 +34,8 @@ export type Database = {
           created_at?: string
           duration: number
           id?: string
+          payment_completed_at?: string | null
+          payment_intent_id?: string | null
           requested_date: string
           requested_time: string
           service_id: string
@@ -45,6 +49,8 @@ export type Database = {
           created_at?: string
           duration?: number
           id?: string
+          payment_completed_at?: string | null
+          payment_intent_id?: string | null
           requested_date?: string
           requested_time?: string
           service_id?: string
@@ -523,6 +529,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "rejected"
+        | "paid"
       pricing_model: "per_job" | "per_hour"
       service_category:
         | "pet_care"
@@ -668,6 +675,7 @@ export const Constants = {
         "completed",
         "cancelled",
         "rejected",
+        "paid",
       ],
       pricing_model: ["per_job", "per_hour"],
       service_category: [

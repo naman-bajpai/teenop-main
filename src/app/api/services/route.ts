@@ -1,12 +1,11 @@
 // app/api/services/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createServerClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createServerClient();
     
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -18,7 +17,7 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const allServices = url.searchParams.get('all') === 'true';
 
-    let query = supabase
+    let query = (supabase as any)
       .from("services")
       .select(`
         id,
@@ -58,22 +57,22 @@ export async function GET(request: NextRequest) {
     }
 
     // Get unique user IDs to fetch profile names
-    const userIds = [...new Set(services?.map(service => service.user_id) || [])];
+    const userIds = [...new Set(services?.map((service: any) => service.user_id) || [])];
     
     // Fetch profile names for all users
-    const { data: profiles } = await supabase
+    const { data: profiles } = await (supabase as any)
       .from("profiles")
       .select("id, first_name, last_name")
       .in("id", userIds);
 
     // Create a map of user_id to profile name
     const profileMap = new Map();
-    profiles?.forEach(profile => {
+    profiles?.forEach((profile: any) => {
       profileMap.set(profile.id, `${profile.first_name} ${profile.last_name}`);
     });
 
     // Transform the data to match the expected format
-    const transformedServices = services?.map(service => ({
+    const transformedServices = services?.map((service: any) => ({
       id: service.id,
       user_id: service.user_id,
       title: service.title,
@@ -103,7 +102,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createServerClient();
     
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -159,7 +158,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the service
-    const { data: service, error } = await supabase
+    const { data: service, error } = await (supabase as any)
       .from("services")
       .insert({
         user_id: user.id,
@@ -216,7 +215,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createServerClient();
     
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -272,7 +271,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update the service
-    const { data: service, error } = await supabase
+    const { data: service, error } = await (supabase as any)
       .from("services")
       .update({
         title: title.trim(),
@@ -334,7 +333,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createServerClient();
     
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -353,7 +352,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete the service
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("services")
       .delete()
       .eq("id", id)
