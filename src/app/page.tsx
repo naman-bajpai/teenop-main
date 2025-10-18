@@ -14,6 +14,9 @@ export default function Home() {
       {/* Hero Section */}
       <HeroSection user={null} />
 
+      {/* Featured Services */}
+      <FeaturedServices services={[]} />
+
       {/* Features Section */}
       <section className="bg-slate-50 ">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -22,14 +25,14 @@ export default function Home() {
               Why Choose TeenOp?
             </h2>
             <p className="mx-auto max-w-3xl text-lg text-slate-600">
-              We’re building a community where teens can thrive, learn, and earn—while helping neighbors with trusted, local services.
+              We're building a community where teens can thrive, learn, and earn—while helping neighbors with trusted, local services.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm transition hover:shadow-md">
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
-                <Users className="h-6 w-6 text-blue-700" aria-hidden />
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-[#96cbc3]/20">
+                <Users className="h-6 w-6 text-[#434c9d]" aria-hidden />
               </div>
               <h3 className="mb-2 text-xl font-semibold">Community First</h3>
               <p className="text-slate-600">
@@ -38,8 +41,8 @@ export default function Home() {
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm transition hover:shadow-md">
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-amber-100">
-                <Star className="h-6 w-6 text-amber-600" aria-hidden />
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-[#ff725a]/20">
+                <Star className="h-6 w-6 text-[#ff725a]" aria-hidden />
               </div>
               <h3 className="mb-2 text-xl font-semibold">Quality Assured</h3>
               <p className="text-slate-600">
@@ -48,8 +51,8 @@ export default function Home() {
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm transition hover:shadow-md">
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
-                <TrendingUp className="h-6 w-6 text-blue-700" aria-hidden />
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-[#96cbc3]/20">
+                <TrendingUp className="h-6 w-6 text-[#434c9d]" aria-hidden />
               </div>
               <h3 className="mb-2 text-xl font-semibold">Fair & Transparent</h3>
               <p className="text-slate-600">
@@ -60,11 +63,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Services */}
-      <FeaturedServices services={[]} />
-
       {/* CTA Section */}
-      <section className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 py-20">
+      <section className="bg-gradient-to-r from-[#434c9d] via-[#434c9d] to-[#96cbc3] py-20">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl">
             Ready to Get Started?
@@ -76,7 +76,7 @@ export default function Home() {
             <Link href="/signup">
               <Button
                 size="lg"
-                className="h-auto px-8 py-4 text-lg bg-white text-blue-700 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-200"
+                className="h-auto px-8 py-4 text-lg bg-white text-[#434c9d] hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-[#96cbc3]"
               >
                 Get Started Today
                 <ArrowRight className="ml-2 h-5 w-5" aria-hidden />
@@ -101,7 +101,7 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
             <div className="col-span-1 md:col-span-2">
               <div className="mb-4 flex items-center gap-2">
-                <Sparkles className="h-7 w-7 text-blue-400" aria-hidden />
+                <Sparkles className="h-7 w-7 text-[#434c9d]" aria-hidden />
                 <span className="text-xl font-bold">TeenOp</span>
               </div>
               <p className="mb-4 text-gray-600">

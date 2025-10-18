@@ -129,12 +129,17 @@ export default function ServiceCard({
             {toTitle(String(service.category))}
           </Badge>
 
-          {service.rating != null && (
-            <div className="flex items-center gap-1 text-sm text-gray-600 bg-yellow-50 px-2 py-1 rounded-full">
-              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-              <span className="font-medium">{service.rating.toFixed(1)}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1 text-sm text-gray-600 bg-yellow-50 px-2 py-1 rounded-full">
+            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+            <span className="font-medium">
+              {service.rating != null ? service.rating.toFixed(1) : 'New'}
+            </span>
+            {service.rating != null && (
+              <span className="text-xs text-gray-500 ml-1">
+                ({service.total_bookings} review{service.total_bookings !== 1 ? 's' : ''})
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Location and date */}

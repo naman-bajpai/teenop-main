@@ -17,8 +17,8 @@ export default function HeroSection({ user }: HeroSectionProps) {
           aria-hidden
         />
         {/* Brand color overlay + vignette */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#434c9d]/60 via-[#434c9d]/40 to-slate-950/80 mix-blend-multiply" />
-        <div className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_50%_-10%,rgba(255,255,255,.15),transparent_60%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#434c9d]/30 via-[#434c9d]/20 to-slate-950/60 mix-blend-multiply" />
+        <div className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_50%_-10%,rgba(255,255,255,.25),transparent_60%)]" />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-4 py-20 text-center md:py-28">
@@ -29,8 +29,8 @@ export default function HeroSection({ user }: HeroSectionProps) {
 
         <p className="mx-auto mt-4 max-w-3xl text-lg leading-relaxed text-white/90 md:text-2xl">
           {user
-            ? "Ready to discover amazing services or start your own teen hustle?"
-            : "Connect with talented teens for pet care, tutoring, yard work, and more—right nearby."}
+            ? "Ready to discover services by teens near you or start your own teen hustle?"
+            : "Hire motivated teens for pet care, lawn services and more - right in your neighborhood"}
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
