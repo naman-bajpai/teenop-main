@@ -2,13 +2,28 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sparkles, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  // Wrap the hook-using component in Suspense to satisfy Next.js
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen grid place-items-center">
+          <div className="text-gray-600">Loading…</div>
+        </div>
+      }
+    >
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -25,11 +40,10 @@ export default function LoginPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-    // Clear error when user starts typing
     if (error) setError("");
   };
 
@@ -39,50 +53,49 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const supabase = createClient();  
-      console.log('Attempting login for:', formData.email);
+      const supabase = createClient();
+      console.log("Attempting login for:", formData.email);
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
-      console.log('Login response:', { data, error });
+      console.log("Login response:", { data, error });
 
       if (error) {
-        console.error('Login error:', error);
+        console.error("Login error:", error);
         setError(error.message || "Login failed. Please try again.");
         return;
       }
 
       if (data.user) {
-        console.log('User authenticated:', data.user.id);
+        console.log("User authenticated:", data.user.id);
 
         const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
+          .from("profiles")
+          .select("*")
+          .eq("id", data.user.id)
           .single();
 
-        console.log('Profile fetch result:', { profile, profileError });
+        console.log("Profile fetch result:", { profile, profileError });
 
         if (profileError || !profile) {
-          console.error('Profile error:', profileError);
+          console.error("Profile error:", profileError);
           setError("User profile not found. Please contact support.");
           return;
         }
 
-        // ✅ Persist session in cookies so middleware and dashboard can access it
         if (data.session) {
           await supabase.auth.setSession(data.session);
-          console.log('Session persisted successfully');
+          console.log("Session persisted successfully");
         }
 
-        console.log('Login successful, redirecting to:', redirectTo);
+        console.log("Login successful, redirecting to:", redirectTo);
         router.push(redirectTo);
       }
     } catch (err) {
-      console.error('Login exception:', err);
+      console.error("Login exception:", err);
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -96,10 +109,13 @@ export default function LoginPage() {
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-[#ff725a]/20 to-[#434c9d]/20 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-[#23a699]/20 to-[#96cbc3]/20 rounded-full blur-3xl"></div>
       </div>
-      
+
       <div className="relative sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center mb-8">
-          <Link href="/" className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-2xl shadow-lg border border-white/20 hover:bg-white/90 transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-xl">
+          <Link
+            href="/"
+            className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-2xl shadow-lg border border-white/20 hover:bg-white/90 transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-xl"
+          >
             <div className="p-2 bg-gradient-to-r from-[#ff725a] to-[#434c9d] rounded-xl">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
@@ -108,14 +124,10 @@ export default function LoginPage() {
             </span>
           </Link>
         </div>
-        
+
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            Welcome back!
-          </h1>
-          <p className="text-lg text-gray-600">
-            Sign in to continue your teen hustle journey
-          </p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">Welcome back!</h1>
+          <p className="text-lg text-gray-600">Sign in to continue your teen hustle journey</p>
         </div>
       </div>
 
@@ -173,6 +185,7 @@ export default function LoginPage() {
                   className="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-gray-50 rounded-r-xl transition-colors duration-200"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isSubmitting}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
@@ -200,7 +213,10 @@ export default function LoginPage() {
               </div>
 
               <div className="text-sm">
-                <Link href="/forgot-password" className="font-semibold text-[#434c9d] hover:text-[#434c9d]/80 transition-colors duration-200">
+                <Link
+                  href="/forgot-password"
+                  className="font-semibold text-[#434c9d] hover:text-[#434c9d]/80 transition-colors duration-200"
+                >
                   Forgot password?
                 </Link>
               </div>
@@ -223,15 +239,14 @@ export default function LoginPage() {
               </Button>
             </div>
           </form>
-
         </div>
-        
+
         {/* Sign up link */}
         <div className="mt-8 text-center">
           <p className="text-gray-600">
-            Don&apos;t have an account yet?{' '}
-            <Link 
-              href="/signup" 
+            Don&apos;t have an account yet?{" "}
+            <Link
+              href="/signup"
               className="font-semibold text-[#434c9d] hover:text-[#434c9d]/80 transition-colors duration-200"
             >
               Create one
