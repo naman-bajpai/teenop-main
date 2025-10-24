@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import HeroSection from "@/components/home/HeroSection";
 import FeaturedServices from "@/components/home/FeaturedServices";
-import { Sparkles, Users, Star, TrendingUp, ArrowRight } from "lucide-react";
+import { Sparkles, Users, Star } from "lucide-react";
 import Navbar from "@/components/navbar";
 
 export default function Home() {
@@ -17,78 +17,83 @@ export default function Home() {
       {/* Featured Services */}
       <FeaturedServices services={[]} />
 
-      {/* Features Section */}
-      <section className="bg-slate-50 ">
+      {/* Split Benefits: Teens/Sellers vs Community/Buyers */}
+      <section className="bg-slate-50 py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-14 text-center">
+          <div className="mb-12 text-center">
             <h2 className="mb-3 text-3xl font-bold tracking-tight md:text-4xl">
-              Why Choose TeenOp?
+              What is TeenOp?
             </h2>
             <p className="mx-auto max-w-3xl text-lg text-slate-600">
-              We're building a community where teens can thrive, learn, and earn—while helping neighbors with trusted, local services.
+              TeenOp (Teen Opportunity) is a digital marketplace where teens open their
+              own service-based businesses — dog walking, lawn care, tutoring, art
+              commissions, and more — and neighbors can hire them easily.
+              <br /><br />
+              Think of it as a modern bulletin board for your town: simple, local, and trusted.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm transition hover:shadow-md">
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-[#96cbc3]/20">
-                <Users className="h-6 w-6 text-[#434c9d]" aria-hidden />
+          {/* Two large cards side-by-side */}
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+            {/* Teens / Sellers */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 shadow-sm transition hover:shadow-md">
+              <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-[#96cbc3]/20">
+                <Users className="h-8 w-8 text-[#434c9d]" aria-hidden />
               </div>
-              <h3 className="mb-2 text-xl font-semibold">Community First</h3>
-              <p className="text-slate-600">
-                Connect with teens in your neighborhood. Build relationships and trust in your local community.
-              </p>
+              <h3 className="mb-6 text-2xl font-semibold">TEENS / SELLERS</h3>
+              <ul className="mb-8 list-disc space-y-3 pl-6 text-slate-700">
+                <li>Make $</li>
+                <li>Build college résumé</li>
+                <li>Flexible schedule</li>
+                <li>Be your own boss</li>
+              </ul>
+              <Link href="/signup">
+                <Button className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90">
+                  Open Storefront!
+                </Button>
+              </Link>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm transition hover:shadow-md">
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-[#ff725a]/20">
-                <Star className="h-6 w-6 text-[#ff725a]" aria-hidden />
+            {/* Community / Buyers */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 shadow-sm transition hover:shadow-md">
+              <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-[#ff725a]/20">
+                <Star className="h-8 w-8 text-[#ff725a]" aria-hidden />
               </div>
-              <h3 className="mb-2 text-xl font-semibold">Quality Assured</h3>
-              <p className="text-slate-600">
-                All teen providers are verified and reviewed by the community. Clear expectations, better outcomes.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm transition hover:shadow-md">
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-[#96cbc3]/20">
-                <TrendingUp className="h-6 w-6 text-[#434c9d]" aria-hidden />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold">Fair & Transparent</h3>
-              <p className="text-slate-600">
-                Up-front pricing and fair compensation. Teens earn what they deserve for their work.
-              </p>
+              <h3 className="mb-6 text-2xl font-semibold">COMMUNITY / BUYERS</h3>
+              <ul className="mb-8 list-disc space-y-3 pl-6 text-slate-700">
+                <li>Lower service prices</li>
+                <li>Take tasks off your plate</li>
+                <li>Hire within your neighborhood</li>
+                <li>Support your local High School</li>
+                <li>Find niche services</li>
+              </ul>
+              <Link href="/services">
+                <Button className="bg-[#ff725a] text-white hover:bg-[#ff725a]/90">
+                  Search Services!
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-gradient-to-r from-[#434c9d] via-[#434c9d] to-[#96cbc3] py-20">
-        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl">
-            Ready to Get Started?
-          </h2>
-          <p className="mb-8 text-lg text-white/90">
-            Join teens already earning and learning in their communities.
-          </p>
-          <div className="flex flex-col justify-center gap-3 sm:flex-row">
+      {/* Why Choose TeenOp (re-added beneath split section) */}
+      <section className="bg-white py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <h2 className="mb-3 text-3xl font-bold tracking-tight md:text-4xl">
+              Why Choose TeenOp?
+            </h2>
+            <p className="mx-auto max-w-3xl text-lg text-slate-600">
+              Local, trusted, and fair. Teens grow real-world skills and earn fairly,
+              while neighbors get quality help from people right down the street.
+            </p>
+          </div>
+
+          <div className="mt-10 text-center">
             <Link href="/signup">
-              <Button
-                size="lg"
-                className="h-auto px-8 py-4 text-lg bg-white text-[#434c9d] hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-[#96cbc3]"
-              >
-                Get Started Today
-                <ArrowRight className="ml-2 h-5 w-5" aria-hidden />
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-auto px-8 py-4 text-lg border-white text-gray-700 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60"
-              >
-                Already have an account?
+              <Button size="lg" className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90">
+                Sign Up Today
               </Button>
             </Link>
           </div>
@@ -105,7 +110,7 @@ export default function Home() {
                 <span className="text-xl font-bold">TeenOp</span>
               </div>
               <p className="mb-4 text-gray-600">
-                Empowering teens to build their future through community service and entrepreneurship.
+                Empowering teens to build their future through entrepreneurship.
               </p>
             </div>
 
@@ -119,16 +124,16 @@ export default function Home() {
             </div>
 
             <div>
-              <h3 className="mb-3 text-lg font-semibold">For Families</h3>
+              <h3 className="mb-3 text-lg font-semibold">For Communities</h3>
               <ul className="space-y-2 text-gray-600">
-                <li><Link href="#" className="hover:text-gray-900">Find Services</Link></li>
+                <li><Link href="/services" className="hover:text-gray-900">Find Services</Link></li>
                 <li><Link href="#" className="hover:text-gray-900">Safety</Link></li>
                 <li><Link href="#" className="hover:text-gray-900">Support</Link></li>
               </ul>
             </div>
           </div>
 
-          <div className="mt-8 border-t border-gray-300 pt-8 text-center text-gray-500">
+          <div className="mt-8 border-t border-gray-300 pt-8 text-center text-gray-500">  
             <p>&copy; {new Date().getFullYear()} TeenOp. All rights reserved.</p>
           </div>
         </div>

@@ -14,7 +14,7 @@ export const uploadServiceImage = async (
     const filePath = `${userId}/${serviceId}/${fileName}`;
 
     // Upload file to storage
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('service-images')
       .upload(filePath, file, {
         cacheControl: '3600',

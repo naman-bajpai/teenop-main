@@ -283,6 +283,40 @@ export async function PATCH(
     // Type assertion for updated booking data
     const updatedBookingData = updatedBooking as any;
 
+    // Send notifications based on status change
+    try {
+      if (status === "confirmed") {
+        // Send confirmation notifications to service provider
+        await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.INTERNAL_API_SECRET || 'internal-secret'}`
+          },
+          body: JSON.stringify({
+            type: 'service_provider_confirmation',
+            bookingId: updatedBookingData.id
+          })
+        });
+      } else if (status === "rejected") {
+        // Send rejection notification to buyer
+        await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.INTERNAL_API_SECRET || 'internal-secret'}`
+          },
+          body: JSON.stringify({
+            type: 'buyer_rejection',
+            bookingId: updatedBookingData.id
+          })
+        });
+      }
+    } catch (notificationError) {
+      console.error("Error sending notification:", notificationError);
+      // Don't fail the booking update if notification fails
+    }
+
     return NextResponse.json({
       success: true,
       booking: {

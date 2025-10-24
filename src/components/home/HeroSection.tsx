@@ -24,13 +24,13 @@ export default function HeroSection({ user }: HeroSectionProps) {
       <div className="relative mx-auto max-w-7xl px-4 py-20 text-center md:py-28">
 
         <h1 className="mx-auto mt-6 max-w-4xl text-balance text-4xl font-extrabold tracking-tight text-white drop-shadow md:text-6xl lg:text-7xl">
-          {user ? `Welcome back!` : "Find Help in Your Neighborhood"}
+          {user ? `Welcome to TeenOp` : "Find Help in Your Neighborhood"}
         </h1>
 
-        <p className="mx-auto mt-4 max-w-3xl text-lg leading-relaxed text-white/90 md:text-2xl">
+        <p className="mx-auto mt-4 max-w-3xl text-lg leading-relaxed text-white/90 md:text-2xl font-semibold">
           {user
             ? "Ready to discover services by teens near you or start your own teen hustle?"
-            : "Hire motivated teens for pet care, lawn services and more - right in your neighborhood"}
+            : "Connecting teen businesses to their community."}
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

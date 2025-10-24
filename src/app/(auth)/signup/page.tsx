@@ -214,7 +214,7 @@ export default function SignupPage() {
             Join TeenOp!  
           </h1>
           <p className="text-lg text-gray-600">
-            Start your teen hustle journey today
+            Start offering services today
           </p>
         </div>
       </div>
