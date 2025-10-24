@@ -13,6 +13,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -249,6 +250,12 @@ export default function TeenHustlePage() {
   const [services, setServices] = useState<Service[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [earningsStats, setEarningsStats] = useState({
+    totalEarned: 0,
+    thisWeekEarned: 0,
+    thisMonthEarned: 0,
+    pendingEarnings: 0
+  });
 
   // Add Service dialog state
   const [open, setOpen] = useState(false);
@@ -289,6 +296,15 @@ export default function TeenHustlePage() {
           setBookings(allBookings);
         } else {
           setBookings([]);
+        }
+
+        // Fetch earnings stats
+        const earningsRes = await fetch("/api/earnings", { cache: "no-store" });
+        if (earningsRes.ok) {
+          const earningsData = await earningsRes.json();
+          if (earningsData.success) {
+            setEarningsStats(earningsData.stats);
+          }
         }
       } catch (e: any) {
         toast({ title: "Load failed", description: e.message, variant: "destructive" });
@@ -543,7 +559,9 @@ export default function TeenHustlePage() {
               <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto mx-auto p-8">
                 <DialogHeader className="text-center pb-6">
                   <DialogTitle className="text-2xl font-bold text-gray-800">{editingService ? 'Edit Service' : 'Add a Service'}</DialogTitle>
-                  <p className="text-sm text-gray-600 mt-2">Fill in the details below to {editingService ? 'update your service' : 'create your new service'}</p>
+                  <DialogDescription className="text-sm text-gray-600 mt-2">
+                    Fill in the details below to {editingService ? 'update your service' : 'create your new service'}
+                  </DialogDescription>
                 </DialogHeader>
                 
                 <div className="space-y-8">
@@ -750,7 +768,7 @@ export default function TeenHustlePage() {
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center"><TrendingUp className="w-6 h-6 text-green-600" /></div>
               <div>
                 <p className="text-sm text-gray-600">This Week</p>
-                <p className="text-2xl font-bold text-gray-900">$85</p>
+                <p className="text-2xl font-bold text-gray-900">${earningsStats.thisWeekEarned.toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -759,7 +777,7 @@ export default function TeenHustlePage() {
               <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center"><Calendar className="w-6 h-6 text-gray-600" /></div>
               <div>
                 <p className="text-sm text-gray-600">This Month</p>
-                <p className="text-2xl font-bold text-gray-900">$320</p>
+                <p className="text-2xl font-bold text-gray-900">${earningsStats.thisMonthEarned.toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -768,7 +786,7 @@ export default function TeenHustlePage() {
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center"><DollarSign className="w-6 h-6 text-purple-600" /></div>
               <div>
                 <p className="text-sm text-gray-600">Total Earned</p>
-                <p className="text-2xl font-bold text-gray-900">$1250</p>
+                <p className="text-2xl font-bold text-gray-900">${earningsStats.totalEarned.toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -777,7 +795,7 @@ export default function TeenHustlePage() {
               <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center"><Clock className="w-6 h-6 text-yellow-600" /></div>
               <div>
                 <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-gray-900">$45</p>
+                <p className="text-2xl font-bold text-gray-900">${earningsStats.pendingEarnings.toFixed(2)}</p>
               </div>
             </div>
           </div>

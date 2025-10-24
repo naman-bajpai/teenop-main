@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -22,24 +23,19 @@ interface Message {
 }
 
 interface MessageDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  recipientId: string;
+  recipientName: string;
   bookingId: string;
-  otherPerson: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    avatar_url?: string;
-  };
-  currentUserId: string;
 }
 
 export default function MessageDialog({
-  open,
-  onOpenChange,
+  isOpen,
+  onClose,
   bookingId,
-  otherPerson,
-  currentUserId,
+  recipientId,
+  recipientName,
 }: MessageDialogProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -47,16 +43,30 @@ export default function MessageDialog({
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
 
-  const otherPersonName = [otherPerson.first_name, otherPerson.last_name]
-    .filter(Boolean)
-    .join(" ")
-    .trim() || "User";
+  const [currentUserId, setCurrentUserId] = useState<string>("");
 
   useEffect(() => {
-    if (open && bookingId) {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.user) {
+            setCurrentUserId(data.user.id);
+          }
+        }
+      } catch (error) {
+        console.error('Error getting current user:', error);
+      }
+    };
+    getCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && bookingId) {
       fetchMessages();
     }
-  }, [open, bookingId]);
+  }, [isOpen, bookingId]);
 
   const fetchMessages = async () => {
     try {
@@ -90,7 +100,7 @@ export default function MessageDialog({
         },
         body: JSON.stringify({
           booking_id: bookingId,
-          receiver_id: otherPerson.id,
+          receiver_id: recipientId,
           content: newMessage.trim(),
         }),
       });
@@ -136,19 +146,19 @@ export default function MessageDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5" />
-              Messages with {otherPersonName}
+              Messages with {recipientName}
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                onOpenChange(false);
+                onClose();
                 window.location.href = "/messages";
               }}
               className="flex items-center gap-1"
@@ -157,6 +167,9 @@ export default function MessageDialog({
               View All Messages
             </Button>
           </DialogTitle>
+          <DialogDescription>
+            Send and receive messages with {recipientName} about your booking.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 flex flex-col min-h-0">

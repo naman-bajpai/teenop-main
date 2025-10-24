@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CreditCard, Loader2, CheckCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -261,6 +261,9 @@ export function PaymentModal({
           <DialogTitle className="text-center">
             Complete Payment
           </DialogTitle>
+          <DialogDescription className="text-center">
+            Secure payment processing for your booking.
+          </DialogDescription>
         </DialogHeader>
         
         {stripePromise && (

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MapPin, Clock, Star, ArrowLeft, User, MessageCircle, Shield, CheckCircle, AlertCircle } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useUser } from "@/hooks/useUser";
@@ -385,6 +385,9 @@ return (
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Request Service</DialogTitle>
+                    <DialogDescription>
+                      Fill out the form below to request this service from {service.provider_name}.
+                    </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleBookingSubmit} className="space-y-4">
                     <div>
