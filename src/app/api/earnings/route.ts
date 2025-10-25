@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Get earnings stats for the user
     const { data: earningsStats, error: statsError } = await supabase
-      .rpc('get_user_earnings_stats', { p_user_id: user.id });
+      .rpc('get_user_earnings_stats', { p_user_id: user.id } as any);
 
     if (statsError) {
       console.error('Error fetching earnings stats:', statsError);
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const stats = earningsStats?.[0] || {
+    const stats = earningsStats?.[0] as any || {
       total_earned: 0,
       this_week_earned: 0,
       this_month_earned: 0,

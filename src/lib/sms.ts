@@ -2,18 +2,25 @@ import twilio from 'twilio';
 
 // SMS service for sending text notifications
 export class SMSService {
-  private client: twilio.Twilio;
+  private client: twilio.Twilio | null = null;
 
-  constructor() {
-    this.client = twilio(
-      process.env.TWILIO_ACCOUNT_SID,
-      process.env.TWILIO_AUTH_TOKEN
-    );
+  private getClient() {
+    if (!this.client) {
+      if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+        throw new Error('Twilio credentials not configured');
+      }
+      this.client = twilio(
+        process.env.TWILIO_ACCOUNT_SID,
+        process.env.TWILIO_AUTH_TOKEN
+      );
+    }
+    return this.client;
   }
 
   async sendSMS(to: string, message: string) {
     try {
-      const result = await this.client.messages.create({
+      const client = this.getClient();
+      const result = await client.messages.create({
         body: message,
         from: process.env.TWILIO_PHONE_NUMBER,
         to: to,

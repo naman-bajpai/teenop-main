@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Send,
   MoreVertical,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +66,11 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ conversation: Conversation | null; show: boolean }>({
+    conversation: null,
+    show: false
+  });
+  const [deleting, setDeleting] = useState(false);
 
   // Helper function to add a message without duplicates
   const addMessageSafely = (newMessage: Message) => {
@@ -270,6 +276,50 @@ export default function MessagesPage() {
     }
   };
 
+  const deleteConversation = async () => {
+    if (!deleteConfirm.conversation) return;
+
+    try {
+      setDeleting(true);
+      const response = await fetch(`/api/messages/conversations?booking_id=${deleteConfirm.conversation.booking_id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete conversation");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        // Remove conversation from list
+        setConversations(prev => 
+          prev.filter(conv => conv.id !== deleteConfirm.conversation!.id)
+        );
+        
+        // If the deleted conversation was selected, clear the selection
+        if (selectedConversation?.id === deleteConfirm.conversation.id) {
+          setSelectedConversation(null);
+          setMessages([]);
+        }
+
+        toast({
+          title: "Conversation deleted",
+          description: "The conversation has been permanently deleted.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteConfirm({ conversation: null, show: false });
+    }
+  };
+
   const formatTime = (timeString: string) => {
     try {
       const [hours, minutes] = timeString.split(':');
@@ -384,7 +434,6 @@ export default function MessagesPage() {
                     <div className="flex items-start gap-3">
                       <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
                         {conversation.other_person.avatar_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={conversation.other_person.avatar_url}
                             alt={`${conversation.other_person.first_name} ${conversation.other_person.last_name}`}
@@ -407,16 +456,29 @@ export default function MessagesPage() {
                           )}
                         </div>
                         
-                        <p className="text-sm text-gray-600 truncate mb-1">
-                          {conversation.booking.service.title}
-                        </p>
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm text-gray-600 truncate">
+                            {conversation.booking.service.title}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirm({ conversation, show: true });
+                            }}
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
                         
                         {conversation.last_message && (
                           <div className="flex items-center justify-between">
                             <p className="text-sm text-gray-500 truncate">
                               {conversation.last_message.content}
                             </p>
-                            <span className="text-xs text-gray-400 ml-2">
+                            <span className="text-xs text-gray-400">
                               {formatMessageTime(conversation.last_message.created_at)}
                             </span>
                           </div>
@@ -449,7 +511,6 @@ export default function MessagesPage() {
                     
                     <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                       {selectedConversation.other_person.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={selectedConversation.other_person.avatar_url}
                           alt={`${selectedConversation.other_person.first_name} ${selectedConversation.other_person.last_name}`}
@@ -572,6 +633,48 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm.show && deleteConfirm.conversation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete Conversation</h3>
+                <p className="text-sm text-gray-600">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete the conversation with{" "}
+              <span className="font-semibold">
+                {deleteConfirm.conversation.other_person.first_name} {deleteConfirm.conversation.other_person.last_name}
+              </span>? 
+              All messages in this conversation will be permanently deleted.
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirm({ conversation: null, show: false })}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={deleteConversation}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete Conversation"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

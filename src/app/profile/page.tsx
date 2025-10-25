@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
+import { RatingDisplay } from "@/components/ui/rating";
 
 
 type Profile = {
@@ -58,8 +59,9 @@ export default function ProfilePage() {
       })
     : "";
 
-  // You can compute these properly later (e.g., from reviews/services)
-  const rating = 4.8;
+  // Rating and stats state
+  const [rating, setRating] = React.useState<number>(0);
+  const [reviewCount, setReviewCount] = React.useState<number>(0);
   const totalServices = React.useRef<number>(0);
   const totalBookings = React.useRef<number>(0);
 
@@ -122,15 +124,31 @@ export default function ProfilePage() {
           bio: profileData.bio ?? "",
         });
 
-        // Optional: count services created by this user (if you created `services`)
+        // Count services created by this user
         const { count: svcCount } = await supabase
           .from("services")
           .select("*", { count: "exact", head: true })
           .eq("user_id", authUser.id);
         totalServices.current = svcCount ?? 0;
 
-        // TODO: replace with real bookings count when you add a bookings table
-        totalBookings.current = 0;
+        // Count bookings for this user
+        const { count: bookingCount } = await supabase
+          .from("bookings")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", authUser.id);
+        totalBookings.current = bookingCount ?? 0;
+
+        // Get average rating from service reviews
+        const { data: reviews } = await supabase
+          .from("service_reviews")
+          .select("rating")
+          .eq("reviewer_id", authUser.id);
+
+        if (reviews && reviews.length > 0) {
+          const avgRating = reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length;
+          setRating(Math.round(avgRating * 10) / 10);
+          setReviewCount(reviews.length);
+        }
       } catch (e: any) {
         console.error(e);
         setError(e?.message || "Failed to load profile.");
@@ -300,9 +318,9 @@ export default function ProfilePage() {
                 <Badge className="mb-4 capitalize">{profile.role}</Badge>
 
                 <div className="flex items-center justify-center gap-1 mb-4">
-                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                  <span className="text-sm font-medium text-gray-900">{rating}</span>
-                  <span className="text-sm text-gray-500">(24 reviews)</span>
+                  <RatingDisplay rating={rating} size="sm" showCount={false} />
+                  <span className="text-sm font-medium text-gray-900">{rating.toFixed(1)}</span>
+                  <span className="text-sm text-gray-500">({reviewCount} reviews)</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-center">

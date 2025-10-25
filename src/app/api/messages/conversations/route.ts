@@ -192,3 +192,89 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// DELETE conversation (delete all messages for a booking)
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createServerClient();
+    
+    // Get the current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const bookingId = searchParams.get("booking_id");
+
+    if (!bookingId) {
+      return NextResponse.json(
+        { success: false, error: "Booking ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify user has access to this booking
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .select(`
+        *,
+        services (
+          user_id
+        )
+      `)
+      .eq("id" as any, bookingId as any)
+      .single();
+
+    if (bookingError || !booking) {
+      return NextResponse.json(
+        { success: false, error: "Booking not found" },
+        { status: 404 }
+      );
+    }
+
+    // Type assertion for booking data
+    const bookingData = booking as any;
+
+    // Check if user has permission to delete messages for this booking
+    const isCustomer = bookingData.user_id === user.id;
+    const isProvider = bookingData.services?.user_id === user.id;
+
+    if (!isCustomer && !isProvider) {
+      return NextResponse.json(
+        { success: false, error: "Access denied" },
+        { status: 403 }
+      );
+    }
+
+    // Delete all messages for this booking
+    const { error: deleteError } = await supabase
+      .from("messages")
+      .delete()
+      .eq("booking_id" as any, bookingId as any);
+
+    if (deleteError) {
+      console.error("Error deleting messages:", deleteError);
+      return NextResponse.json(
+        { success: false, error: "Failed to delete conversation" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Conversation deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Unexpected error in deleting conversation:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

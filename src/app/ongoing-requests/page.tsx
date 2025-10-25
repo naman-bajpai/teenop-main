@@ -95,7 +95,7 @@ export default function OngoingRequestsPage() {
       // Get bookings for services where user is the provider
       let providerBookings: any[] = [];
       if (providerServices && providerServices.length > 0) {
-        const serviceIds = providerServices.map(service => service.id);
+        const serviceIds = (providerServices as any[]).map(service => service.id);
         const { data: providerBookingsData, error: providerBookingsError } = await supabase
           .from('bookings')
           .select('*')

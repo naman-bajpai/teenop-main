@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
       .select(`
         id,
         total_price,
+        service_price,
         payment_completed_at,
         services!inner (
           user_id
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check which bookings already have earnings
-    const bookingIds = paidBookings?.map(b => b.id) || [];
+    const bookingIds = paidBookings?.map((b: any) => b.id) || [];
     if (bookingIds.length === 0) {
       return NextResponse.json({
         success: true,
@@ -61,8 +62,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existingBookingIds = new Set(existingEarnings?.map(e => e.booking_id) || []);
-    const bookingsToProcess = paidBookings?.filter(b => !existingBookingIds.has(b.id)) || [];
+    const existingBookingIds = new Set(existingEarnings?.map((e: any) => e.booking_id) || []);
+    const bookingsToProcess = paidBookings?.filter((b: any) => !existingBookingIds.has(b.id)) || [];
 
     if (bookingsToProcess.length === 0) {
       return NextResponse.json({
@@ -73,15 +74,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Create earnings records for bookings that don't have them
-    const earningsToInsert = bookingsToProcess.map(booking => ({
+    const earningsToInsert = bookingsToProcess.map((booking: any) => ({
       user_id: user.id,
       booking_id: booking.id,
-      amount: booking.total_price,
+      amount: booking.service_price, // Use service_price directly
       status: 'completed',
       earned_at: booking.payment_completed_at
     }));
 
-    const { data: insertedEarnings, error: insertError } = await supabase
+    const { data: insertedEarnings, error: insertError } = await (supabase as any)
       .from('earnings')
       .insert(earningsToInsert)
       .select();

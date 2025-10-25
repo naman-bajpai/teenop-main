@@ -94,10 +94,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate total price
-    const totalPrice = serviceData.pricing_model === "per_hour" 
+    // Calculate total price with platform fee
+    const servicePrice = serviceData.pricing_model === "per_hour" 
       ? serviceData.price * (serviceData.duration / 60) 
       : serviceData.price;
+    const platformFee = 3.00; // $3 platform fee
+    const totalPrice = servicePrice + platformFee;
 
     // Create the booking
     const { data: booking, error: bookingError } = await supabase
@@ -110,6 +112,8 @@ export async function POST(request: NextRequest) {
         requested_time,
         duration: serviceData.duration,
         total_price: totalPrice,
+        service_price: servicePrice,
+        platform_fee: platformFee,
         special_instructions: special_instructions || null,
       } as any)
       .select(`

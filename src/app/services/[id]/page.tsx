@@ -39,7 +39,6 @@ useEffect(() => {
   if (serviceId) {
     void fetchServiceDetails(serviceId);
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [serviceId]);
 
 const fetchServiceDetails = async (id: string) => {

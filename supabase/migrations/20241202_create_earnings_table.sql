@@ -35,7 +35,7 @@ BEGIN
     SELECT 
       s.user_id,
       NEW.id,
-      NEW.total_price,
+      NEW.total_price - 3.00, -- Subtract $3 platform fee
       'completed',
       NEW.payment_completed_at
     FROM services s

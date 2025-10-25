@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast"; 
 import { cn } from "@/lib/utils";
 import ImageUpload from "@/components/ui/image-upload";
+import { RatingDisplay, RatingForm } from "@/components/ui/rating";
 import {
   Plus,
   Edit,
@@ -38,6 +39,7 @@ import {
   TrendingUp,
   Users,
   MessageCircle,
+  CheckCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -98,6 +100,8 @@ const getStatusColor = (status: string) => {
       return "bg-green-100 text-green-800";
     case "completed":
       return "bg-gray-100 text-gray-800";
+    case "paid":
+      return "bg-blue-100 text-blue-800";
     case "rejected":
       return "bg-red-100 text-red-800";
     case "cancelled":
@@ -112,7 +116,6 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
     <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
       <div className="flex gap-4">
         {service.banner_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={service.banner_url}
             alt={service.title}
@@ -137,7 +140,10 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
             <div className="flex items-center gap-2"><DollarSign className="w-4 h-4" /><span className="font-semibold">${service.price}</span> <span className="text-xs text-gray-500">/{service.pricing_model === 'per_hour' ? 'hr' : 'job'}</span></div>
             <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{service.location}</div>
             <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{service.duration || 60} min</div>
-            <div className="flex items-center gap-2"><Star className="w-4 h-4" />{service.rating ? `${service.rating}/5` : "—"}</div>
+            <div className="flex items-center gap-2">
+              <RatingDisplay rating={service.rating || 0} size="sm" showCount={false} />
+              {service.rating ? `${service.rating}/5` : "—"}
+            </div>
             <div className="flex items-center gap-2"><Users className="w-4 h-4" />{service.total_bookings} bookings</div>
           </div>
           <div className="flex gap-2">
@@ -151,7 +157,11 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
   );
 }
 
-function BookingCard({ booking, onStatusUpdate }: { booking: Booking; onStatusUpdate: (bookingId: string, status: string) => Promise<void> }) {
+function BookingCard({ booking, onStatusUpdate, onRatingSubmit }: { 
+  booking: Booking; 
+  onStatusUpdate: (bookingId: string, status: string) => Promise<void>;
+  onRatingSubmit?: (serviceId: string, rating: number, comment?: string) => Promise<void>;
+}) {
   const formatTime = (timeString: string) => {
     try {
       const [hours, minutes] = timeString.split(':');
@@ -174,6 +184,12 @@ function BookingCard({ booking, onStatusUpdate }: { booking: Booking; onStatusUp
 
   const handleViewDetails = () => {
     window.location.href = `/booking/${booking.id}`;
+  };
+
+  const handleRatingSubmit = async (rating: number, comment?: string) => {
+    if (onRatingSubmit) {
+      await onRatingSubmit(booking.service_id, rating, comment);
+    }
   };
 
   return (
@@ -226,10 +242,17 @@ function BookingCard({ booking, onStatusUpdate }: { booking: Booking; onStatusUp
             <MessageCircle className="w-4 h-4 mr-1" />View Details
           </Button>
         )}
-        {booking.status === "completed" && (
-          <Button variant="outline" size="sm" onClick={handleViewDetails}>
-            View Details
-          </Button>
+        {(booking.status === "completed" || booking.status === "paid") && (
+          <div className="space-y-3">
+            <Button variant="outline" size="sm" onClick={handleViewDetails}>
+              View Details
+            </Button>
+            {onRatingSubmit && (
+              <div className="border-t pt-3">
+                <RatingForm onSubmit={handleRatingSubmit} />
+              </div>
+            )}
+          </div>
         )}
         {booking.status === "rejected" && (
           <Button variant="outline" size="sm" onClick={handleViewDetails}>
@@ -294,8 +317,13 @@ export default function TeenHustlePage() {
           // Combine incoming bookings (where user is provider) and my requests (where user is customer)
           const allBookings = [...(bookingsData.incoming || []), ...(bookingsData.myRequests || [])];
           setBookings(allBookings);
+          
+          // Filter completed requests (paid status)
+          const completed = allBookings.filter(booking => booking.status === "paid");
+          setCompletedRequests(completed);
         } else {
           setBookings([]);
+          setCompletedRequests([]);
         }
 
         // Fetch earnings stats
@@ -322,6 +350,7 @@ export default function TeenHustlePage() {
   // Separate bookings by type
   const [incomingBookings, setIncomingBookings] = useState<Booking[]>([]);
   const [myRequests, setMyRequests] = useState<Booking[]>([]);
+  const [completedRequests, setCompletedRequests] = useState<Booking[]>([]);
   
   // Update booking arrays when bookings change
   useEffect(() => {
@@ -534,6 +563,42 @@ export default function TeenHustlePage() {
     } catch (e: any) {
       toast({ 
         title: "Could not update booking", 
+        description: e.message, 
+        variant: "destructive" 
+      });
+    }
+  }
+
+  async function handleRatingSubmit(serviceId: string, rating: number, comment?: string) {
+    try {
+      const res = await fetch("/api/ratings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ service_id: serviceId, rating, comment }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || "Failed to submit rating");
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        toast({ 
+          title: "Rating submitted", 
+          description: "Thank you for your feedback!" 
+        });
+        
+        // Refresh services to update ratings
+        const servicesRes = await fetch("/api/services", { cache: "no-store" });
+        if (servicesRes.ok) {
+          const servicesData = await servicesRes.json();
+          setServices(servicesData.services ?? []);
+        }
+      }
+    } catch (e: any) {
+      toast({ 
+        title: "Could not submit rating", 
         description: e.message, 
         variant: "destructive" 
       });
@@ -803,10 +868,11 @@ export default function TeenHustlePage() {
 
         {/* Tabs */}
         <Tabs defaultValue="services" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="services">My Services ({services.length})</TabsTrigger>
             <TabsTrigger value="incoming">Incoming ({incomingBookings.length})</TabsTrigger>
             <TabsTrigger value="my-requests">My Requests ({myRequests.length})</TabsTrigger>
+            <TabsTrigger value="completed">Completed ({completedRequests.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="services" className="mt-6">
@@ -845,7 +911,7 @@ export default function TeenHustlePage() {
                 <p className="text-sm text-gray-600">Requests for your services</p>
               </div>
               {incomingBookings.length > 0 ? (
-                <div className="space-y-4">{incomingBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
+                <div className="space-y-4">{incomingBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} onRatingSubmit={handleRatingSubmit} />)}</div>
               ) : (
                 <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -865,7 +931,7 @@ export default function TeenHustlePage() {
                 <p className="text-sm text-gray-600">Services you've requested</p>
               </div>
               {myRequests.length > 0 ? (
-                <div className="space-y-4">{myRequests.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
+                <div className="space-y-4">{myRequests.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} onRatingSubmit={handleRatingSubmit} />)}</div>
               ) : (
                 <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -873,6 +939,26 @@ export default function TeenHustlePage() {
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No requests yet</h3>
                   <p className="text-gray-600">When you book services from other providers, they'll appear here</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="completed" className="mt-6">
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Completed Requests</h2>
+                <p className="text-sm text-gray-600">Successfully completed and paid bookings</p>
+              </div>
+              {completedRequests.length > 0 ? (
+                <div className="space-y-4">{completedRequests.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} onRatingSubmit={handleRatingSubmit} />)}</div>
+              ) : (
+                <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No completed requests yet</h3>
+                  <p className="text-gray-600">Completed and paid bookings will appear here</p>
                 </div>
               )}
             </div>

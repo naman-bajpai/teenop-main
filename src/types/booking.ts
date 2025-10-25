@@ -7,6 +7,8 @@ export interface Booking {
   requested_time: string;
   duration: number;
   total_price: number;
+  service_price: number;
+  platform_fee: number;
   special_instructions?: string | null;
   payment_intent_id?: string | null;
   payment_completed_at?: string | null;

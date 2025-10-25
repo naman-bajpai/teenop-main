@@ -458,7 +458,6 @@ export default function BookingDetailsPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                     {otherPerson?.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={otherPerson.avatar_url}
                         alt={otherPersonName}
@@ -563,11 +562,11 @@ export default function BookingDetailsPage() {
         {/* Message Dialog */}
         {booking && otherPerson && user && (
           <MessageDialog
-            open={messageDialogOpen}
-            onOpenChange={setMessageDialogOpen}
+            isOpen={messageDialogOpen}
+            onClose={() => setMessageDialogOpen(false)}
             bookingId={booking.id}
-            otherPerson={otherPerson}
-            currentUserId={user.id}
+            recipientId={otherPerson.id}
+            recipientName={`${otherPerson.first_name} ${otherPerson.last_name}`}
           />
         )}
 
