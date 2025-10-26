@@ -20,6 +20,12 @@ export default function NeighborhoodPage() {
   const [selectedCategory, setSelectedCategory] = React.useState("all");
   const [loading, setLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [stats, setStats] = React.useState({
+    averageRating: 0,
+    activeProviders: 0,
+    serviceAreas: 0,
+    totalServices: 0
+  });
 
   // Initial load from Supabase (public.v_services)
   React.useEffect(() => {
@@ -28,14 +34,27 @@ export default function NeighborhoodPage() {
         setLoading(true);
         setLoadError(null);
   
-        const res = await fetch("/api/services/public");
-        if (!res.ok) throw new Error("Failed to fetch services");
+        // Load services and stats in parallel
+        const [servicesRes, statsRes] = await Promise.all([
+          fetch("/api/services/public"),
+          fetch("/api/neighborhood/stats")
+        ]);
+        
+        if (!servicesRes.ok) throw new Error("Failed to fetch services");
+        if (!statsRes.ok) throw new Error("Failed to fetch statistics");
   
-        const json = await res.json();
-        const list = (json?.services ?? []) as Service[];
-  
+        const [servicesJson, statsJson] = await Promise.all([
+          servicesRes.json(),
+          statsRes.json()
+        ]);
+        
+        const list = (servicesJson?.services ?? []) as Service[];
         setServices(list);
         setFilteredServices(list);
+        
+        if (statsJson.success) {
+          setStats(statsJson.stats);
+        }
       } catch (err: any) {
         console.error("Failed to load services:", err);
         setLoadError(err?.message || "Failed to load services.");
@@ -72,34 +91,27 @@ export default function NeighborhoodPage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-orange-50 to-white">
         <div className="p-6">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-700 mb-2">Neighborhood</h1>
-            <p className="text-slate-600">Discover services offered by talented teens in your area</p>
+          <div className="mb-8 text-center">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+              Neighborhood
+            </h1>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Discover amazing services offered by talented teens in your area. 
+              Support your local community while getting things done!
+            </p>
           </div>
 
-          {/* Search and Filter Section */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-blue-200 mb-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search services in your neighborhood..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white/80 border-blue-200 focus:border-blue-400"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex items-center gap-2 border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300">
-                  <MapPin className="w-4 h-4" />
-                  Location
-                </Button>
-                <Button variant="outline" className="flex items-center gap-2 border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300">
-                  <Filter className="w-4 h-4" />
-                  More Filters
-                </Button>
+          {/* Search Section */}
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-blue-100 mb-8">
+            <div className="max-w-2xl mx-auto">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                <Input
+                  placeholder="Search services in your neighborhood..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-12 pr-4 py-3 bg-white border-2 border-blue-200 focus:border-blue-400 rounded-xl text-lg shadow-sm"
+                />
               </div>
             </div>
           </div>
@@ -110,10 +122,10 @@ export default function NeighborhoodPage() {
         </div>
 
           {/* Services Grid */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-700">Available Services</h2>
-              <Badge variant="secondary" className="text-sm bg-blue-100 text-blue-700">
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Available Services</h2>
+              <Badge variant="secondary" className="text-sm bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 px-4 py-2 rounded-full">
                 {loading ? "Loading..." : `${filteredServices.length} services found`}
               </Badge>
             </div>
@@ -132,7 +144,7 @@ export default function NeighborhoodPage() {
             ) : loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 animate-pulse border border-blue-200">
+                  <div key={i} className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 animate-pulse border border-blue-100 shadow-lg">
                     <div className="h-48 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl mb-4" />
                     <div className="h-4 bg-slate-200 rounded mb-2" />
                     <div className="h-4 bg-slate-200 rounded w-2/3" />
@@ -146,18 +158,21 @@ export default function NeighborhoodPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-8 h-8 text-blue-500" />
+              <div className="text-center py-16 bg-white/90 backdrop-blur-sm rounded-2xl border border-blue-100 shadow-lg">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Search className="w-10 h-10 text-blue-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">No services found</h3>
-                <p className="text-slate-600 mb-4">Try adjusting your search or browse different categories</p>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">No services found</h3>
+                <p className="text-slate-600 mb-6 max-w-md mx-auto">
+                  Try adjusting your search terms or browse different categories to discover amazing services
+                </p>
                 <Button
                   variant="orange"
                   onClick={() => {
                     setSearchTerm("");
                     setSelectedCategory("all");
                   }}
+                  className="px-6 py-2"
                 >
                   Clear all filters
                 </Button>
@@ -165,38 +180,49 @@ export default function NeighborhoodPage() {
             )}
           </div>
 
-          {/* Quick Stats (static placeholders for now) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Star className="w-5 h-5 text-blue-600" />
+          {/* Real-time Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl border border-blue-100 shadow-lg hover:shadow-xl transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
+                  <Star className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600">Average Rating</p>
-                  <p className="text-lg font-semibold text-gray-700">4.7</p>
+                  <p className="text-sm text-slate-600 font-medium">Average Rating</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.averageRating.toFixed(1)}</p>
                 </div>
               </div>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-green-600" />
+            <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl border border-green-100 shadow-lg hover:shadow-xl transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600">Active Providers</p>
-                  <p className="text-lg font-semibold text-gray-700">24</p>
+                  <p className="text-sm text-slate-600 font-medium">Active Providers</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.activeProviders}</p>
                 </div>
               </div>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-purple-600" />
+            <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl border border-purple-100 shadow-lg hover:shadow-xl transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600">Service Areas</p>
-                  <p className="text-lg font-semibold text-gray-700">8</p>
+                  <p className="text-sm text-slate-600 font-medium">Service Areas</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.serviceAreas}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl border border-orange-100 shadow-lg hover:shadow-xl transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center">
+                  <Search className="w-6 h-6 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600 font-medium">Total Services</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.totalServices}</p>
                 </div>
               </div>
             </div>

@@ -34,13 +34,13 @@ export default function HeroSection({ user }: HeroSectionProps) {
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link href="/services">
+          <Link href="/neighborhood">
             <Button className="h-auto px-6 py-3 text-lg bg-white text-[#434c9d] hover:bg-slate-100 shadow-md focus-visible:ring-2 focus-visible:ring-[#96cbc3]">
               <Users className="mr-2 h-5 w-5" aria-hidden />
               Browse Services
             </Button>
           </Link>
-          <Link href="/signup">
+          <Link href="/my-teen-hustle">
             <Button className="h-auto px-6 py-3 text-lg bg-[#ff725a] text-white hover:bg-[#ff725a]/90 shadow-md focus-visible:ring-2 focus-visible:ring-white/60">
               <TrendingUp className="mr-2 h-5 w-5" aria-hidden />
               Start Earning

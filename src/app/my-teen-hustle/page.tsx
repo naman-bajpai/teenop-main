@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -40,6 +39,7 @@ import {
   Users,
   MessageCircle,
   CheckCircle,
+  Wallet,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -157,10 +157,9 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
   );
 }
 
-function BookingCard({ booking, onStatusUpdate, onRatingSubmit }: { 
+function BookingCard({ booking, onStatusUpdate }: { 
   booking: Booking; 
   onStatusUpdate: (bookingId: string, status: string) => Promise<void>;
-  onRatingSubmit?: (serviceId: string, rating: number, comment?: string) => Promise<void>;
 }) {
   const formatTime = (timeString: string) => {
     try {
@@ -186,11 +185,6 @@ function BookingCard({ booking, onStatusUpdate, onRatingSubmit }: {
     window.location.href = `/booking/${booking.id}`;
   };
 
-  const handleRatingSubmit = async (rating: number, comment?: string) => {
-    if (onRatingSubmit) {
-      await onRatingSubmit(booking.service_id, rating, comment);
-    }
-  };
 
   return (
     <div className="bg-white rounded-xl p-6 border border-gray-200">
@@ -243,16 +237,9 @@ function BookingCard({ booking, onStatusUpdate, onRatingSubmit }: {
           </Button>
         )}
         {(booking.status === "completed" || booking.status === "paid") && (
-          <div className="space-y-3">
-            <Button variant="outline" size="sm" onClick={handleViewDetails}>
-              View Details
-            </Button>
-            {onRatingSubmit && (
-              <div className="border-t pt-3">
-                <RatingForm onSubmit={handleRatingSubmit} />
-              </div>
-            )}
-          </div>
+          <Button variant="outline" size="sm" onClick={handleViewDetails}>
+            View Details
+          </Button>
         )}
         {booking.status === "rejected" && (
           <Button variant="outline" size="sm" onClick={handleViewDetails}>
@@ -314,16 +301,25 @@ export default function TeenHustlePage() {
         const bookingsData = await bookingsRes.json();
         
         if (bookingsData.success) {
-          // Combine incoming bookings (where user is provider) and my requests (where user is customer)
-          const allBookings = [...(bookingsData.incoming || []), ...(bookingsData.myRequests || [])];
-          setBookings(allBookings);
+          // Filter out paid bookings from incoming requests
+          const incoming = (bookingsData.incoming || []).filter((booking: Booking) => booking.status !== "paid");
           
-          // Filter completed requests (paid status)
-          const completed = allBookings.filter(booking => booking.status === "paid");
+          // For My Teen Hustle page, we only show incoming bookings (where user is provider)
+          // The myRequests should NOT be shown here - they belong in the My Requests page
+          setBookings(incoming);
+          
+          // Set completed requests to only include paid bookings from incoming
+          const completed = (bookingsData.incoming || []).filter((booking: Booking) => booking.status === "paid");
           setCompletedRequests(completed);
+          
+          // Set the individual arrays - only incoming bookings for this page
+          setIncomingBookings(incoming);
+          setMyRequests([]); // Don't show user's own requests here
         } else {
           setBookings([]);
           setCompletedRequests([]);
+          setIncomingBookings([]);
+          setMyRequests([]);
         }
 
         // Fetch earnings stats
@@ -360,8 +356,16 @@ export default function TeenHustlePage() {
         if (bookingsRes.ok) {
           const bookingsData = await bookingsRes.json();
           if (bookingsData.success) {
-            setIncomingBookings(bookingsData.incoming || []);
-            setMyRequests(bookingsData.myRequests || []);
+            // Filter out paid bookings from incoming requests
+            const incoming = (bookingsData.incoming || []).filter((booking: Booking) => booking.status !== "paid");
+            
+            // For My Teen Hustle page, only show incoming bookings (where user is provider)
+            setIncomingBookings(incoming);
+            setMyRequests([]); // Don't show user's own requests here
+            
+            // Update completed requests to include paid bookings
+            const completed = (bookingsData.incoming || []).filter((booking: Booking) => booking.status === "paid");
+            setCompletedRequests(completed);
           }
         }
       } catch (e) {
@@ -569,41 +573,43 @@ export default function TeenHustlePage() {
     }
   }
 
-  async function handleRatingSubmit(serviceId: string, rating: number, comment?: string) {
+  async function handleWithdrawMoney() {
     try {
-      const res = await fetch("/api/ratings", {
+      const res = await fetch("/api/earnings/withdraw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ service_id: serviceId, rating, comment }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || "Failed to submit rating");
+        throw new Error(err.error || "Failed to process withdrawal");
       }
 
       const data = await res.json();
       if (data.success) {
         toast({ 
-          title: "Rating submitted", 
-          description: "Thank you for your feedback!" 
+          title: "Withdrawal successful", 
+          description: `$${data.amount} has been transferred to your account.` 
         });
         
-        // Refresh services to update ratings
-        const servicesRes = await fetch("/api/services", { cache: "no-store" });
-        if (servicesRes.ok) {
-          const servicesData = await servicesRes.json();
-          setServices(servicesData.services ?? []);
+        // Refresh earnings stats
+        const earningsRes = await fetch("/api/earnings", { cache: "no-store" });
+        if (earningsRes.ok) {
+          const earningsData = await earningsRes.json();
+          if (earningsData.success) {
+            setEarningsStats(earningsData.stats);
+          }
         }
       }
     } catch (e: any) {
       toast({ 
-        title: "Could not submit rating", 
+        title: "Could not withdraw money", 
         description: e.message, 
         variant: "destructive" 
       });
     }
   }
+
 
   return (
     <DashboardLayout user={user}>
@@ -866,12 +872,35 @@ export default function TeenHustlePage() {
           </div>
         </div>
 
+        {/* Withdraw Money Section */}
+        {earningsStats.pendingEarnings > 0 && (
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-xl border border-green-200 mb-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Wallet className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Ready to Withdraw</h3>
+                  <p className="text-sm text-gray-600">You have ${earningsStats.pendingEarnings.toFixed(2)} available for withdrawal</p>
+                </div>
+              </div>
+              <Button 
+                onClick={handleWithdrawMoney}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                Withdraw Money
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <Tabs defaultValue="services" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="services">My Services ({services.length})</TabsTrigger>
             <TabsTrigger value="incoming">Incoming ({incomingBookings.length})</TabsTrigger>
-            <TabsTrigger value="my-requests">My Requests ({myRequests.length})</TabsTrigger>
             <TabsTrigger value="completed">Completed ({completedRequests.length})</TabsTrigger>
           </TabsList>
 
@@ -911,7 +940,7 @@ export default function TeenHustlePage() {
                 <p className="text-sm text-gray-600">Requests for your services</p>
               </div>
               {incomingBookings.length > 0 ? (
-                <div className="space-y-4">{incomingBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} onRatingSubmit={handleRatingSubmit} />)}</div>
+                <div className="space-y-4">{incomingBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
               ) : (
                 <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -924,25 +953,6 @@ export default function TeenHustlePage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="my-requests" className="mt-6">
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">My Requests</h2>
-                <p className="text-sm text-gray-600">Services you've requested</p>
-              </div>
-              {myRequests.length > 0 ? (
-                <div className="space-y-4">{myRequests.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} onRatingSubmit={handleRatingSubmit} />)}</div>
-              ) : (
-                <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Calendar className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No requests yet</h3>
-                  <p className="text-gray-600">When you book services from other providers, they'll appear here</p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
 
           <TabsContent value="completed" className="mt-6">
             <div className="mb-6">
@@ -951,7 +961,7 @@ export default function TeenHustlePage() {
                 <p className="text-sm text-gray-600">Successfully completed and paid bookings</p>
               </div>
               {completedRequests.length > 0 ? (
-                <div className="space-y-4">{completedRequests.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} onRatingSubmit={handleRatingSubmit} />)}</div>
+                <div className="space-y-4">{completedRequests.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
               ) : (
                 <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

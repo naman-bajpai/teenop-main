@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sparkles, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
@@ -29,6 +29,47 @@ export default function SignupPage() {
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastAttemptTime, setLastAttemptTime] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (countdown && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (countdown === 0) {
+      setCountdown(null);
+      setError("");
+    }
+  }, [countdown]);
+
+  // Helper function to check if we should wait before retrying
+  const shouldWaitForRetry = () => {
+    if (!lastAttemptTime) return false;
+    const timeSinceLastAttempt = Date.now() - lastAttemptTime;
+    const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000); // Max 30 seconds
+    return timeSinceLastAttempt < waitTime;
+  };
+
+  // Helper function to get user-friendly error message
+  const getErrorMessage = (error: any) => {
+    if (error?.message?.includes("rate limit")) {
+      return "Too many signup attempts. Please wait a moment and try again.";
+    }
+    if (error?.message?.includes("User already registered")) {
+      return "An account with this email already exists. Please sign in instead.";
+    }
+    if (error?.message?.includes("Password should be at least")) {
+      return "Password must be at least 8 characters long.";
+    }
+    if (error?.message?.includes("Invalid email")) {
+      return "Please enter a valid email address.";
+    }
+    return error?.message || "Signup failed. Please try again.";
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type, checked } = e.target as HTMLInputElement;
@@ -92,6 +133,17 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if we should wait before retrying
+    if (shouldWaitForRetry()) {
+      const timeSinceLastAttempt = Date.now() - (lastAttemptTime || 0);
+      const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000);
+      const remainingTime = Math.ceil((waitTime - timeSinceLastAttempt) / 1000);
+      setCountdown(remainingTime);
+      setError(`Please wait ${remainingTime} seconds before trying again.`);
+      return;
+    }
+
     setError("");
     setSuccess("");
 
@@ -111,6 +163,7 @@ export default function SignupPage() {
 
   const submitForm = async () => {
     setIsSubmitting(true);
+    setLastAttemptTime(Date.now());
 
     try {
 
@@ -132,9 +185,26 @@ export default function SignupPage() {
       });
 
       if (error) {
-        setError(error.message || "Signup failed. Please try again.");
+        console.error("Signup error:", error);
+        
+        // Handle rate limiting specifically
+        if (error.message?.includes("rate limit")) {
+          setRetryCount(prev => prev + 1);
+          const waitTime = Math.min(1000 * Math.pow(2, retryCount + 1), 30000);
+          const remainingTime = Math.ceil(waitTime / 1000);
+          setCountdown(remainingTime);
+          setError(getErrorMessage(error));
+          return;
+        }
+        
+        // Reset retry count for non-rate-limit errors
+        setRetryCount(0);
+        setError(getErrorMessage(error));
         return;
       }
+
+      // Reset retry count on successful signup
+      setRetryCount(0);
 
       if (data.user) {
         try {
@@ -173,7 +243,7 @@ export default function SignupPage() {
       }
     } catch (error) {
       console.error('Signup error:', error);
-      setError(error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.');
+      setRetryCount(prev => prev + 1);
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -226,7 +296,14 @@ export default function SignupPage() {
               <div className="p-1 bg-red-100 rounded-full">
                 <AlertCircle className="w-4 h-4 text-red-500" />
               </div>
-              <span className="text-sm text-red-700 font-medium">{error}</span>
+              <div className="flex-1">
+                <span className="text-sm text-red-700 font-medium">{error}</span>
+                {countdown && countdown > 0 && (
+                  <div className="mt-1 text-xs text-red-600">
+                    Retry available in {countdown} second{countdown !== 1 ? 's' : ''}
+                  </div>
+                )}
+              </div>
             </div>
           )}
           
@@ -464,13 +541,15 @@ export default function SignupPage() {
               <Button 
                 type="submit" 
                 className="w-full h-12 bg-gradient-to-r from-[#ff725a] to-[#434c9d] hover:from-[#ff725a]/90 hover:to-[#434c9d]/90 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 disabled:transform-none disabled:opacity-50"
-                disabled={isSubmitting}
+                disabled={isSubmitting || (countdown !== null && countdown > 0)}
               >
                 {isSubmitting ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                     Creating account...
                   </div>
+                ) : countdown && countdown > 0 ? (
+                  `Wait ${countdown}s`
                 ) : (
                   "Create account"
                 )}

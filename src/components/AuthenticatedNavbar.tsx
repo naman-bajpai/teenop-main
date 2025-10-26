@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, X, MessageCircle, User, Home, Briefcase, Clock } from "lucide-react";
+import { LogOut, Menu, X, MessageCircle, User, Home, Briefcase, Calendar } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import clsx from "clsx";
@@ -75,9 +75,9 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
       icon: MessageCircle,
     },
     {
-      name: "Ongoing Requests",
-      href: "/ongoing-requests",
-      icon: Clock,
+      name: "My Requests",
+      href: "/my-requests",
+      icon: Calendar,
     },
     {
       name: "My Teen Hustle",
