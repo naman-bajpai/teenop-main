@@ -453,7 +453,11 @@ export default function ProfilePage() {
                       Receive updates about bookings and messages
                     </p>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => alert("Email notification settings coming soon!")}
+                  >
                     Manage
                   </Button>
                 </div>
@@ -465,7 +469,11 @@ export default function ProfilePage() {
                       Control who can see your profile and services
                     </p>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => alert("Privacy settings coming soon!")}
+                  >
                     Manage
                   </Button>
                 </div>
@@ -477,7 +485,17 @@ export default function ProfilePage() {
                       Manage your payment and payout settings
                     </p>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      if (profile?.role === "teen") {
+                        window.location.href = "/my-teen-hustle";
+                      } else {
+                        alert("Payment settings coming soon!");
+                      }
+                    }}
+                  >
                     Manage
                   </Button>
                 </div>

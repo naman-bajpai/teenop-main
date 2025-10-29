@@ -39,9 +39,12 @@ export default function FeaturedServices({ services }: FeaturedServicesProps) {
               <Button 
                 size="lg"
                 className="bg-gradient-to-r from-[#ff725a] to-[#434c9d] hover:from-[#ff725a]/90 hover:to-[#434c9d]/90 text-white"
+                asChild
               >
-                View All Services
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <a href="/neighborhood">
+                  View All Services
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </a>
               </Button>
             </div>
           </>

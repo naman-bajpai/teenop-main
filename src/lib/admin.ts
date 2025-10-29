@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import { createAdminClient } from "@/lib/supabase";
+import { Database, TablesUpdate } from "@/lib/database.types";
 
 export interface AdminUser {
   id: string;
@@ -69,7 +69,7 @@ export async function checkAdminAccess(): Promise<AdminUser | null> {
 
 export async function getAllUsers() {
   try {
-    const supabase = createAdminClient();
+    const supabase = createClient();
     
     const { data, error } = await supabase
       .from('profiles')
@@ -87,13 +87,13 @@ export async function getAllUsers() {
   }
 }
 
-export async function updateUserStatus(userId: string, status: "active" | "inactive" | "suspended" | "pending_verification") {
+export async function updateUserStatus(userId: string, status: Database["public"]["Enums"]["user_status"]) {
   try {
-    const supabase = createAdminClient();
+    const supabase = createClient();
     
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('profiles')
-      .update({ status })
+      .update({ status } as any)
       .eq('id', userId);
 
     if (error) {
@@ -109,7 +109,7 @@ export async function updateUserStatus(userId: string, status: "active" | "inact
 
 export async function getUserStats() {
   try {
-    const supabase = createAdminClient();
+    const supabase = createClient();
     
     // Get total users
     const { count: totalUsers } = await supabase
@@ -142,6 +142,126 @@ export async function getUserStats() {
     };
   } catch (error) {
     console.error('Error fetching user stats:', error);
+    throw error;
+  }
+}
+
+// Service Management Functions
+export async function getAllServices() {
+  try {
+    const supabase = createClient();
+    
+    const { data, error } = await supabase
+      .from('services')
+      .select(`
+        *,
+        profiles:user_id (
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch services: ${error.message}`);
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching services:', error);
+    throw error;
+  }
+}
+
+export async function updateServiceStatus(serviceId: string, status: string) {
+  try {
+    const supabase = createClient();
+    
+    const { error } = await (supabase as any)
+      .from('services')
+      .update({ status } as any)
+      .eq('id', serviceId);
+
+    if (error) {
+      throw new Error(`Failed to update service status: ${error.message}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error updating service status:', error);
+    throw error;
+  }
+}
+
+export async function deleteService(serviceId: string) {
+  try {
+    const supabase = createClient();
+    
+    const { error } = await (supabase as any)
+      .from('services')
+      .delete()
+      .eq('id', serviceId);
+
+    if (error) {
+      throw new Error(`Failed to delete service: ${error.message}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting service:', error);
+    throw error;
+  }
+}
+
+export async function deleteUser(userId: string) {
+  try {
+    const supabase = createClient();
+    
+    const { error } = await (supabase as any)
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error(`Failed to delete user: ${error.message}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    throw error;
+  }
+}
+
+export async function getServiceStats() {
+  try {
+    const supabase = createClient();
+    
+    // Get total services
+    const { count: totalServices } = await supabase
+      .from('services')
+      .select('*', { count: 'exact', head: true });
+
+    // Get active services
+    const { count: activeServices } = await supabase
+      .from('services')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active');
+
+    // Get paused services
+    const { count: pausedServices } = await supabase
+      .from('services')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'paused');
+
+    return {
+      totalServices: totalServices || 0,
+      activeServices: activeServices || 0,
+      pausedServices: pausedServices || 0,
+    };
+  } catch (error) {
+    console.error('Error fetching service stats:', error);
     throw error;
   }
 }

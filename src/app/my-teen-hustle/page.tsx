@@ -266,6 +266,11 @@ export default function TeenHustlePage() {
     thisMonthEarned: 0,
     pendingEarnings: 0
   });
+  const [stripeAccountStatus, setStripeAccountStatus] = useState({
+    hasAccount: false,
+    accountStatus: null as any,
+    loading: true
+  });
 
   // Add Service dialog state
   const [open, setOpen] = useState(false);
@@ -283,6 +288,30 @@ export default function TeenHustlePage() {
   const [pricingModel, setPricingModel] = useState<"per_job" | "per_hour">("per_hour");
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
 
+
+  // Handle URL parameters for Stripe Connect callbacks
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const stripeSuccess = urlParams.get('stripe_success');
+    const stripeError = urlParams.get('stripe_error');
+    
+    if (stripeSuccess === 'true') {
+      toast({
+        title: "Payment account connected!",
+        description: "Your Stripe Connect account has been successfully set up.",
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (stripeError) {
+      toast({
+        title: "Payment setup failed",
+        description: `There was an error setting up your payment account: ${stripeError}`,
+        variant: "destructive"
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -329,6 +358,21 @@ export default function TeenHustlePage() {
           if (earningsData.success) {
             setEarningsStats(earningsData.stats);
           }
+        }
+
+        // Fetch Stripe Connect account status
+        const stripeRes = await fetch("/api/stripe/connect/setup", { cache: "no-store" });
+        if (stripeRes.ok) {
+          const stripeData = await stripeRes.json();
+          if (stripeData.success) {
+            setStripeAccountStatus({
+              hasAccount: stripeData.hasAccount,
+              accountStatus: stripeData.accountStatus,
+              loading: false
+            });
+          }
+        } else {
+          setStripeAccountStatus(prev => ({ ...prev, loading: false }));
         }
       } catch (e: any) {
         toast({ title: "Load failed", description: e.message, variant: "destructive" });
@@ -589,7 +633,7 @@ export default function TeenHustlePage() {
       if (data.success) {
         toast({ 
           title: "Withdrawal successful", 
-          description: `$${data.amount} has been transferred to your account.` 
+          description: data.message || `$${data.amount} has been transferred to your account.` 
         });
         
         // Refresh earnings stats
@@ -604,6 +648,50 @@ export default function TeenHustlePage() {
     } catch (e: any) {
       toast({ 
         title: "Could not withdraw money", 
+        description: e.message, 
+        variant: "destructive" 
+      });
+    }
+  }
+
+  async function handleStripeConnectSetup() {
+    try {
+      const res = await fetch("/api/stripe/connect/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || "Failed to create payment account");
+      }
+
+      const data = await res.json();
+      if (data.success && data.authUrl) {
+        // Redirect to Stripe OAuth
+        window.location.href = data.authUrl;
+      }
+    } catch (e: any) {
+      toast({ 
+        title: "Could not set up payment account", 
+        description: e.message, 
+        variant: "destructive" 
+      });
+    }
+  }
+
+  async function handleStripeConnectLogin() {
+    try {
+      const res = await fetch("/api/stripe/connect/setup", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.accountStatus?.loginUrl) {
+          window.location.href = data.accountStatus.loginUrl;
+        }
+      }
+    } catch (e: any) {
+      toast({ 
+        title: "Could not access payment account", 
         description: e.message, 
         variant: "destructive" 
       });
@@ -676,7 +764,7 @@ export default function TeenHustlePage() {
                         id="description" 
                         value={description} 
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} 
-                        placeholder="Describe what you offer, your experience, availability, and what makes you unique..." 
+                        placeholder="Describe what you offer, what your service includes, or what makes your service unique!" 
                         rows={3}
                         className="w-full resize-none"
                       />
@@ -872,27 +960,105 @@ export default function TeenHustlePage() {
           </div>
         </div>
 
-        {/* Withdraw Money Section */}
-        {earningsStats.pendingEarnings > 0 && (
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-xl border border-green-200 mb-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Wallet className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Ready to Withdraw</h3>
-                  <p className="text-sm text-gray-600">You have ${earningsStats.pendingEarnings.toFixed(2)} available for withdrawal</p>
+        {/* Payment Setup Section */}
+        {!stripeAccountStatus.loading && (
+          <div className="mb-8">
+            {!stripeAccountStatus.hasAccount ? (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Wallet className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Set Up Payments</h3>
+                      <p className="text-sm text-gray-600">Connect your bank account to receive payments for your services</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleStripeConnectSetup}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                  >
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Set Up Payments
+                  </Button>
                 </div>
               </div>
-              <Button 
-                onClick={handleWithdrawMoney}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
-              >
-                <Wallet className="w-4 h-4 mr-2" />
-                Withdraw Money
-              </Button>
-            </div>
+            ) : !stripeAccountStatus.accountStatus?.chargesEnabled ? (
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-xl border border-yellow-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                      <Clock className="w-6 h-6 text-yellow-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Complete Payment Setup</h3>
+                      <p className="text-sm text-gray-600">Your payment account is being verified. Complete the setup to receive payments.</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleStripeConnectLogin}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2"
+                  >
+                    <Clock className="w-4 h-4 mr-2" />
+                    Complete Setup
+                  </Button>
+                </div>
+              </div>
+            ) : earningsStats.pendingEarnings > 0 ? (
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-xl border border-green-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Wallet className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Ready to Withdraw</h3>
+                      <p className="text-sm text-gray-600">You have ${earningsStats.pendingEarnings.toFixed(2)} available for withdrawal</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      onClick={handleStripeConnectLogin}
+                      className="px-4 py-2"
+                    >
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Manage Account
+                    </Button>
+                    <Button 
+                      onClick={handleWithdrawMoney}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
+                    >
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Withdraw Money
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-xl border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <Wallet className="w-6 h-6 text-gray-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Payment Account Ready</h3>
+                      <p className="text-sm text-gray-600">Your payment account is set up. Complete jobs to start earning!</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    onClick={handleStripeConnectLogin}
+                    className="px-4 py-2"
+                  >
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Manage Account
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -927,7 +1093,17 @@ export default function TeenHustlePage() {
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No services yet</h3>
                   <p className="text-gray-600 mb-4">Start your teen hustle by adding your first service</p>
-                  <Button onClick={() => setOpen(true)}><Plus className="w-4 h-4 mr-2" />Add Your First Service</Button>
+                  <Button onClick={() => {
+                    if (!stripeAccountStatus.hasAccount) {
+                      toast({
+                        title: "Payment setup required",
+                        description: "Please set up your payment account before creating your first service.",
+                        variant: "destructive"
+                      });
+                    } else {
+                      setOpen(true);
+                    }
+                  }}><Plus className="w-4 h-4 mr-2" />Add Your First Service</Button>
                 </div>
               )}
             </div>

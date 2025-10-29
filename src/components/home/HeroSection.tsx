@@ -3,8 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Users, Star, TrendingUp } from "lucide-react";
 
-interface User { id: string; name?: string; email?: string; }
-interface HeroSectionProps { user: User | null; }
+interface User { id: string; name?: string; email?: string; role?: string; }
+interface HeroSectionProps { user: User | null | undefined; }
 
 export default function HeroSection({ user }: HeroSectionProps) {
   return (
@@ -27,7 +27,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
           {user ? `Welcome to TeenOp` : "Find Help in Your Neighborhood"}
         </h1>
 
-        <p className="mx-auto mt-4 max-w-3xl text-lg leading-relaxed text-white/90 md:text-2xl font-semibold">
+        <p className="mx-auto mt-4 max-w-3xl text-lg leading-relaxed text-white md:text-2xl font-semibold drop-shadow-lg bg-black/20 backdrop-blur-sm px-4 py-2 rounded-lg">
           {user
             ? "Ready to discover services by teens near you or start your own teen hustle?"
             : "Connecting teen businesses to their community."}
@@ -40,12 +40,14 @@ export default function HeroSection({ user }: HeroSectionProps) {
               Browse Services
             </Button>
           </Link>
-          <Link href="/my-teen-hustle">
-            <Button className="h-auto px-6 py-3 text-lg bg-[#ff725a] text-white hover:bg-[#ff725a]/90 shadow-md focus-visible:ring-2 focus-visible:ring-white/60">
-              <TrendingUp className="mr-2 h-5 w-5" aria-hidden />
-              Start Earning
-            </Button>
-          </Link>
+          {user && user.role === "teen" && (
+            <Link href="/my-teen-hustle">
+              <Button className="h-auto px-6 py-3 text-lg bg-[#ff725a] text-white hover:bg-[#ff725a]/90 shadow-md focus-visible:ring-2 focus-visible:ring-white/60">
+                <TrendingUp className="mr-2 h-5 w-5" aria-hidden />
+                Start Earning
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Highlights */}

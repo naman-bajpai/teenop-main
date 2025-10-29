@@ -92,7 +92,7 @@ export default function NeighborhoodPage() {
         <div className="p-6">
           {/* Header */}
           <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-[#96cbc3] to-[#434c9d] bg-clip-text text-transparent mb-3">
               Neighborhood
             </h1>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">

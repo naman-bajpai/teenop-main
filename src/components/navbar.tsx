@@ -44,20 +44,12 @@ export default function Navbar() {
           className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#434c9d]"
         >
           <Image
-            src="/images/teenop_logo.png"
+            src="/images/teenop.png"
             alt="TeenOp Logo"
-            width={28}
-            height={28}
-            className="h-7 w-7"
+            width={120}
+            height={120}
+            className="h-12 w-12"
           />
-          <span
-            className={clsx(
-              "text-xl font-bold tracking-tight",
-              overHero ? "text-white" : "text-[#434c9d]"
-            )}
-          >
-            TeenOp
-          </span>
         </Link>
 
         {/* Desktop */}

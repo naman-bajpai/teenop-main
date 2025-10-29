@@ -5,8 +5,31 @@ import HeroSection from "@/components/home/HeroSection";
 import FeaturedServices from "@/components/home/FeaturedServices";
 import { Sparkles, Users, Star } from "lucide-react";
 import Navbar from "@/components/navbar";
+import { useState, useEffect } from "react";
+import { Service } from "@/types/service";
 
 export default function Home() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        const response = await fetch("/api/services/public");
+        if (response.ok) {
+          const data = await response.json();
+          setServices(data.services || []);
+        }
+      } catch (error) {
+        console.error("Failed to load services:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadServices();
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-gray-700">
       <Navbar />
@@ -15,7 +38,7 @@ export default function Home() {
       <HeroSection user={null} />
 
       {/* Featured Services */}
-      <FeaturedServices services={[]} />
+      <FeaturedServices services={services} />
 
       {/* Split Benefits: Teens/Sellers vs Community/Buyers */}
       <section className="bg-slate-50 py-16">
@@ -118,7 +141,7 @@ export default function Home() {
               <h3 className="mb-3 text-lg font-semibold">For Teens</h3>
               <ul className="space-y-2 text-gray-600">
                 <li><Link href="/signup" className="hover:text-gray-900">Start Earning</Link></li>
-                <li><Link href="/dashboard" className="hover:text-gray-900">Dashboard</Link></li>
+                <li><Link href="/admin/dashboard" className="hover:text-gray-900">Dashboard</Link></li>
                 <li><Link href="#" className="hover:text-gray-900">Resources</Link></li>
               </ul>
             </div>

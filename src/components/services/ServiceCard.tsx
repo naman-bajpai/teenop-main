@@ -78,7 +78,7 @@ export default function ServiceCard({
   return (
     <div className="group bg-white rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
       {/* Header with gradient background or image */}
-      <div className={`relative h-40 overflow-hidden ${
+      <div className={`relative h-48 w-full aspect-square overflow-hidden ${
         service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient}`
       }`}>
         {service.banner_url ? (

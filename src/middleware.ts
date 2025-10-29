@@ -36,10 +36,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // Protect admin routes
-  if (req.nextUrl.pathname.startsWith('/admin')) {
+  // Protect admin routes (except admin login page)
+  if (req.nextUrl.pathname.startsWith('/admin') && req.nextUrl.pathname !== '/admin/login') {
     if (!session) {
-      return NextResponse.redirect(new URL('/login', req.url));
+      return NextResponse.redirect(new URL('/admin/login', req.url));
     }
 
     // Check if user is admin
@@ -50,7 +50,20 @@ export async function middleware(req: NextRequest) {
       .single();
 
     if (!profile || (profile as any).role !== 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
+      return NextResponse.redirect(new URL('/admin/login', req.url));
+    }
+  }
+
+  // If user is already logged in and tries to access admin login, redirect to admin dashboard
+  if (req.nextUrl.pathname === '/admin/login' && session) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profile && (profile as any).role === 'admin') {
+      return NextResponse.redirect(new URL('/admin/dashboard', req.url));
     }
   }
 

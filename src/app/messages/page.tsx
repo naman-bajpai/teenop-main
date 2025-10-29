@@ -320,6 +320,7 @@ export default function MessagesPage() {
     }
   };
 
+
   const formatTime = (timeString: string) => {
     try {
       const [hours, minutes] = timeString.split(':');
@@ -532,8 +533,13 @@ export default function MessagesPage() {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm">
-                      <MoreVertical className="w-4 h-4" />
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setDeleteConfirm({ conversation: selectedConversation, show: true })}
+                      className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -634,7 +640,7 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Conversation Confirmation Dialog */}
       {deleteConfirm.show && deleteConfirm.conversation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
@@ -675,6 +681,7 @@ export default function MessagesPage() {
           </div>
         </div>
       )}
+
     </DashboardLayout>
   );
 }

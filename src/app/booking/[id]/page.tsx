@@ -480,10 +480,11 @@ export default function BookingDetailsPage() {
                     <Mail className="w-4 h-4" />
                     <span>{otherPerson?.email || "Email not provided"}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  {/* Phone number hidden for privacy */}
+                  {/* <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Phone className="w-4 h-4" />
                     <span>{otherPerson?.phone || "Phone not provided"}</span>
-                  </div>
+                  </div> */}
                 </div>
 
                 <Button 

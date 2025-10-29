@@ -372,15 +372,16 @@ return (
                 </div>
               </div>
 
-              <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
-                    disabled={service.status !== "active"}
-                  >
-                    {service.status === "active" ? "Request Service" : "Service Unavailable"}
-                  </Button>
-                </DialogTrigger>
+              <div className="space-y-3">
+                <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
+                      disabled={service.status !== "active"}
+                    >
+                      {service.status === "active" ? "Request Service" : "Service Unavailable"}
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Request Service</DialogTitle>
@@ -433,6 +434,19 @@ return (
                   </form>
                 </DialogContent>
               </Dialog>
+              
+              <Button
+                variant="outline"
+                className="w-full border-2 border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10 hover:border-[#434c9d] transition-all duration-200 py-3 text-lg font-semibold"
+                onClick={() => {
+                  // TODO: Implement messaging functionality
+                  alert("Messaging feature coming soon!");
+                }}
+              >
+                <MessageCircle className="w-5 h-5 mr-2" />
+                Message Provider
+              </Button>
+              </div>
 
               <div className="mt-6 space-y-4">
                 <div className="flex items-center gap-3 text-sm text-gray-600">

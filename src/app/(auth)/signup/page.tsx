@@ -99,14 +99,16 @@ export default function SignupPage() {
       setError("Please enter a valid email address");
       return false;
     }
-    if (!formData.age) {
-      setError("Age is required");
-      return false;
-    }
-    const age = parseInt(formData.age);
-    if (age < 13 || age > 19) {
-      setError("Age must be between 13 and 19");
-      return false;
+    if (formData.role === "teen") {
+      if (!formData.age) {
+        setError("Age is required for teen accounts");
+        return false;
+      }
+      const age = parseInt(formData.age);
+      if (age < 13 || age > 19) {
+        setError("Age must be between 13 and 19");
+        return false;
+      }
     }
     if (!formData.password) {
       setError("Password is required");
@@ -166,81 +168,65 @@ export default function SignupPage() {
     setLastAttemptTime(Date.now());
 
     try {
-
-      const supabase = createClient();
-      
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            role: formData.role || 'teen',
-            age: parseInt(formData.age),
-            parent_email: formData.parentEmail || undefined,
-            parent_phone: formData.parentPhone || undefined,
-          }
-        }
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          age: formData.role === "teen" ? parseInt(formData.age) : undefined,
+          role: formData.role || 'teen',
+          parentEmail: formData.parentEmail || undefined,
+          parentPhone: formData.parentPhone || undefined,
+        }),
       });
 
-      if (error) {
-        console.error("Signup error:", error);
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Signup error:", result);
         
         // Handle rate limiting specifically
-        if (error.message?.includes("rate limit")) {
+        if (result.error?.includes("rate limit")) {
           setRetryCount(prev => prev + 1);
           const waitTime = Math.min(1000 * Math.pow(2, retryCount + 1), 30000);
           const remainingTime = Math.ceil(waitTime / 1000);
           setCountdown(remainingTime);
-          setError(getErrorMessage(error));
+          setError(result.error);
           return;
         }
         
         // Reset retry count for non-rate-limit errors
         setRetryCount(0);
-        setError(getErrorMessage(error));
+        setError(result.error || "Failed to create account");
         return;
       }
 
       // Reset retry count on successful signup
       setRetryCount(0);
 
-      if (data.user) {
-        try {
-          const { error: updateError } = await (supabase as any)
-            .from('profiles')
-            .update({ status: 'active' }) 
-            .eq('id', data.user.id);
-
-          if (updateError) {
-            console.error('Error activating user:', updateError);
-          } else {
-            console.log('User activated successfully');
-          }
-        } catch (updateErr) {
-          console.error('Error updating user status:', updateErr);
-        }
-
-        setSuccess("Account created successfully! You can now log in.");
-        // Reset form
-        setFormData({
-          firstName: "",
-          lastName: "",
-          email: "",
-          age: "",
-          password: "",
-          confirmPassword: "",
-          role: "teen",
-          parentEmail: "",
-          parentPhone: "",
-          terms: false,
-        });
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          router.push("/login");
-        }, 2000);
-      }
+      setSuccess("Account created successfully! Please check your email for verification.");
+      // Reset form
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        age: "",
+        password: "",
+        confirmPassword: "",
+        role: "teen",
+        parentEmail: "",
+        parentPhone: "",
+        terms: false,
+      });
+      // Redirect to login after 2 seconds
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
     } catch (error) {
       console.error('Signup error:', error);
       setRetryCount(prev => prev + 1);
@@ -284,7 +270,7 @@ export default function SignupPage() {
             Join TeenOp!  
           </h1>
           <p className="text-lg text-gray-600">
-            Start offering services today
+            Teens offering services to their community
           </p>
         </div>
       </div>
@@ -373,24 +359,26 @@ export default function SignupPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="age" className="block text-sm font-semibold text-gray-700">
-                Age
-              </label>
-              <Input
-                id="age"
-                name="age"
-                type="number"
-                min="13"
-                max="22"
-                required
-                value={formData.age}
-                onChange={handleInputChange}
-                className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
-                placeholder="16"
-                disabled={isSubmitting}
-              />
-            </div>
+            {formData.role === "teen" && (
+              <div className="space-y-2">
+                <label htmlFor="age" className="block text-sm font-semibold text-gray-700">
+                  Age
+                </label>
+                <Input
+                  id="age"
+                  name="age"
+                  type="number"
+                  min="13"
+                  max="22"
+                  required
+                  value={formData.age}
+                  onChange={handleInputChange}
+                  className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  placeholder="16"
+                  disabled={isSubmitting}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <label htmlFor="role" className="block text-sm font-semibold text-gray-700">
@@ -405,7 +393,7 @@ export default function SignupPage() {
                 disabled={isSubmitting}
               >
                 <option value="teen">Teen (13-22 years old)</option>
-                <option value="parent">Parent/Guardian</option>
+                <option value="parent">Community Member</option>
               </select>
             </div>
 

@@ -259,6 +259,13 @@ export async function DELETE(request: NextRequest) {
 
     if (deleteError) {
       console.error("Error deleting messages:", deleteError);
+      // If messages table doesn't exist, that's okay - just return success
+      if (deleteError.code === 'PGRST200' || deleteError.message?.includes('relation "messages" does not exist')) {
+        return NextResponse.json({
+          success: true,
+          message: "Conversation deleted successfully (no messages to delete)"
+        });
+      }
       return NextResponse.json(
         { success: false, error: "Failed to delete conversation" },
         { status: 500 }
