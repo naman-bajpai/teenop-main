@@ -12,8 +12,17 @@ export async function GET(request: NextRequest) {
     // Handle OAuth errors
     if (error) {
       console.error('Stripe Connect OAuth error:', error);
+      let errorMessage = error;
+      
+      // Provide more helpful error messages
+      if (error === 'access_denied') {
+        errorMessage = 'Authorization was denied. Please try again.';
+      } else if (error.includes('redirect_uri')) {
+        errorMessage = 'Redirect URI mismatch. Please add the callback URL to Stripe Dashboard → Connect → Settings → OAuth settings.';
+      }
+      
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/my-teen-hustle?stripe_error=${error}`
+        `${process.env.NEXT_PUBLIC_APP_URL}/my-teen-hustle?stripe_error=${encodeURIComponent(errorMessage)}`
       );
     }
 

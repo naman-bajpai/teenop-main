@@ -44,22 +44,56 @@ export async function POST(request: NextRequest) {
     }
 
     // Create OAuth link for Stripe Connect
+    // ⚠️ Stripe requires HTTPS for redirect URIs (even in test mode)
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const clientId = process.env.STRIPE_CLIENT_ID; // You'll need to add this to your .env
+    const clientId = process.env.STRIPE_CLIENT_ID;
+    
+    // Validate that we're using HTTPS for Stripe Connect
+    if (baseUrl.startsWith('http://')) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: "Stripe Connect requires HTTPS. For local development, use ngrok or a deployment URL.",
+          details: {
+            currentUrl: baseUrl,
+            instructions: [
+              "1. Install ngrok: npx ngrok http 3000",
+              "2. Copy the HTTPS URL from ngrok (e.g., https://abc123.ngrok.io)",
+              "3. Update NEXT_PUBLIC_APP_URL in .env.local to the ngrok URL",
+              "4. Add the callback URL to Stripe Dashboard: {ngrok_url}/api/stripe/connect/callback"
+            ]
+          }
+        },
+        { status: 400 }
+      );
+    }
+    
+    const redirectUri = `${baseUrl}/api/stripe/connect/callback`;
     
     if (!clientId) {
       return NextResponse.json(
-        { success: false, error: "Stripe Connect not properly configured" },
+        { 
+          success: false, 
+          error: "Stripe Connect not properly configured. Missing STRIPE_CLIENT_ID environment variable.",
+          debug: {
+            hasClientId: false,
+            redirectUri: redirectUri
+          }
+        },
         { status: 500 }
       );
     }
+
+    // Log redirect URI for debugging
+    console.log('Stripe Connect OAuth redirect URI:', redirectUri);
+    console.log('Make sure this exact URI is added to Stripe Dashboard → Connect → Settings → OAuth settings');
 
     // Create OAuth authorization URL
     const authUrl = new URL('https://connect.stripe.com/oauth/authorize');
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('client_id', clientId);
     authUrl.searchParams.set('scope', 'read_write');
-    authUrl.searchParams.set('redirect_uri', `${baseUrl}/api/stripe/connect/callback`);
+    authUrl.searchParams.set('redirect_uri', redirectUri);
     authUrl.searchParams.set('state', user.id); // Pass user ID as state
 
     return NextResponse.json({

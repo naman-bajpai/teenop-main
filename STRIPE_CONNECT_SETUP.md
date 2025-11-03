@@ -31,11 +31,24 @@
    - This is different from your publishable key
 
 3. **Set Redirect URIs**
-   - Add these redirect URIs:
-     ```
-     http://localhost:3000/api/stripe/connect/callback
-     https://your-domain.com/api/stripe/connect/callback
-     ```
+   - ⚠️ **Important**: Stripe requires **HTTPS** for redirect URIs (even in test mode)
+   - For local development, you have two options:
+   
+   **Option A: Use ngrok (Recommended for local dev)**
+   - Install ngrok: `npm install -g ngrok` or `npx ngrok http 3000`
+   - Start your app: `npm run dev`
+   - In another terminal, run: `npx ngrok http 3000`
+   - Copy the HTTPS URL (e.g., `https://abc123.ngrok.io`)
+   - Add redirect URI: `https://abc123.ngrok.io/api/stripe/connect/callback`
+   - Update `.env.local`: `NEXT_PUBLIC_APP_URL=https://abc123.ngrok.io`
+   
+   **Option B: Use a deployment URL**
+   - Deploy to Vercel/Netlify and use the preview URL
+   - Add redirect URI: `https://your-deployment-url.vercel.app/api/stripe/connect/callback`
+   - Update `.env.local`: `NEXT_PUBLIC_APP_URL=https://your-deployment-url.vercel.app`
+   
+   **For Production:**
+   - Add redirect URI: `https://your-domain.com/api/stripe/connect/callback`
 
 ### **Step 3: Update Environment Variables**
 
@@ -48,7 +61,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 
 # New Connect credentials
 STRIPE_CLIENT_ID=ca_...  # From Connect settings
-NEXT_PUBLIC_APP_URL=http://localhost:3000  # Your app URL
+NEXT_PUBLIC_APP_URL=https://your-ngrok-url.ngrok.io  # Must be HTTPS! Use ngrok for local dev
 ```
 
 ### **Step 4: Configure Connect Settings (Optional)**
@@ -113,9 +126,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000  # Your app URL
    - **Solution**: Check that `STRIPE_CLIENT_ID` is correct
    - Make sure you're using the right mode (test vs live)
 
-3. **"Invalid redirect_uri"**
-   - **Solution**: Add your callback URL to Stripe Connect OAuth settings
-   - Make sure the URL matches exactly (including http vs https)
+3. **"Invalid redirect_uri"** or **"Cannot add HTTP URLs"**
+   - **Solution**: Stripe requires HTTPS for redirect URIs
+   - For local development, use ngrok: `npx ngrok http 3000`
+   - Add the HTTPS ngrok URL to Stripe Dashboard
+   - Update `NEXT_PUBLIC_APP_URL` in `.env.local` to the ngrok HTTPS URL
+   - Make sure the URL matches exactly in Stripe Dashboard
 
 4. **"OAuth token exchange failed"**
    - **Solution**: Check that `STRIPE_SECRET_KEY` is correct
