@@ -45,7 +45,18 @@ export async function POST(request: NextRequest) {
 
     // Create OAuth link for Stripe Connect
     // ⚠️ Stripe requires HTTPS for redirect URIs (even in test mode)
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    let baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').trim();
+    
+    // Normalize the URL - handle various formats
+    // Remove any duplicate https:// prefixes
+    baseUrl = baseUrl.replace(/^https?:\/\/https?:\/\//, 'https://');
+    // Remove trailing slashes
+    baseUrl = baseUrl.replace(/\/+$/, '');
+    // Ensure it starts with a protocol
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = `https://${baseUrl}`;
+    }
+    
     const clientId = process.env.STRIPE_CLIENT_ID;
     
     // Validate that we're using HTTPS for Stripe Connect
@@ -59,7 +70,7 @@ export async function POST(request: NextRequest) {
             instructions: [
               "1. Deploy your app to Vercel/Netlify and use the preview URL",
               "2. Copy the HTTPS deployment URL (e.g., https://your-app.vercel.app)",
-              "3. Update NEXT_PUBLIC_APP_URL in .env.local to the deployment URL",
+              "3. Update NEXT_PUBLIC_APP_URL in .env.local to the deployment URL (without trailing slash)",
               "4. Add the callback URL to Stripe Dashboard: {deployment_url}/api/stripe/connect/callback"
             ]
           }
@@ -68,7 +79,11 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const redirectUri = `${baseUrl}/api/stripe/connect/callback`;
+    // Construct redirect URI - ensure no double slashes (except after protocol)
+    const redirectUri = `${baseUrl}/api/stripe/connect/callback`.replace(/([^:]\/)\/+/g, '$1');
+    
+    // Log for debugging
+    console.log('Stripe Connect redirect URI:', redirectUri);
     
     if (!clientId) {
       return NextResponse.json(
