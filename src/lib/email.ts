@@ -115,6 +115,84 @@ export class EmailService {
     return this.sendEmail(data.providerEmail, subject, html);
   }
 
+  // Service provider request notification (when a booking is requested)
+  async sendServiceProviderRequest(data: {
+    providerName: string;
+    providerEmail: string;
+    serviceName: string;
+    buyerName: string;
+    date: string;
+    time: string;
+    timeZone: string;
+    location: string;
+    duration: number;
+    totalPrice: number;
+    bookingId: string;
+    specialInstructions?: string;
+  }) {
+    const subject = `New booking request for ${data.serviceName}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>New Booking Request</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+          .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
+          .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
+          .button { display: inline-block; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>You have a new booking request!</h1>
+            <p>Someone wants to book your service. Review the details below.</p>
+          </div>
+          
+          <div class="content">
+            <div class="booking-details">
+              <h3>Booking Request Details</h3>
+              <p><strong>Service:</strong> ${data.serviceName}</p>
+              <p><strong>Requested by:</strong> ${data.buyerName}</p>
+              <p><strong>Date & Time:</strong> ${data.date}, ${data.time} ${data.timeZone}</p>
+              <p><strong>Location:</strong> ${data.location}</p>
+              <p><strong>Duration:</strong> ${data.duration} minutes</p>
+              <p><strong>Total Price:</strong> $${data.totalPrice}</p>
+              <p><strong>Booking ID:</strong> #${data.bookingId}</p>
+              ${data.specialInstructions ? `<p><strong>Special Instructions:</strong> ${data.specialInstructions}</p>` : ''}
+            </div>
+
+            <h3>What's next?</h3>
+            <ul>
+              <li>Log in to your TeenOp account to review and respond to this booking request.</li>
+              <li>You can accept or reject the request based on your availability.</li>
+              <li>If you accept, the booking will be confirmed and you'll receive payment details.</li>
+              <li>If you need to discuss details with the buyer, use TeenOp messages to communicate.</li>
+            </ul>
+
+            <p><strong>Important:</strong> Please respond to this request as soon as possible so the buyer knows if their booking is confirmed.</p>
+            
+            <p>Thanks for being part of TeenOp!</p>
+          </div>
+
+          <div class="footer">
+            <p>Best,<br>The TeenOp Team</p>
+            <p>teenop.co@gmail.com | www.teenop.com</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail(data.providerEmail, subject, html);
+  }
+
   // Buyer rejection email
   async sendBuyerRejection(data: {
     buyerName: string;

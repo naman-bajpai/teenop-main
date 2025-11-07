@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast"; 
 import { cn } from "@/lib/utils";
-import ImageUpload from "@/components/ui/image-upload";
+import MultiImageUpload, { ServiceImage } from "@/components/ui/multi-image-upload";
 import { RatingDisplay, RatingForm } from "@/components/ui/rating";
 import {
   Plus,
@@ -64,6 +64,7 @@ export type Service = {
   qualifications?: string | null;
   address?: string | null;
   pricing_model?: "per_job" | "per_hour";
+  images?: ServiceImage[];
 };
 
 export type Booking = {
@@ -287,6 +288,7 @@ export default function TeenHustlePage() {
   const [address, setAddress] = useState("");
   const [pricingModel, setPricingModel] = useState<"per_job" | "per_hour">("per_hour");
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [serviceImages, setServiceImages] = useState<ServiceImage[]>([]);
 
 
   // Handle URL parameters for Stripe Connect callbacks
@@ -468,6 +470,7 @@ export default function TeenHustlePage() {
     setAddress("");
     setPricingModel("per_hour");
     setBannerUrl(null);
+    setServiceImages([]);
     setEditingService(null);
   };
 
@@ -485,6 +488,7 @@ export default function TeenHustlePage() {
     setAddress(service.address || "");
     setPricingModel(service.pricing_model || "per_hour");
     setBannerUrl(service.banner_url);
+    setServiceImages(service.images || []);
     setOpen(true);
   };
 
@@ -542,11 +546,58 @@ export default function TeenHustlePage() {
 
       const { service } = await res.json();
       
+      // Upload images if there are any (for new services or when images were added)
+      if (serviceImages.length > 0) {
+        try {
+          // Filter out images that already have IDs (already uploaded)
+          const imagesToUpload = serviceImages.filter(img => !img.id);
+          
+          if (imagesToUpload.length > 0) {
+            // Convert blob URLs to files if needed
+            const formData = new FormData();
+            formData.append('service_id', service.id);
+            
+            for (const image of imagesToUpload) {
+              if (image.url.startsWith('blob:')) {
+                // Fetch blob and convert to file
+                const response = await fetch(image.url);
+                const blob = await response.blob();
+                const file = new File([blob], `image-${Date.now()}.png`, { type: blob.type });
+                formData.append('images', file);
+              }
+            }
+            
+            if (formData.has('images')) {
+              const imagesRes = await fetch('/api/services/images', {
+                method: 'POST',
+                body: formData,
+              });
+              
+              if (imagesRes.ok) {
+                const imagesData = await imagesRes.json();
+                service.images = imagesData.images || [];
+              }
+            }
+          } else {
+            // All images already uploaded, just use existing
+            service.images = serviceImages;
+          }
+        } catch (imgError: any) {
+          console.error('Error uploading images:', imgError);
+          // Don't fail the whole operation if image upload fails
+          toast({ 
+            title: "Service saved", 
+            description: `"${service.title}" was saved, but some images may not have uploaded.`,
+            variant: "default"
+          });
+        }
+      }
+      
       if (isEditing) {
-        setServices((prev) => prev.map(s => s.id === service.id ? service : s));
+        setServices((prev) => prev.map(s => s.id === service.id ? { ...service, images: service.images || [] } : s));
         toast({ title: "Service updated", description: `"${service.title}" has been updated.` });
       } else {
-        setServices((prev) => [service, ...prev]);
+        setServices((prev) => [{ ...service, images: service.images || [] }, ...prev]);
         toast({ title: "Service added", description: `"${service.title}" is now ${service.status}.` });
       }
       
@@ -771,21 +822,20 @@ export default function TeenHustlePage() {
                     </div>
                   </div>
 
-                  {/* Service Image Section */}
+                  {/* Service Images Section */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
                       <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                      Service Image
+                      Service Images
                     </h3>
-                    <div className="max-w-md">
-                      <Label className="text-sm font-medium">Service Banner Image (Optional)</Label>
-                      <p className="text-xs text-gray-500 mb-3">Upload an image to showcase your service</p>
-                      <ImageUpload
+                    <div>
+                      <Label className="text-sm font-medium">Upload Multiple Images (Optional)</Label>
+                      <p className="text-xs text-gray-500 mb-3">Upload up to 10 images to showcase your service. The first image will be set as primary.</p>
+                      <MultiImageUpload
                         serviceId={editingService?.id || "new"}
-                        userId={user?.id || ""}
-                        currentImageUrl={bannerUrl || undefined}
-                        onImageUploaded={(url) => setBannerUrl(url)}
-                        onImageRemoved={() => setBannerUrl(null)}
+                        currentImages={serviceImages}
+                        onImagesChange={setServiceImages}
+                        maxImages={10}
                       />
                     </div>
                   </div>

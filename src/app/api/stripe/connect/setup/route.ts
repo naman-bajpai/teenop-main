@@ -53,14 +53,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: "Stripe Connect requires HTTPS. For local development, use ngrok or a deployment URL.",
+          error: "Stripe Connect requires HTTPS. For local development, deploy to a staging environment or use a deployment URL (e.g., Vercel preview).",
           details: {
             currentUrl: baseUrl,
             instructions: [
-              "1. Install ngrok: npx ngrok http 3000",
-              "2. Copy the HTTPS URL from ngrok (e.g., https://abc123.ngrok.io)",
-              "3. Update NEXT_PUBLIC_APP_URL in .env.local to the ngrok URL",
-              "4. Add the callback URL to Stripe Dashboard: {ngrok_url}/api/stripe/connect/callback"
+              "1. Deploy your app to Vercel/Netlify and use the preview URL",
+              "2. Copy the HTTPS deployment URL (e.g., https://your-app.vercel.app)",
+              "3. Update NEXT_PUBLIC_APP_URL in .env.local to the deployment URL",
+              "4. Add the callback URL to Stripe Dashboard: {deployment_url}/api/stripe/connect/callback"
             ]
           }
         },
@@ -85,7 +85,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Log redirect URI for debugging
-    console.log('Stripe Connect OAuth redirect URI:', redirectUri);
+    console.log('Stripe Connect OAuth setup:', {
+      redirectUri,
+      clientId: clientId ? `${clientId.substring(0, 10)}...` : 'MISSING',
+      userId: user.id,
+      baseUrl
+    });
     console.log('Make sure this exact URI is added to Stripe Dashboard → Connect → Settings → OAuth settings');
 
     // Create OAuth authorization URL
@@ -96,10 +101,14 @@ export async function POST(request: NextRequest) {
     authUrl.searchParams.set('redirect_uri', redirectUri);
     authUrl.searchParams.set('state', user.id); // Pass user ID as state
 
+    const authUrlString = authUrl.toString();
+    console.log('Generated OAuth URL:', authUrlString.substring(0, 100) + '...');
+
     return NextResponse.json({
       success: true,
-      authUrl: authUrl.toString(),
-      message: "Redirect to Stripe Connect authorization"
+      authUrl: authUrlString,
+      message: "Redirect to Stripe Connect authorization",
+      redirectUri // Include for debugging
     });
 
   } catch (error: any) {

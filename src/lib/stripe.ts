@@ -8,9 +8,8 @@ if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
   throw new Error('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set. Please add it to your .env.local file.');
 }
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-09-30.clover',
-});
+// Initialize Stripe - using default API version (latest stable)
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export const getStripe = async () => {
   if (typeof window !== 'undefined') {

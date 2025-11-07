@@ -22,13 +22,28 @@ export async function GET(request: NextRequest) {
       }
       
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/my-teen-hustle?stripe_error=${encodeURIComponent(errorMessage)}`
+        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=${encodeURIComponent(errorMessage)}`
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/my-teen-hustle?stripe_error=missing_parameters`
+        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=missing_parameters`
+      );
+    }
+
+    // Validate environment variables
+    if (!process.env.STRIPE_CLIENT_ID) {
+      console.error('STRIPE_CLIENT_ID is not set');
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=configuration_error`
+      );
+    }
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY is not set');
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=configuration_error`
       );
     }
 
@@ -40,25 +55,58 @@ export async function GET(request: NextRequest) {
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
-        client_id: process.env.STRIPE_CLIENT_ID!,
-        client_secret: process.env.STRIPE_SECRET_KEY!,
+        client_id: process.env.STRIPE_CLIENT_ID,
+        client_secret: process.env.STRIPE_SECRET_KEY,
         code: code,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Stripe OAuth token exchange failed:', errorData);
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('Stripe OAuth token exchange failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData
+      });
+      
+      let errorMessage = 'token_exchange_failed';
+      if (errorData.error) {
+        if (errorData.error === 'invalid_grant') {
+          errorMessage = 'Authorization code expired or invalid. Please try again.';
+        } else if (errorData.error === 'invalid_client') {
+          errorMessage = 'Invalid Stripe credentials. Please check your configuration.';
+        } else {
+          errorMessage = errorData.error_description || errorData.error;
+        }
+      }
+      
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/my-teen-hustle?stripe_error=token_exchange_failed`
+        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=${encodeURIComponent(errorMessage)}`
       );
     }
 
-    const tokenData = await response.json();
+    const tokenData = await response.json().catch(() => null);
+    
+    if (!tokenData || !tokenData.stripe_user_id) {
+      console.error('Invalid token response from Stripe:', tokenData);
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=invalid_token_response`
+      );
+    }
+
     const accountId = tokenData.stripe_user_id;
+    console.log('Stripe Connect account created:', accountId);
 
     // Get account details from Stripe
-    const account = await stripe.accounts.retrieve(accountId);
+    let account;
+    try {
+      account = await stripe.accounts.retrieve(accountId);
+    } catch (stripeError: any) {
+      console.error('Error retrieving Stripe account:', stripeError);
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=account_retrieval_failed`
+      );
+    }
 
     // Update user profile with Stripe Connect account ID
     const supabase = await createServerClient();
@@ -69,20 +117,24 @@ export async function GET(request: NextRequest) {
 
     if (updateError) {
       console.error('Error updating profile with Stripe account ID:', updateError);
+      // Account was created in Stripe but failed to save to database
+      // This is a critical error - the account exists but isn't linked
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/my-teen-hustle?stripe_error=profile_update_failed`
+        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=profile_update_failed&account_id=${accountId}`
       );
     }
 
-    // Redirect back to the app with success
+    console.log('Successfully linked Stripe Connect account to user:', state);
+
+    // Redirect back to onboarding with success
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/my-teen-hustle?stripe_success=true`
+      `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_success=true`
     );
 
   } catch (error) {
     console.error('Stripe Connect callback error:', error);
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/my-teen-hustle?stripe_error=callback_failed`
+      `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=callback_failed`
     );
   }
 }

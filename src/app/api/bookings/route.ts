@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { CreateBookingRequest, BookingResponse } from "@/types/booking";
+import { emailService } from "@/lib/email";
 
 // Bookings API route with proper type assertions
 export async function POST(request: NextRequest) {
@@ -147,8 +148,59 @@ export async function POST(request: NextRequest) {
     // Type assertion for booking data
     const bookingData = booking as any;
 
-    // TODO: Send notification to service provider
-    // This could be implemented with email notifications, push notifications, etc.
+    // Fetch provider's profile information
+    const { data: providerProfile, error: providerError } = await supabase
+      .from("profiles")
+      .select("first_name, last_name, email")
+      .eq("id", serviceData.user_id)
+      .single();
+
+    // Format date and time for email
+    const formatDate = (dateString: string) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    };
+
+    const formatTime = (timeString: string) => {
+      const [hours, minutes] = timeString.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}:${minutes} ${ampm}`;
+    };
+
+    const formattedDate = formatDate(bookingData.requested_date);
+    const formattedTime = formatTime(bookingData.requested_time);
+    const timeZone = 'EST'; // You might want to make this configurable
+
+    // Send email notification to service provider (don't block on error)
+    const provider = providerProfile as any;
+    if (provider?.email) {
+      emailService.sendServiceProviderRequest({
+        providerName: `${provider.first_name || ''} ${provider.last_name || ''}`.trim() || 'Provider',
+        providerEmail: provider.email,
+        serviceName: bookingData.services.title,
+        buyerName: `${bookingData.profiles.first_name || ''} ${bookingData.profiles.last_name || ''}`.trim() || 'Customer',
+        date: formattedDate,
+        time: formattedTime,
+        timeZone,
+        location: bookingData.services.location || 'Online',
+        duration: bookingData.duration,
+        totalPrice: bookingData.total_price,
+        bookingId: bookingData.id,
+        specialInstructions: bookingData.special_instructions || undefined,
+      }).catch((error) => {
+        console.error('Failed to send email notification to provider:', error);
+        // Don't fail the booking creation if email fails
+      });
+    } else {
+      console.warn('Provider email not found, skipping email notification');
+    }
 
     return NextResponse.json({
       success: true,

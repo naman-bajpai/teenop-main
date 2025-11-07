@@ -38,6 +38,7 @@ function LoginInner() {
   const [retryCount, setRetryCount] = useState(0);
   const [lastAttemptTime, setLastAttemptTime] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [submitLock, setSubmitLock] = useState(false);
 
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
 
@@ -58,13 +59,28 @@ function LoginInner() {
   const shouldWaitForRetry = () => {
     if (!lastAttemptTime) return false;
     const timeSinceLastAttempt = Date.now() - lastAttemptTime;
-    const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000); // Max 30 seconds
+    // Longer wait time for rate limit scenarios
+    const waitTime = Math.min(1000 * Math.pow(2, retryCount), 60000); // Max 60 seconds
     return timeSinceLastAttempt < waitTime;
+  };
+
+  // Helper function to check if error is a rate limit error
+  const isRateLimitError = (error: any) => {
+    const errorMessage = error?.message?.toLowerCase() || "";
+    const errorStatus = error?.status || error?.code;
+    
+    return (
+      errorMessage.includes("rate limit") ||
+      errorMessage.includes("too many requests") ||
+      errorStatus === 429 ||
+      errorStatus === "429" ||
+      error?.name === "AuthApiError" && (errorMessage.includes("rate") || errorStatus === 429)
+    );
   };
 
   // Helper function to get user-friendly error message
   const getErrorMessage = (error: any) => {
-    if (error?.message?.includes("rate limit")) {
+    if (isRateLimitError(error)) {
       return "Too many login attempts. Please wait a moment and try again.";
     }
     if (error?.message?.includes("Invalid login credentials")) {
@@ -91,16 +107,33 @@ function LoginInner() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Prevent rapid-fire submissions
+    if (submitLock || isSubmitting) {
+      return;
+    }
+    
     // Check if we should wait before retrying
     if (shouldWaitForRetry()) {
       const timeSinceLastAttempt = Date.now() - (lastAttemptTime || 0);
-      const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000);
+      const waitTime = Math.min(1000 * Math.pow(2, retryCount), 60000);
       const remainingTime = Math.ceil((waitTime - timeSinceLastAttempt) / 1000);
       setCountdown(remainingTime);
       setError(`Please wait ${remainingTime} seconds before trying again.`);
       return;
     }
 
+    // Minimum delay between requests (1 second) to prevent rapid submissions
+    const minDelay = 1000;
+    if (lastAttemptTime) {
+      const timeSinceLastAttempt = Date.now() - lastAttemptTime;
+      if (timeSinceLastAttempt < minDelay) {
+        const remaining = Math.ceil((minDelay - timeSinceLastAttempt) / 1000);
+        setError(`Please wait ${remaining} second${remaining !== 1 ? 's' : ''} before trying again.`);
+        return;
+      }
+    }
+
+    setSubmitLock(true);
     setIsSubmitting(true);
     setError("");
     setLastAttemptTime(Date.now());
@@ -118,20 +151,28 @@ function LoginInner() {
 
       if (error) {
         console.error("Login error:", error);
+        console.error("Error details:", {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+          name: error.name,
+        });
         
         // Handle rate limiting specifically
-        if (error.message?.includes("rate limit")) {
+        if (isRateLimitError(error)) {
           setRetryCount(prev => prev + 1);
-          const waitTime = Math.min(1000 * Math.pow(2, retryCount + 1), 30000);
+          const waitTime = Math.min(1000 * Math.pow(2, retryCount + 1), 60000); // Max 60 seconds for rate limits
           const remainingTime = Math.ceil(waitTime / 1000);
           setCountdown(remainingTime);
           setError(getErrorMessage(error));
+          setIsSubmitting(false);
           return;
         }
         
         // Reset retry count for non-rate-limit errors
         setRetryCount(0);
         setError(getErrorMessage(error));
+        setIsSubmitting(false);
         return;
       }
 
@@ -163,12 +204,26 @@ function LoginInner() {
         console.log("Login successful, redirecting to:", redirectTo);
         router.push(redirectTo);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login exception:", err);
-      setRetryCount(prev => prev + 1);
-      setError("An unexpected error occurred. Please try again.");
+      
+      // Check if it's a rate limit error in the catch block too
+      if (isRateLimitError(err)) {
+        setRetryCount(prev => prev + 1);
+        const waitTime = Math.min(1000 * Math.pow(2, retryCount + 1), 60000);
+        const remainingTime = Math.ceil(waitTime / 1000);
+        setCountdown(remainingTime);
+        setError(getErrorMessage(err));
+      } else {
+        setRetryCount(prev => prev + 1);
+        setError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
+      // Release lock after a minimum delay
+      setTimeout(() => {
+        setSubmitLock(false);
+      }, 1000);
     }
   };
 

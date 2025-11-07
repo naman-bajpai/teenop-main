@@ -32,17 +32,9 @@
 
 3. **Set Redirect URIs**
    - ⚠️ **Important**: Stripe requires **HTTPS** for redirect URIs (even in test mode)
-   - For local development, you have two options:
+   - For local development, use a deployment URL:
    
-   **Option A: Use ngrok (Recommended for local dev)**
-   - Install ngrok: `npm install -g ngrok` or `npx ngrok http 3000`
-   - Start your app: `npm run dev`
-   - In another terminal, run: `npx ngrok http 3000`
-   - Copy the HTTPS URL (e.g., `https://abc123.ngrok.io`)
-   - Add redirect URI: `https://abc123.ngrok.io/api/stripe/connect/callback`
-   - Update `.env.local`: `NEXT_PUBLIC_APP_URL=https://abc123.ngrok.io`
-   
-   **Option B: Use a deployment URL**
+   **Use a deployment URL (Recommended)**
    - Deploy to Vercel/Netlify and use the preview URL
    - Add redirect URI: `https://your-deployment-url.vercel.app/api/stripe/connect/callback`
    - Update `.env.local`: `NEXT_PUBLIC_APP_URL=https://your-deployment-url.vercel.app`
@@ -61,7 +53,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 
 # New Connect credentials
 STRIPE_CLIENT_ID=ca_...  # From Connect settings
-NEXT_PUBLIC_APP_URL=https://your-ngrok-url.ngrok.io  # Must be HTTPS! Use ngrok for local dev
+NEXT_PUBLIC_APP_URL=https://your-deployment-url.vercel.app  # Must be HTTPS! Use deployment URL for local dev
 ```
 
 ### **Step 4: Configure Connect Settings (Optional)**
@@ -128,9 +120,9 @@ NEXT_PUBLIC_APP_URL=https://your-ngrok-url.ngrok.io  # Must be HTTPS! Use ngrok 
 
 3. **"Invalid redirect_uri"** or **"Cannot add HTTP URLs"**
    - **Solution**: Stripe requires HTTPS for redirect URIs
-   - For local development, use ngrok: `npx ngrok http 3000`
-   - Add the HTTPS ngrok URL to Stripe Dashboard
-   - Update `NEXT_PUBLIC_APP_URL` in `.env.local` to the ngrok HTTPS URL
+   - For local development, deploy to Vercel/Netlify and use the preview URL
+   - Add the HTTPS deployment URL to Stripe Dashboard
+   - Update `NEXT_PUBLIC_APP_URL` in `.env.local` to the deployment HTTPS URL
    - Make sure the URL matches exactly in Stripe Dashboard
 
 4. **"OAuth token exchange failed"**

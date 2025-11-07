@@ -119,6 +119,26 @@ export async function GET(request: Request) {
       }
     }
 
+    // Get service IDs to fetch images
+    const serviceIds = svc.map((s) => s.id);
+    
+    // Fetch service images
+    const { data: serviceImages } = await (supabase as any)
+      .from("service_images")
+      .select("id, service_id, url, is_primary, created_at")
+      .in("service_id", serviceIds)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true });
+
+    // Create map of service_id to images array
+    const imagesMap = new Map();
+    serviceImages?.forEach((image: any) => {
+      if (!imagesMap.has(image.service_id)) {
+        imagesMap.set(image.service_id, []);
+      }
+      imagesMap.get(image.service_id).push(image);
+    });
+
     // Transform
     const transformedServices = svc.map((service) => ({
       id: service.id,
@@ -139,6 +159,7 @@ export async function GET(request: Request) {
       rating: service.rating ?? null,
       total_bookings: service.total_bookings ?? 0,
       provider_name: profileMap.get(service.user_id) || null,
+      images: imagesMap.get(service.id) || []
     }));
 
     return NextResponse.json({

@@ -223,10 +223,18 @@ export default function SignupPage() {
         parentPhone: "",
         terms: false,
       });
-      // Redirect to login after 2 seconds
-      setTimeout(() => {
-        router.push("/login");
-      }, 2000);
+      
+      // For teen accounts, redirect to onboarding after signup
+      // For parent accounts, redirect to login
+      if (formData.role === "teen") {
+        setTimeout(() => {
+          router.push("/onboarding");
+        }, 2000);
+      } else {
+        setTimeout(() => {
+          router.push("/login");
+        }, 2000);
+      }
     } catch (error) {
       console.error('Signup error:', error);
       setRetryCount(prev => prev + 1);

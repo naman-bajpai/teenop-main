@@ -8,14 +8,22 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerClient();
     
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Check for cron authentication (for automated reminders)
+    const authHeader = request.headers.get('authorization');
+    const isCronRequest = authHeader === `Bearer ${process.env.CRON_SECRET}`;
     
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Authentication required" },
-        { status: 401 }
-      );
+    // Get the current user (only required for non-cron requests)
+    let user = null;
+    if (!isCronRequest) {
+      const { data: authUser, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !authUser) {
+        return NextResponse.json(
+          { success: false, error: "Authentication required" },
+          { status: 401 }
+        );
+      }
+      user = authUser;
     }
 
     const body = await request.json();

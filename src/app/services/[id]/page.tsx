@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Clock, Star, ArrowLeft, User, MessageCircle, Shield, CheckCircle, AlertCircle } from "lucide-react";
+import { MapPin, Clock, Star, ArrowLeft, User, MessageCircle, Shield, CheckCircle, AlertCircle, Calendar } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useUser } from "@/hooks/useUser";
 import { Service } from "@/types/service";
@@ -25,6 +25,7 @@ const [error, setError] = useState<string | null>(null);
 const [bookingLoading, setBookingLoading] = useState(false);
 const [bookingSuccess, setBookingSuccess] = useState(false);
 const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
+const [providerScheduleUrl, setProviderScheduleUrl] = useState<string | null>(null);
 
 const [bookingForm, setBookingForm] = useState<CreateBookingRequest>({
   service_id: "",
@@ -68,11 +69,12 @@ const fetchServiceDetails = async (id: string) => {
      // 2) fetch provider profile separately using user_id
      let provider_name: string | null = null;
      let provider_rating: number | null = null;
+     let provider_schedule_url: string | null = null;
 
      if (serviceData.user_id) {
        const { data: prof, error: profErr } = await supabase
          .from("profiles")
-         .select("first_name, last_name, rating")
+         .select("first_name, last_name, rating, schedule_url")
          .eq("id", serviceData.user_id)
          .maybeSingle();
 
@@ -80,10 +82,19 @@ const fetchServiceDetails = async (id: string) => {
          const profileData = prof as any;
          provider_name = [profileData.first_name, profileData.last_name].filter(Boolean).join(" ").trim() || null;
          provider_rating = profileData.rating ?? null;
+         provider_schedule_url = profileData.schedule_url ?? null;
        }
      }
 
-     // 3) normalize for UI (schema default is duration=30, pricing_model='per_job')
+     // 3) fetch service images
+     const { data: images } = await supabase
+       .from("service_images")
+       .select("id, service_id, url, is_primary, created_at")
+       .eq("service_id", id)
+       .order("is_primary", { ascending: false })
+       .order("created_at", { ascending: true });
+
+     // 4) normalize for UI (schema default is duration=30, pricing_model='per_job')
      const normalizedServiceData: Service = {
        ...serviceData,
        duration: serviceData.duration ?? 30,
@@ -94,9 +105,11 @@ const fetchServiceDetails = async (id: string) => {
        location: serviceData.location ?? "",
        pricing_model: (serviceData.pricing_model as any) ?? "per_job",
        provider_name,
+       images: images || [],
      };
 
      setService(normalizedServiceData);
+     setProviderScheduleUrl(provider_schedule_url);
      setBookingForm((prev) => ({ ...prev, service_id: id }));
   } catch (err: any) {
     console.error("Error fetching service:", err);
@@ -284,9 +297,31 @@ return (
           {/* Main */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className={`relative h-64 bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-                <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
-                <div className="relative text-9xl opacity-30">{icon}</div>
+              {/* Main Banner Image */}
+              <div className={`relative h-64 w-full overflow-hidden ${
+                (service.images && service.images.length > 0) || service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient} flex items-center justify-center`
+              }`}>
+                {(() => {
+                  const primaryImage = service.images?.find(img => img.is_primary);
+                  const firstImage = service.images?.[0];
+                  const displayImage = primaryImage || firstImage || service.banner_url;
+                  
+                  if (displayImage) {
+                    return (
+                      <img
+                        src={typeof displayImage === 'string' ? displayImage : displayImage.url}
+                        alt={service.title}
+                        className="w-full h-full object-cover"
+                      />
+                    );
+                  }
+                  return (
+                    <>
+                      <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
+                      <div className="relative text-9xl opacity-30">{icon}</div>
+                    </>
+                  );
+                })()}
                 <div className="absolute top-4 right-4">
                   <Badge
                     variant={service.status === "active" ? "default" : "secondary"}
@@ -300,6 +335,28 @@ return (
                   </Badge>
                 </div>
               </div>
+
+              {/* Image Gallery */}
+              {service.images && service.images.length > 1 && (
+                <div className="p-4 border-t border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">More Images</h3>
+                  <div className="grid grid-cols-4 gap-2">
+                    {service.images.slice(1).map((image) => (
+                      <div key={image.id} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer group">
+                        <img
+                          src={image.url}
+                          alt={`${service.title} - Image ${image.id}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          onClick={() => {
+                            // Scroll to top and could implement lightbox here
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="p-8">
                 <div className="flex items-start justify-between mb-4">
@@ -447,6 +504,30 @@ return (
                 Message Provider
               </Button>
               </div>
+
+              {/* Provider Schedule */}
+              {providerScheduleUrl && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <h3 className="font-semibold text-gray-900">Provider Schedule</h3>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <a
+                      href={providerScheduleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                    >
+                      <span className="font-medium">View Availability Schedule</span>
+                      <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
+                    </a>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Check when the provider is available for bookings
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="mt-6 space-y-4">
                 <div className="flex items-center gap-3 text-sm text-gray-600">

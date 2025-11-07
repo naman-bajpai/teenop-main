@@ -16,54 +16,28 @@ export async function GET(request: NextRequest) {
     const supabase = await createServerClient();
     const now = new Date();
     
-    // Calculate time ranges for reminders
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+    // Calculate time ranges for reminders (24 hours ± 1 hour window, 3 hours ± 30 min window)
+    const twentyFourHoursFromNow = new Date(now);
+    twentyFourHoursFromNow.setHours(twentyFourHoursFromNow.getHours() + 24);
     
-    const tomorrowEnd = new Date(tomorrow);
-    tomorrowEnd.setHours(23, 59, 59, 999);
+    const twentyFourHoursStart = new Date(twentyFourHoursFromNow);
+    twentyFourHoursStart.setHours(twentyFourHoursStart.getHours() - 1);
+    
+    const twentyFourHoursEnd = new Date(twentyFourHoursFromNow);
+    twentyFourHoursEnd.setHours(twentyFourHoursEnd.getHours() + 1);
     
     const threeHoursFromNow = new Date(now);
     threeHoursFromNow.setHours(threeHoursFromNow.getHours() + 3);
     
-    const threeHoursFromNowEnd = new Date(threeHoursFromNow);
-    threeHoursFromNowEnd.setMinutes(threeHoursFromNowEnd.getMinutes() + 30);
+    const threeHoursStart = new Date(threeHoursFromNow);
+    threeHoursStart.setMinutes(threeHoursStart.getMinutes() - 30);
+    
+    const threeHoursEnd = new Date(threeHoursFromNow);
+    threeHoursEnd.setMinutes(threeHoursEnd.getMinutes() + 30);
 
-    // Get bookings for tomorrow (24-hour reminders)
-    const { data: tomorrowBookings, error: tomorrowError } = await supabase
-      .from("bookings")
-      .select(`
-        *,
-        services (
-          id,
-          title,
-          location,
-          user_id,
-          profiles:profiles!services_user_id_fkey (
-            first_name,
-            last_name,
-            email,
-            phone
-          )
-        ),
-        profiles:profiles!bookings_user_id_fkey (
-          first_name,
-          last_name,
-          email,
-          phone
-        )
-      `)
-      .eq("status", "confirmed")
-      .gte("requested_date", tomorrow.toISOString().split('T')[0])
-      .lte("requested_date", tomorrowEnd.toISOString().split('T')[0]);
-
-    if (tomorrowError) {
-      console.error("Error fetching tomorrow bookings:", tomorrowError);
-    }
-
-    // Get bookings for 3 hours from now
-    const { data: threeHourBookings, error: threeHourError } = await supabase
+    // Get all confirmed bookings that might need reminders
+    // We'll filter by date/time in JavaScript since we need to combine date and time
+    const { data: allBookings, error: bookingsError } = await supabase
       .from("bookings")
       .select(`
         *,
@@ -88,11 +62,49 @@ export async function GET(request: NextRequest) {
       `)
       .eq("status", "confirmed")
       .gte("requested_date", now.toISOString().split('T')[0])
-      .lte("requested_date", threeHoursFromNowEnd.toISOString().split('T')[0]);
+      .lte("requested_date", twentyFourHoursEnd.toISOString().split('T')[0]);
 
-    if (threeHourError) {
-      console.error("Error fetching 3-hour bookings:", threeHourError);
+    if (bookingsError) {
+      console.error("Error fetching bookings:", bookingsError);
+      return NextResponse.json(
+        { success: false, error: "Failed to fetch bookings" },
+        { status: 500 }
+      );
     }
+
+    console.log(`Found ${allBookings?.length || 0} confirmed bookings to check for reminders`);
+
+    // Filter bookings for 24-hour reminders (24 hours ± 1 hour)
+    const tomorrowBookings = (allBookings || []).filter((booking: any) => {
+      try {
+        const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
+        const isInRange = bookingDateTime >= twentyFourHoursStart && bookingDateTime <= twentyFourHoursEnd;
+        if (isInRange) {
+          console.log(`Booking ${booking.id} is in 24-hour reminder window: ${bookingDateTime.toISOString()}`);
+        }
+        return isInRange;
+      } catch (error) {
+        console.error(`Error parsing date/time for booking ${booking.id}:`, error);
+        return false;
+      }
+    });
+
+    // Filter bookings for 3-hour reminders (3 hours ± 30 minutes)
+    const threeHourBookings = (allBookings || []).filter((booking: any) => {
+      try {
+        const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
+        const isInRange = bookingDateTime >= threeHoursStart && bookingDateTime <= threeHoursEnd;
+        if (isInRange) {
+          console.log(`Booking ${booking.id} is in 3-hour reminder window: ${bookingDateTime.toISOString()}`);
+        }
+        return isInRange;
+      } catch (error) {
+        console.error(`Error parsing date/time for booking ${booking.id}:`, error);
+        return false;
+      }
+    });
+
+    console.log(`Filtered to ${tomorrowBookings.length} bookings for 24-hour reminders and ${threeHourBookings.length} for 3-hour reminders`);
 
     const results = {
       tomorrowReminders: 0,
@@ -111,39 +123,55 @@ export async function GET(request: NextRequest) {
 
           // Send buyer 24-hour reminder
           if (customer?.email) {
-            const buyerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.CRON_SECRET}`
-              },
-              body: JSON.stringify({
-                type: 'buyer_24_hour_reminder',
-                bookingId: bookingData.id
-              })
-            });
+            try {
+              const buyerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${process.env.CRON_SECRET}`
+                },
+                body: JSON.stringify({
+                  type: 'buyer_24_hour_reminder',
+                  bookingId: bookingData.id
+                })
+              });
 
-            if (buyerResponse.ok) {
-              results.tomorrowReminders++;
+              if (buyerResponse.ok) {
+                results.tomorrowReminders++;
+                console.log(`Sent 24-hour reminder to buyer for booking ${bookingData.id}`);
+              } else {
+                const errorData = await buyerResponse.json().catch(() => ({}));
+                results.errors.push(`Buyer 24h reminder failed for booking ${bookingData.id}: ${buyerResponse.status} - ${errorData.error || 'Unknown error'}`);
+              }
+            } catch (fetchError) {
+              results.errors.push(`Buyer 24h reminder fetch error for booking ${bookingData.id}: ${fetchError}`);
             }
           }
 
           // Send service provider 24-hour reminder
           if (provider?.phone) {
-            const providerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.CRON_SECRET}`
-              },
-              body: JSON.stringify({
-                type: 'service_provider_24_hour_reminder',
-                bookingId: bookingData.id
-              })
-            });
+            try {
+              const providerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${process.env.CRON_SECRET}`
+                },
+                body: JSON.stringify({
+                  type: 'service_provider_24_hour_reminder',
+                  bookingId: bookingData.id
+                })
+              });
 
-            if (providerResponse.ok) {
-              results.tomorrowReminders++;
+              if (providerResponse.ok) {
+                results.tomorrowReminders++;
+                console.log(`Sent 24-hour reminder to provider for booking ${bookingData.id}`);
+              } else {
+                const errorData = await providerResponse.json().catch(() => ({}));
+                results.errors.push(`Provider 24h reminder failed for booking ${bookingData.id}: ${providerResponse.status} - ${errorData.error || 'Unknown error'}`);
+              }
+            } catch (fetchError) {
+              results.errors.push(`Provider 24h reminder fetch error for booking ${bookingData.id}: ${fetchError}`);
             }
           }
         } catch (error) {
@@ -164,39 +192,55 @@ export async function GET(request: NextRequest) {
 
           // Send buyer 3-hour reminder
           if (customer?.email) {
-            const buyerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.CRON_SECRET}`
-              },
-              body: JSON.stringify({
-                type: 'buyer_3_hour_reminder',
-                bookingId: bookingData.id
-              })
-            });
+            try {
+              const buyerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${process.env.CRON_SECRET}`
+                },
+                body: JSON.stringify({
+                  type: 'buyer_3_hour_reminder',
+                  bookingId: bookingData.id
+                })
+              });
 
-            if (buyerResponse.ok) {
-              results.threeHourReminders++;
+              if (buyerResponse.ok) {
+                results.threeHourReminders++;
+                console.log(`Sent 3-hour reminder to buyer for booking ${bookingData.id}`);
+              } else {
+                const errorData = await buyerResponse.json().catch(() => ({}));
+                results.errors.push(`Buyer 3h reminder failed for booking ${bookingData.id}: ${buyerResponse.status} - ${errorData.error || 'Unknown error'}`);
+              }
+            } catch (fetchError) {
+              results.errors.push(`Buyer 3h reminder fetch error for booking ${bookingData.id}: ${fetchError}`);
             }
           }
 
           // Send service provider 3-hour reminder
           if (provider?.phone) {
-            const providerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.CRON_SECRET}`
-              },
-              body: JSON.stringify({
-                type: 'service_provider_3_hour_reminder',
-                bookingId: bookingData.id
-              })
-            });
+            try {
+              const providerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${process.env.CRON_SECRET}`
+                },
+                body: JSON.stringify({
+                  type: 'service_provider_3_hour_reminder',
+                  bookingId: bookingData.id
+                })
+              });
 
-            if (providerResponse.ok) {
-              results.threeHourReminders++;
+              if (providerResponse.ok) {
+                results.threeHourReminders++;
+                console.log(`Sent 3-hour reminder to provider for booking ${bookingData.id}`);
+              } else {
+                const errorData = await providerResponse.json().catch(() => ({}));
+                results.errors.push(`Provider 3h reminder failed for booking ${bookingData.id}: ${providerResponse.status} - ${errorData.error || 'Unknown error'}`);
+              }
+            } catch (fetchError) {
+              results.errors.push(`Provider 3h reminder fetch error for booking ${bookingData.id}: ${fetchError}`);
             }
           }
         } catch (error) {
@@ -206,10 +250,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    console.log(`Reminder cron job completed: ${results.tomorrowReminders} 24-hour reminders, ${results.threeHourReminders} 3-hour reminders, ${results.errors.length} errors`);
+
     return NextResponse.json({
       success: true,
       message: "Reminder notifications processed",
-      results
+      results: {
+        ...results,
+        processed24h: tomorrowBookings.length,
+        processed3h: threeHourBookings.length
+      }
     });
 
   } catch (error) {

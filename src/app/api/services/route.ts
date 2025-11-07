@@ -65,10 +65,30 @@ export async function GET(request: NextRequest) {
       .select("id, first_name, last_name")
       .in("id", userIds);
 
-    // Create a map of user_id to profile name
+    // Create map of user_id to profile name
     const profileMap = new Map();
     profiles?.forEach((profile: any) => {
       profileMap.set(profile.id, `${profile.first_name} ${profile.last_name}`);
+    });
+
+    // Get service IDs to fetch images
+    const serviceIds = services?.map((service: any) => service.id) || [];
+    
+    // Fetch service images
+    const { data: serviceImages } = await (supabase as any)
+      .from("service_images")
+      .select("id, service_id, url, is_primary, created_at")
+      .in("service_id", serviceIds)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true });
+
+    // Create map of service_id to images array
+    const imagesMap = new Map();
+    serviceImages?.forEach((image: any) => {
+      if (!imagesMap.has(image.service_id)) {
+        imagesMap.set(image.service_id, []);
+      }
+      imagesMap.get(image.service_id).push(image);
     });
 
     // Transform the data to match the expected format
@@ -90,7 +110,8 @@ export async function GET(request: NextRequest) {
       created_at: service.created_at,
       rating: service.rating || null,
       total_bookings: service.total_bookings || 0,
-      provider_name: profileMap.get(service.user_id) || null
+      provider_name: profileMap.get(service.user_id) || null,
+      images: imagesMap.get(service.id) || []
     })) || [];
 
     return NextResponse.json({ services: transformedServices });
@@ -203,7 +224,8 @@ export async function POST(request: NextRequest) {
     const responseService = {
       ...service,
       rating: null,
-      total_bookings: 0
+      total_bookings: 0,
+      images: []
     };
 
     return NextResponse.json({ service: responseService }, { status: 201 });

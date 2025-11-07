@@ -1,3 +1,11 @@
+export interface ServiceImage {
+  id: string;
+  service_id: string;
+  url: string;
+  is_primary: boolean;
+  created_at: string;
+}
+
 export interface Service {
   id: string;
   user_id: string;
@@ -17,6 +25,7 @@ export interface Service {
   rating?: number | null;
   total_bookings: number;
   provider_name?: string | null;
+  images?: ServiceImage[];
 }
 
 export type ServiceCategory = 

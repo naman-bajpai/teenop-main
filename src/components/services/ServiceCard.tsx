@@ -79,22 +79,32 @@ export default function ServiceCard({
     <div className="group bg-white rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
       {/* Header with gradient background or image */}
       <div className={`relative h-48 w-full aspect-square overflow-hidden ${
-        service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient}`
+        (service.images && service.images.length > 0) || service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient}`
       }`}>
-        {service.banner_url ? (
-          <img
-            src={service.banner_url}
-            alt={service.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <>
-            <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
-            <div className="relative text-7xl opacity-30 transform group-hover:scale-110 transition-transform duration-300 flex items-center justify-center h-full">
-              {icon}
-            </div>
-          </>
-        )}
+        {(() => {
+          // Check for primary image first, then first image, then banner_url
+          const primaryImage = service.images?.find(img => img.is_primary);
+          const firstImage = service.images?.[0];
+          const displayImage = primaryImage || firstImage || service.banner_url;
+          
+          if (displayImage) {
+            return (
+              <img
+                src={typeof displayImage === 'string' ? displayImage : displayImage.url}
+                alt={service.title}
+                className="w-full h-full object-cover"
+              />
+            );
+          }
+          return (
+            <>
+              <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+              <div className="relative text-7xl opacity-30 transform group-hover:scale-110 transition-transform duration-300 flex items-center justify-center h-full">
+                {icon}
+              </div>
+            </>
+          );
+        })()}
         
         {/* Status indicator */}
         <div className="absolute top-3 right-3">
@@ -142,8 +152,8 @@ export default function ServiceCard({
           </div>
         </div>
 
-        {/* Location and date */}
-        <div className="flex items-center gap-4 text-sm text-gray-500 mb-5">
+        {/* Location, date, and schedule */}
+        <div className="flex items-center gap-4 text-sm text-gray-500 mb-5 flex-wrap">
           {service.location && (
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <MapPin className="w-4 h-4 shrink-0 text-gray-400" />

@@ -21,7 +21,8 @@ export async function middleware(req: NextRequest) {
     "/neighborhood",
     "/provider",
     "/booking/",
-    "/services/"
+    "/services/",
+    "/onboarding"
   ];
 
   const isProtected = protectedRoutes.some((r) => req.nextUrl.pathname.startsWith(r));
@@ -34,6 +35,20 @@ export async function middleware(req: NextRequest) {
 
   if ((req.nextUrl.pathname === "/login" || req.nextUrl.pathname === "/signup") && session) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
+  // Check if teen users need to complete onboarding
+  if (session && !req.nextUrl.pathname.startsWith('/onboarding') && !req.nextUrl.pathname.startsWith('/api')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+
+    // If user is a teen, allow access (onboarding check removed)
+    if (profile && (profile as any).role === 'teen') {
+      // Onboarding is no longer required
+    }
   }
 
   // Protect admin routes (except admin login page)
