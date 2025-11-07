@@ -2,8 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 
+// Helper function to normalize and get base URL
+function getBaseUrl(): string {
+  let baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').trim();
+  
+  // Normalize the URL - handle various formats
+  // Remove any duplicate https:// prefixes
+  baseUrl = baseUrl.replace(/^https?:\/\/https?:\/\//, 'https://');
+  // Remove trailing slashes
+  baseUrl = baseUrl.replace(/\/+$/, '');
+  // Ensure it starts with a protocol
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+    baseUrl = `https://${baseUrl}`;
+  }
+  
+  return baseUrl;
+}
+
 export async function GET(request: NextRequest) {
   try {
+    const baseUrl = getBaseUrl();
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
     const state = searchParams.get('state'); // This is the user ID
@@ -22,13 +40,13 @@ export async function GET(request: NextRequest) {
       }
       
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=${encodeURIComponent(errorMessage)}`
+        `${baseUrl}/onboarding?stripe_error=${encodeURIComponent(errorMessage)}`
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=missing_parameters`
+        `${baseUrl}/onboarding?stripe_error=missing_parameters`
       );
     }
 
@@ -36,14 +54,14 @@ export async function GET(request: NextRequest) {
     if (!process.env.STRIPE_CLIENT_ID) {
       console.error('STRIPE_CLIENT_ID is not set');
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=configuration_error`
+        `${baseUrl}/onboarding?stripe_error=configuration_error`
       );
     }
 
     if (!process.env.STRIPE_SECRET_KEY) {
       console.error('STRIPE_SECRET_KEY is not set');
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=configuration_error`
+        `${baseUrl}/onboarding?stripe_error=configuration_error`
       );
     }
 
@@ -81,7 +99,7 @@ export async function GET(request: NextRequest) {
       }
       
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=${encodeURIComponent(errorMessage)}`
+        `${baseUrl}/onboarding?stripe_error=${encodeURIComponent(errorMessage)}`
       );
     }
 
@@ -90,7 +108,7 @@ export async function GET(request: NextRequest) {
     if (!tokenData || !tokenData.stripe_user_id) {
       console.error('Invalid token response from Stripe:', tokenData);
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=invalid_token_response`
+        `${baseUrl}/onboarding?stripe_error=invalid_token_response`
       );
     }
 
@@ -104,7 +122,7 @@ export async function GET(request: NextRequest) {
     } catch (stripeError: any) {
       console.error('Error retrieving Stripe account:', stripeError);
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=account_retrieval_failed`
+        `${baseUrl}/onboarding?stripe_error=account_retrieval_failed`
       );
     }
 
@@ -120,7 +138,7 @@ export async function GET(request: NextRequest) {
       // Account was created in Stripe but failed to save to database
       // This is a critical error - the account exists but isn't linked
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=profile_update_failed&account_id=${accountId}`
+        `${baseUrl}/onboarding?stripe_error=profile_update_failed&account_id=${accountId}`
       );
     }
 
@@ -128,13 +146,14 @@ export async function GET(request: NextRequest) {
 
     // Redirect back to onboarding with success
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_success=true`
+      `${baseUrl}/onboarding?stripe_success=true`
     );
 
   } catch (error) {
     console.error('Stripe Connect callback error:', error);
+    const baseUrl = getBaseUrl();
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/onboarding?stripe_error=callback_failed`
+      `${baseUrl}/onboarding?stripe_error=callback_failed`
     );
   }
 }
