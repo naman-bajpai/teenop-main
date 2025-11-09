@@ -39,14 +39,15 @@ export async function GET(request: NextRequest) {
         errorMessage = 'Redirect URI mismatch. Please add the callback URL to Stripe Dashboard → Connect → Settings → OAuth settings.';
       }
       
+      // Redirect to earnings page (where users typically initiate the connection)
       return NextResponse.redirect(
-        `${baseUrl}/onboarding?stripe_error=${encodeURIComponent(errorMessage)}`
+        `${baseUrl}/earnings?stripe_error=${encodeURIComponent(errorMessage)}`
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        `${baseUrl}/onboarding?stripe_error=missing_parameters`
+        `${baseUrl}/earnings?stripe_error=missing_parameters`
       );
     }
 
@@ -54,14 +55,14 @@ export async function GET(request: NextRequest) {
     if (!process.env.STRIPE_CLIENT_ID) {
       console.error('STRIPE_CLIENT_ID is not set');
       return NextResponse.redirect(
-        `${baseUrl}/onboarding?stripe_error=configuration_error`
+        `${baseUrl}/earnings?stripe_error=configuration_error`
       );
     }
 
     if (!process.env.STRIPE_SECRET_KEY) {
       console.error('STRIPE_SECRET_KEY is not set');
       return NextResponse.redirect(
-        `${baseUrl}/onboarding?stripe_error=configuration_error`
+        `${baseUrl}/earnings?stripe_error=configuration_error`
       );
     }
 
@@ -98,8 +99,9 @@ export async function GET(request: NextRequest) {
         }
       }
       
+      // Redirect to earnings page (where users typically initiate the connection)
       return NextResponse.redirect(
-        `${baseUrl}/onboarding?stripe_error=${encodeURIComponent(errorMessage)}`
+        `${baseUrl}/earnings?stripe_error=${encodeURIComponent(errorMessage)}`
       );
     }
 
@@ -108,7 +110,7 @@ export async function GET(request: NextRequest) {
     if (!tokenData || !tokenData.stripe_user_id) {
       console.error('Invalid token response from Stripe:', tokenData);
       return NextResponse.redirect(
-        `${baseUrl}/onboarding?stripe_error=invalid_token_response`
+        `${baseUrl}/earnings?stripe_error=invalid_token_response`
       );
     }
 
@@ -122,7 +124,7 @@ export async function GET(request: NextRequest) {
     } catch (stripeError: any) {
       console.error('Error retrieving Stripe account:', stripeError);
       return NextResponse.redirect(
-        `${baseUrl}/onboarding?stripe_error=account_retrieval_failed`
+        `${baseUrl}/earnings?stripe_error=account_retrieval_failed`
       );
     }
 
@@ -138,22 +140,22 @@ export async function GET(request: NextRequest) {
       // Account was created in Stripe but failed to save to database
       // This is a critical error - the account exists but isn't linked
       return NextResponse.redirect(
-        `${baseUrl}/onboarding?stripe_error=profile_update_failed&account_id=${accountId}`
+        `${baseUrl}/earnings?stripe_error=profile_update_failed&account_id=${accountId}`
       );
     }
 
     console.log('Successfully linked Stripe Connect account to user:', state);
 
-    // Redirect back to onboarding with success
+    // Redirect back to earnings page with success
     return NextResponse.redirect(
-      `${baseUrl}/onboarding?stripe_success=true`
+      `${baseUrl}/earnings?stripe_success=true`
     );
 
   } catch (error) {
     console.error('Stripe Connect callback error:', error);
     const baseUrl = getBaseUrl();
     return NextResponse.redirect(
-      `${baseUrl}/onboarding?stripe_error=callback_failed`
+      `${baseUrl}/earnings?stripe_error=callback_failed`
     );
   }
 }

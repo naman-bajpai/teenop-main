@@ -14,6 +14,7 @@ import { useUser } from "@/hooks/useUser";
 import { Service } from "@/types/service";
 import { CreateBookingRequest, BookingResponse } from "@/types/booking";
 import { createClient } from "@/lib/supabase/client";
+import MessageDialog from "@/components/messaging/MessageDialog";
 
 export default function ServiceDetailsPage() {
 const params = useParams();
@@ -22,10 +23,12 @@ const { user, loading: userLoading } = useUser();
 const [service, setService] = useState<Service | null>(null);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState<string | null>(null);
-const [bookingLoading, setBookingLoading] = useState(false);
-const [bookingSuccess, setBookingSuccess] = useState(false);
-const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
-const [providerScheduleUrl, setProviderScheduleUrl] = useState<string | null>(null);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
+  const [providerScheduleUrl, setProviderScheduleUrl] = useState<string | null>(null);
+  const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
+  const [quoteBookingId, setQuoteBookingId] = useState<string | null>(null);
 
 const [bookingForm, setBookingForm] = useState<CreateBookingRequest>({
   service_id: "",
@@ -161,6 +164,46 @@ const handleBookingSubmit = async (e: React.FormEvent) => {
   } catch (err: any) {
     console.error("Error creating booking:", err);
     alert(err?.message || "Failed to create booking. Please try again.");
+  } finally {
+    setBookingLoading(false);
+  }
+};
+
+const handleQuoteRequest = async () => {
+  if (!user) {
+    router.push("/login");
+    return;
+  }
+
+  if (!service) return;
+
+  try {
+    setBookingLoading(true);
+
+    // Create a quote request booking
+    const response = await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        service_id: service.id,
+        requested_date: new Date().toISOString().split("T")[0],
+        requested_time: "00:00",
+        special_instructions: "Quote request - please provide a custom quote for this service.",
+      }),
+    });
+
+    const result: BookingResponse = await response.json();
+
+    if (!response.ok || !result?.success) {
+      throw new Error(result?.error || "Failed to create quote request");
+    }
+
+    // Open message dialog with the booking
+    setQuoteBookingId(result.booking?.id || null);
+    setIsQuoteDialogOpen(true);
+  } catch (err: any) {
+    console.error("Error creating quote request:", err);
+    alert(err?.message || "Failed to create quote request. Please try again.");
   } finally {
     setBookingLoading(false);
   }
@@ -422,23 +465,42 @@ return (
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-8">
-              <div className="text-center mb-6">
-                <div className="text-4xl font-bold text-gray-900 mb-1">{formatPrice(service.price as number)}</div>
-                <div className="text-sm text-gray-500">
-                  per {service.pricing_model === "per_hour" ? "hour" : "service"}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
-                  <DialogTrigger asChild>
+              {service.pricing_model === "quote" ? (
+                <>
+                  <div className="text-center mb-6">
+                    <div className="text-2xl font-bold text-gray-900 mb-1">Quote Based</div>
+                    <div className="text-sm text-gray-500">
+                      Contact provider for pricing
+                    </div>
+                  </div>
+                  <div className="space-y-3">
                     <Button
+                      onClick={handleQuoteRequest}
                       className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
-                      disabled={service.status !== "active"}
+                      disabled={service.status !== "active" || bookingLoading}
                     >
-                      {service.status === "active" ? "Request Service" : "Service Unavailable"}
+                      {bookingLoading ? "Creating..." : service.status === "active" ? "Request Quote" : "Service Unavailable"}
                     </Button>
-                  </DialogTrigger>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-center mb-6">
+                    <div className="text-4xl font-bold text-gray-900 mb-1">{formatPrice(service.price as number)}</div>
+                    <div className="text-sm text-gray-500">
+                      per {service.pricing_model === "per_hour" ? "hour" : "service"}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
+                          disabled={service.status !== "active"}
+                        >
+                          {service.status === "active" ? "Request Service" : "Service Unavailable"}
+                        </Button>
+                      </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Request Service</DialogTitle>
@@ -504,6 +566,8 @@ return (
                 Message Provider
               </Button>
               </div>
+                </>
+              )}
 
               {/* Provider Schedule */}
               {providerScheduleUrl && (
@@ -562,6 +626,20 @@ return (
         </div>
       </div>
     </div>
+
+    {/* Quote Request Message Dialog */}
+    {service && quoteBookingId && service.user_id && (
+      <MessageDialog
+        isOpen={isQuoteDialogOpen}
+        onClose={() => {
+          setIsQuoteDialogOpen(false);
+          setQuoteBookingId(null);
+        }}
+        bookingId={quoteBookingId}
+        recipientId={service.user_id}
+        recipientName={service.provider_name || "Provider"}
+      />
+    )}
   </DashboardLayout>
 );
 }

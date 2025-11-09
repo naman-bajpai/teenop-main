@@ -78,7 +78,7 @@ export default function ServiceCard({
   return (
     <div className="group bg-white rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
       {/* Header with gradient background or image */}
-      <div className={`relative h-48 w-full aspect-square overflow-hidden ${
+      <div className={`relative w-full aspect-square overflow-hidden ${
         (service.images && service.images.length > 0) || service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient}`
       }`}>
         {(() => {
@@ -171,12 +171,20 @@ export default function ServiceCard({
         {/* Price and action */}
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-gray-900">
-              {formatPrice(service.price)}
-            </span>
-            <span className="text-sm text-gray-500 font-medium">
-              /{service.pricing_model === 'per_hour' ? 'hour' : 'service'}
-            </span>
+            {service.pricing_model === 'quote' ? (
+              <span className="text-2xl font-bold text-gray-900">
+                Quote Based
+              </span>
+            ) : (
+              <>
+                <span className="text-3xl font-bold text-gray-900">
+                  {formatPrice(service.price)}
+                </span>
+                <span className="text-sm text-gray-500 font-medium">
+                  /{service.pricing_model === 'per_hour' ? 'hour' : 'service'}
+                </span>
+              </>
+            )}
           </div>
 
           <Button

@@ -27,6 +27,29 @@ function OnboardingContent() {
   const [uploadingSchedule, setUploadingSchedule] = useState(false);
   const [scheduleError, setScheduleError] = useState("");
   const [canComplete, setCanComplete] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+  const [stripeSuccess, setStripeSuccess] = useState(false);
+
+  // Check URL parameters for Stripe callback results
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('stripe_error');
+    const success = params.get('stripe_success');
+    
+    if (error) {
+      setStripeError(decodeURIComponent(error));
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    
+    if (success === 'true') {
+      setStripeSuccess(true);
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+      // Hide success message after 5 seconds
+      setTimeout(() => setStripeSuccess(false), 5000);
+    }
+  }, []);
 
   // Check if user has already completed onboarding
   useEffect(() => {
@@ -195,6 +218,51 @@ function OnboardingContent() {
             Upload your schedule to complete your setup
           </p>
         </div>
+
+        {/* Stripe Error Message */}
+        {stripeError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-900 mb-1">Stripe Connection Error</h3>
+                <p className="text-sm text-red-700 mb-3">{stripeError}</p>
+                {stripeError.includes('expired') || stripeError.includes('invalid') ? (
+                  <div className="text-xs text-red-600 space-y-1">
+                    <p>• Authorization codes expire quickly. Please try connecting again.</p>
+                    <p>• Make sure you complete the Stripe authorization in one session.</p>
+                    <p>• If the problem persists, check that your redirect URI matches in Stripe Dashboard.</p>
+                  </div>
+                ) : null}
+                <Button
+                  onClick={() => {
+                    setStripeError(null);
+                    // Redirect to earnings page to try again
+                    router.push('/earnings');
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 border-red-300 text-red-700 hover:bg-red-100"
+                >
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stripe Success Message */}
+        {stripeSuccess && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <div>
+                <h3 className="text-sm font-semibold text-green-900">Stripe Account Connected!</h3>
+                <p className="text-sm text-green-700">Your payment account has been successfully set up.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 space-y-6 border border-white/20">
           {/* Schedule Upload Section */}

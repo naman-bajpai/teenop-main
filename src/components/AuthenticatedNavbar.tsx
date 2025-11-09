@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, X, MessageCircle, User, Home, Briefcase, Calendar } from "lucide-react";
+import { LogOut, Menu, X, MessageCircle, User, Home, Briefcase, Calendar, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import clsx from "clsx";
@@ -79,11 +79,18 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
       href: "/my-requests",
       icon: Calendar,
     },
-    ...(user?.role === "teen" ? [{
-      name: "My Teen Hustle",
-      href: "/my-teen-hustle",
-      icon: Briefcase,
-    }] : []),
+    ...(user?.role === "teen" ? [
+      {
+        name: "My Teen Hustle",
+        href: "/my-teen-hustle",
+        icon: Briefcase,
+      },
+      {
+        name: "Earnings",
+        href: "/earnings",
+        icon: Wallet,
+      },
+    ] : []),
     {
       name: "Profile",
       href: "/profile",

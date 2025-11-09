@@ -172,9 +172,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate pricing model if provided
-    if (pricing_model && !["per_job", "per_hour"].includes(pricing_model)) {
+    if (pricing_model && !["per_job", "per_hour", "quote"].includes(pricing_model)) {
       return NextResponse.json({ 
-        error: "Pricing model must be either 'per_job' or 'per_hour'" 
+        error: "Pricing model must be either 'per_job', 'per_hour', or 'quote'" 
       }, { status: 400 });
     }
 
@@ -286,9 +286,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // Validate pricing model if provided
-    if (pricing_model && !["per_job", "per_hour"].includes(pricing_model)) {
+    if (pricing_model && !["per_job", "per_hour", "quote"].includes(pricing_model)) {
       return NextResponse.json({ 
-        error: "Pricing model must be either 'per_job' or 'per_hour'" 
+        error: "Pricing model must be either 'per_job', 'per_hour', or 'quote'" 
       }, { status: 400 });
     }
 
