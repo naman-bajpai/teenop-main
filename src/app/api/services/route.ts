@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, banner_url } = body;
+    const { title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url } = body;
 
     // Validate required fields
     if (!title || !description || price === undefined || !location || !category || !status) {
@@ -142,10 +142,17 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate price is a positive number
+    // Validate price - for quote-based services, price can be 0, otherwise must be positive
     if (typeof price !== "number" || price < 0) {
       return NextResponse.json({ 
         error: "Price must be a positive number" 
+      }, { status: 400 });
+    }
+    
+    // For quote-based services, allow price to be 0, but for others require positive price
+    if (pricing_model !== "quote" && price <= 0) {
+      return NextResponse.json({ 
+        error: "Price must be greater than 0 for non-quote services" 
       }, { status: 400 });
     }
 
@@ -185,7 +192,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         title: title.trim(),
         description: description.trim(),
-        price: Number(price),
+        price: pricing_model === "quote" ? 0 : Number(price),
         location: location.trim(),
         category,
         status,
@@ -194,6 +201,8 @@ export async function POST(request: NextRequest) {
         qualifications: qualifications || null,
         address: address || null,
         pricing_model: pricing_model || "per_hour",
+        delivery_method: delivery_method || "in_person",
+        location_type: location_type || "public_address",
         banner_url: banner_url || null
       })
       .select(`
@@ -210,6 +219,8 @@ export async function POST(request: NextRequest) {
         qualifications,
         address,
         pricing_model,
+        delivery_method,
+        location_type,
         banner_url,
         created_at
       `)
@@ -247,7 +258,7 @@ export async function PUT(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { id, title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, banner_url } = body;
+    const { id, title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url } = body;
 
     // Validate required fields
     if (!id || !title || !description || price === undefined || !location || !category || !status) {
@@ -256,10 +267,17 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate price is a positive number
+    // Validate price - for quote-based services, price can be 0, otherwise must be positive
     if (typeof price !== "number" || price < 0) {
       return NextResponse.json({ 
         error: "Price must be a positive number" 
+      }, { status: 400 });
+    }
+    
+    // For quote-based services, allow price to be 0, but for others require positive price
+    if (pricing_model !== "quote" && price <= 0) {
+      return NextResponse.json({ 
+        error: "Price must be greater than 0 for non-quote services" 
       }, { status: 400 });
     }
 
@@ -298,7 +316,7 @@ export async function PUT(request: NextRequest) {
       .update({
         title: title.trim(),
         description: description.trim(),
-        price: Number(price),
+        price: pricing_model === "quote" ? 0 : Number(price),
         location: location.trim(),
         category,
         status,
@@ -307,6 +325,8 @@ export async function PUT(request: NextRequest) {
         qualifications: qualifications || null,
         address: address || null,
         pricing_model: pricing_model || "per_hour",
+        delivery_method: delivery_method || "in_person",
+        location_type: location_type || "public_address",
         banner_url: banner_url || null,
       })
       .eq("id", id)
@@ -325,6 +345,8 @@ export async function PUT(request: NextRequest) {
         qualifications,
         address,
         pricing_model,
+        delivery_method,
+        location_type,
         banner_url,
         created_at,
         rating,

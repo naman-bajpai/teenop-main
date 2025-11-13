@@ -406,11 +406,13 @@ export type Database = {
           banner_url: string | null
           category: string
           created_at: string
+          delivery_method: string | null
           description: string
           duration: number
           education: string | null
           id: string
           location: string
+          location_type: string | null
           price: number
           pricing_model: Database["public"]["Enums"]["pricing_model"]
           qualifications: string | null
@@ -425,11 +427,13 @@ export type Database = {
           banner_url?: string | null
           category: string
           created_at?: string
+          delivery_method?: string | null
           description: string
           duration?: number
           education?: string | null
           id?: string
           location: string
+          location_type?: string | null
           price: number
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
           qualifications?: string | null
@@ -444,11 +448,13 @@ export type Database = {
           banner_url?: string | null
           category?: string
           created_at?: string
+          delivery_method?: string | null
           description?: string
           duration?: number
           education?: string | null
           id?: string
           location?: string
+          location_type?: string | null
           price?: number
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
           qualifications?: string | null
@@ -597,11 +603,13 @@ export type Database = {
           banner_url: string | null
           category: string | null
           created_at: string | null
+          delivery_method: string | null
           description: string | null
           duration: number | null
           education: string | null
           id: string | null
           location: string | null
+          location_type: string | null
           price: number | null
           pricing_model: Database["public"]["Enums"]["pricing_model"] | null
           qualifications: string | null
@@ -616,11 +624,13 @@ export type Database = {
           banner_url?: string | null
           category?: string | null
           created_at?: string | null
+          delivery_method?: string | null
           description?: string | null
           duration?: number | null
           education?: string | null
           id?: string | null
           location?: string | null
+          location_type?: string | null
           price?: number | null
           pricing_model?: Database["public"]["Enums"]["pricing_model"] | null
           qualifications?: string | null
@@ -635,11 +645,13 @@ export type Database = {
           banner_url?: string | null
           category?: string | null
           created_at?: string | null
+          delivery_method?: string | null
           description?: string | null
           duration?: number | null
           education?: string | null
           id?: string | null
           location?: string | null
+          location_type?: string | null
           price?: number | null
           pricing_model?: Database["public"]["Enums"]["pricing_model"] | null
           qualifications?: string | null
@@ -733,7 +745,7 @@ export type Database = {
         | "cancelled"
         | "rejected"
         | "paid"
-      pricing_model: "per_job" | "per_hour"
+      pricing_model: "per_job" | "per_hour" | "quote"
       service_category:
         | "pet_care"
         | "lawn_care"
@@ -880,7 +892,7 @@ export const Constants = {
         "rejected",
         "paid",
       ],
-      pricing_model: ["per_job", "per_hour"],
+      pricing_model: ["per_job", "per_hour", "quote"],
       service_category: [
         "pet_care",
         "lawn_care",

@@ -77,7 +77,7 @@ export default function ServiceCard({
 
   return (
     <div className="group bg-white rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
-      {/* Header with gradient background or image */}
+      {/* Header with gradient background or image - Square */}
       <div className={`relative w-full aspect-square overflow-hidden ${
         (service.images && service.images.length > 0) || service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient}`
       }`}>
@@ -190,7 +190,7 @@ export default function ServiceCard({
           <Button
             asChild
             size="sm"
-            className="bg-gradient-to-r from-[#ff725a] to-[#434c9d] hover:from-[#ff725a]/90 hover:to-[#434c9d]/90 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2 rounded-xl font-medium"
+            className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2 rounded-xl font-medium"
           >
             <Link href={`/services/${service.id}`}>
               View Details

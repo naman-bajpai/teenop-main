@@ -63,7 +63,9 @@ export type Service = {
   education?: string | null;
   qualifications?: string | null;
   address?: string | null;
-  pricing_model?: "per_job" | "per_hour";
+  pricing_model?: "per_job" | "per_hour" | "quote";
+  delivery_method?: string | null;
+  location_type?: string | null;
   images?: ServiceImage[];
 };
 
@@ -288,6 +290,8 @@ export default function TeenHustlePage() {
   const [qualifications, setQualifications] = useState("");
   const [address, setAddress] = useState("");
   const [pricingModel, setPricingModel] = useState<"per_job" | "per_hour" | "quote">("per_hour");
+  const [deliveryMethod, setDeliveryMethod] = useState<"in_person" | "online">("in_person");
+  const [locationType, setLocationType] = useState<"public_address" | "client_location">("public_address");
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [serviceImages, setServiceImages] = useState<ServiceImage[]>([]);
 
@@ -470,6 +474,8 @@ export default function TeenHustlePage() {
     setQualifications("");
     setAddress("");
     setPricingModel("per_hour");
+    setDeliveryMethod("in_person");
+    setLocationType("public_address");
     setBannerUrl(null);
     setServiceImages([]);
     setEditingService(null);
@@ -488,6 +494,8 @@ export default function TeenHustlePage() {
     setQualifications(service.qualifications || "");
     setAddress(service.address || "");
     setPricingModel(service.pricing_model || "per_hour");
+    setDeliveryMethod((service.delivery_method as "in_person" | "online") || "in_person");
+    setLocationType((service.location_type as "public_address" | "client_location") || "public_address");
     setBannerUrl(service.banner_url);
     setServiceImages(service.images || []);
     setOpen(true);
@@ -516,6 +524,8 @@ export default function TeenHustlePage() {
             qualifications: qualifications.trim() || null,
             address: address.trim() || null,
             pricing_model: pricingModel,
+            delivery_method: deliveryMethod,
+            location_type: locationType,
             banner_url: bannerUrl
           }
         : { 
@@ -530,6 +540,8 @@ export default function TeenHustlePage() {
             qualifications: qualifications.trim() || null,
             address: address.trim() || null,
             pricing_model: pricingModel,
+            delivery_method: deliveryMethod,
+            location_type: locationType,
             banner_url: bannerUrl
           };
 
@@ -868,6 +880,7 @@ export default function TeenHustlePage() {
                           <SelectContent>
                             <SelectItem value="per_hour">Per Hour</SelectItem>
                             <SelectItem value="per_job">Per Job</SelectItem>
+                            <SelectItem value="quote">Quote Based</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -913,6 +926,29 @@ export default function TeenHustlePage() {
                           placeholder="123 Main St, City, State" 
                           className="w-full"
                         />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Delivery Method *</Label>
+                        <Select value={deliveryMethod} onValueChange={(v: any) => setDeliveryMethod(v)}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="in_person">In Person</SelectItem>
+                            <SelectItem value="online">Online</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Location Type *</Label>
+                        <Select value={locationType} onValueChange={(v: any) => setLocationType(v)}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="public_address">Public Address</SelectItem>
+                            <SelectItem value="client_location">Client's Location</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     
@@ -1060,6 +1096,29 @@ export default function TeenHustlePage() {
                         </Select>
                       </div>
                     </div>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Delivery Method *</Label>
+                        <Select value={deliveryMethod} onValueChange={(v: any) => setDeliveryMethod(v)}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="in_person">In Person</SelectItem>
+                            <SelectItem value="online">Online</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Location Type *</Label>
+                        <Select value={locationType} onValueChange={(v: any) => setLocationType(v)}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="public_address">Public Address</SelectItem>
+                            <SelectItem value="client_location">Client's Location</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Background & Qualifications Section */}
@@ -1102,6 +1161,9 @@ export default function TeenHustlePage() {
                     setPricingModel("quote");
                     setPrice(0);
                     setDuration(1);
+                    // Ensure delivery method and location type are set
+                    if (!deliveryMethod) setDeliveryMethod("in_person");
+                    if (!locationType) setLocationType("public_address");
                     await handleCreateService();
                     setOpenQuoteDialog(false);
                   }} variant="orange" className="px-6">

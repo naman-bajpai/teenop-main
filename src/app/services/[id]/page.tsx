@@ -57,7 +57,7 @@ const fetchServiceDetails = async (id: string) => {
        .from("services")
        .select(`
          id, user_id, title, description, price, location, category, status,
-         duration, education, qualifications, address, pricing_model, banner_url,
+         duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url,
          created_at, rating, total_bookings
        `)
        .eq("id", id)
@@ -340,8 +340,8 @@ return (
           {/* Main */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              {/* Main Banner Image */}
-              <div className={`relative h-64 w-full overflow-hidden ${
+              {/* Main Banner Image - Square */}
+              <div className={`relative w-full aspect-square overflow-hidden ${
                 (service.images && service.images.length > 0) || service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient} flex items-center justify-center`
               }`}>
                 {(() => {
@@ -476,7 +476,7 @@ return (
                   <div className="space-y-3">
                     <Button
                       onClick={handleQuoteRequest}
-                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
+                      className="w-full bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
                       disabled={service.status !== "active" || bookingLoading}
                     >
                       {bookingLoading ? "Creating..." : service.status === "active" ? "Request Quote" : "Service Unavailable"}
@@ -495,7 +495,7 @@ return (
                     <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
                       <DialogTrigger asChild>
                         <Button
-                          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
+                          className="w-full bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
                           disabled={service.status !== "active"}
                         >
                           {service.status === "active" ? "Request Service" : "Service Unavailable"}
@@ -546,7 +546,7 @@ return (
                       <Button type="button" variant="outline" onClick={() => setIsBookingDialogOpen(false)} className="flex-1">
                         Cancel
                       </Button>
-                      <Button type="submit" disabled={bookingLoading} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                      <Button type="submit" disabled={bookingLoading} className="flex-1 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90">
                         {bookingLoading ? "Sending..." : "Send Request"}
                       </Button>
                     </div>

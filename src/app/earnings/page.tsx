@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Wallet,
@@ -76,6 +75,7 @@ export default function EarningsPage() {
   const [loading, setLoading] = useState(true);
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [refreshingAccount, setRefreshingAccount] = useState(false);
 
   // Check URL parameters for Stripe callback results
   useEffect(() => {
@@ -98,9 +98,12 @@ export default function EarningsPage() {
         title: "Stripe Account Connected!",
         description: "Your payment account has been successfully set up.",
       });
-      // Clean up URL and refresh account status
+      // Clean up URL and refresh account status with a small delay to ensure DB update is complete
       window.history.replaceState({}, '', window.location.pathname);
-      fetchAccountStatus();
+      // Wait a moment for the database update to propagate, then fetch
+      setTimeout(() => {
+        fetchAccountStatus();
+      }, 500);
     }
   }, []);
 
@@ -128,17 +131,49 @@ export default function EarningsPage() {
     }
   }
 
-  async function fetchAccountStatus() {
+  async function fetchAccountStatus(retryCount = 0, showLoading = false) {
+    if (showLoading) {
+      setRefreshingAccount(true);
+    }
     try {
-      const res = await fetch("/api/stripe/connect/setup", { cache: "no-store" });
+      const res = await fetch("/api/stripe/connect/setup", { 
+        cache: "no-store",
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
+      });
+      
       if (res.ok) {
         const data = await res.json();
+        console.log("Account status response:", data);
         if (data.success) {
           setAccountStatus(data);
+          setRefreshingAccount(false);
+          return;
         }
+      } else {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+        console.error("Failed to fetch account status:", errorData);
+      }
+      
+      // If account not found and we haven't retried, wait a bit and retry (in case DB update is still propagating)
+      if (retryCount < 2) {
+        setTimeout(() => {
+          fetchAccountStatus(retryCount + 1, false);
+        }, 1000 * (retryCount + 1)); // Wait 1s, then 2s
+      } else {
+        setRefreshingAccount(false);
       }
     } catch (error) {
       console.error("Error fetching account status:", error);
+      // Retry on network errors
+      if (retryCount < 2) {
+        setTimeout(() => {
+          fetchAccountStatus(retryCount + 1, false);
+        }, 1000 * (retryCount + 1));
+      } else {
+        setRefreshingAccount(false);
+      }
     }
   }
 
@@ -243,13 +278,13 @@ export default function EarningsPage() {
   function getStatusBadge(status: string) {
     switch (status) {
       case "completed":
-        return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>;
+        return <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 shadow-sm"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>;
       case "processing":
-        return <Badge className="bg-blue-100 text-blue-700 border-blue-200"><Clock className="w-3 h-3 mr-1" />Processing</Badge>;
+        return <Badge className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 shadow-sm"><Clock className="w-3 h-3 mr-1" />Processing</Badge>;
       case "failed":
-        return <Badge className="bg-red-100 text-red-700 border-red-200"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>;
+        return <Badge className="bg-gradient-to-r from-red-100 to-rose-100 text-red-700 shadow-sm"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 shadow-sm">{status}</Badge>;
     }
   }
 
@@ -265,123 +300,154 @@ export default function EarningsPage() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-6 max-w-7xl mx-auto bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Earnings & Account</h1>
-          <p className="text-gray-600">Manage your earnings, withdrawals, and payment account</p>
+        <div className="mb-10">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent mb-3">
+            Earnings & Account
+          </h1>
+          <p className="text-gray-500 text-lg">Manage your earnings, withdrawals, and payment account</p>
         </div>
 
         {/* Earnings Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
+              <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl">
                 <DollarSign className="w-6 h-6 text-blue-600" />
               </div>
-              <TrendingUp className="w-5 h-5 text-gray-400" />
+              <TrendingUp className="w-5 h-5 text-blue-300" />
             </div>
-            <p className="text-sm text-gray-600 mb-1">Total Earned</p>
-            <p className="text-2xl font-bold text-gray-900">${earningsStats.totalEarned.toFixed(2)}</p>
-          </Card>
+            <p className="text-sm text-gray-500 mb-1 font-medium">Total Earned</p>
+            <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
+              ${earningsStats.totalEarned.toFixed(2)}
+            </p>
+          </div>
 
-          <Card className="p-6">
+          <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-100 rounded-lg">
+              <div className="p-3 bg-gradient-to-br from-green-100 to-green-50 rounded-xl">
                 <TrendingUp className="w-6 h-6 text-green-600" />
               </div>
-              <Clock className="w-5 h-5 text-gray-400" />
+              <Clock className="w-5 h-5 text-green-300" />
             </div>
-            <p className="text-sm text-gray-600 mb-1">This Week</p>
-            <p className="text-2xl font-bold text-gray-900">${earningsStats.thisWeekEarned.toFixed(2)}</p>
-          </Card>
+            <p className="text-sm text-gray-500 mb-1 font-medium">This Week</p>
+            <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent">
+              ${earningsStats.thisWeekEarned.toFixed(2)}
+            </p>
+          </div>
 
-          <Card className="p-6">
+          <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
+              <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl">
                 <TrendingUp className="w-6 h-6 text-purple-600" />
               </div>
-              <Clock className="w-5 h-5 text-gray-400" />
+              <Clock className="w-5 h-5 text-purple-300" />
             </div>
-            <p className="text-sm text-gray-600 mb-1">This Month</p>
-            <p className="text-2xl font-bold text-gray-900">${earningsStats.thisMonthEarned.toFixed(2)}</p>
-          </Card>
+            <p className="text-sm text-gray-500 mb-1 font-medium">This Month</p>
+            <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">
+              ${earningsStats.thisMonthEarned.toFixed(2)}
+            </p>
+          </div>
 
-          <Card className="p-6">
+          <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-orange-100 rounded-lg">
+              <div className="p-3 bg-gradient-to-br from-orange-100 to-orange-50 rounded-xl">
                 <Wallet className="w-6 h-6 text-orange-600" />
               </div>
-              <Clock className="w-5 h-5 text-gray-400" />
+              <Clock className="w-5 h-5 text-orange-300" />
             </div>
-            <p className="text-sm text-gray-600 mb-1">Pending</p>
-            <p className="text-2xl font-bold text-gray-900">${earningsStats.pendingEarnings.toFixed(2)}</p>
-          </Card>
+            <p className="text-sm text-gray-500 mb-1 font-medium">Pending</p>
+            <p className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent">
+              ${earningsStats.pendingEarnings.toFixed(2)}
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Payment Account Section */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-2xl p-8 shadow-lg">
+            <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">Payment Account</h2>
-                <p className="text-sm text-gray-600">Manage your Stripe Connect account</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Account</h2>
+                <p className="text-sm text-gray-500">Manage your Stripe Connect account</p>
               </div>
-              <CreditCard className="w-8 h-8 text-gray-400" />
+              <div className="p-3 bg-gradient-to-br from-[#434c9d]/10 to-[#96cbc3]/10 rounded-xl">
+                <CreditCard className="w-8 h-8 text-[#434c9d]" />
+              </div>
             </div>
 
             {!accountStatus?.hasAccount ? (
-              <div className="space-y-4">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="space-y-5">
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-5 shadow-sm">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-yellow-800">Account Not Set Up</p>
-                      <p className="text-sm text-yellow-700 mt-1">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <AlertCircle className="w-5 h-5 text-yellow-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-900">Account Not Set Up</p>
+                      <p className="text-sm text-gray-600 mt-1">
                         Set up your payment account to receive withdrawals
                       </p>
                     </div>
+                    {refreshingAccount && (
+                      <Loader2 className="w-4 h-4 animate-spin text-yellow-600" />
+                    )}
                   </div>
                 </div>
-                <Button
-                  onClick={handleStripeConnectSetup}
-                  className="w-full bg-gradient-to-r from-[#ff725a] to-[#434c9d] hover:from-[#ff725a]/90 hover:to-[#434c9d]/90"
-                >
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Set Up Payment Account
-                </Button>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleStripeConnectSetup}
+                    className="flex-1 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-md hover:shadow-lg transition-all"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Set Up Payment Account
+                  </Button>
+                  <Button
+                    onClick={() => fetchAccountStatus(0, true)}
+                    variant="outline"
+                    disabled={refreshingAccount}
+                    className="px-4 shadow-sm hover:shadow-md transition-all"
+                  >
+                    {refreshingAccount ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <ExternalLink className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
             ) : accountStatus.accountStatus ? (
               <div className="space-y-4">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm text-gray-600">Account Status</span>
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl">
+                    <span className="text-sm font-medium text-gray-700">Account Status</span>
                     {accountStatus.accountStatus.chargesEnabled && accountStatus.accountStatus.payoutsEnabled ? (
-                      <Badge className="bg-green-100 text-green-700 border-green-200">
+                      <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 shadow-sm">
                         <CheckCircle className="w-3 h-3 mr-1" />Active
                       </Badge>
                     ) : (
-                      <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">
+                      <Badge className="bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-700 shadow-sm">
                         <AlertCircle className="w-3 h-3 mr-1" />Setup Required
                       </Badge>
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm text-gray-600">Details Submitted</span>
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl">
+                    <span className="text-sm font-medium text-gray-700">Details Submitted</span>
                     {accountStatus.accountStatus.detailsSubmitted ? (
                       <CheckCircle className="w-5 h-5 text-green-600" />
                     ) : (
-                      <XCircle className="w-5 h-5 text-red-600" />
+                      <XCircle className="w-5 h-5 text-red-500" />
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm text-gray-600">Payouts Enabled</span>
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl">
+                    <span className="text-sm font-medium text-gray-700">Payouts Enabled</span>
                     {accountStatus.accountStatus.payoutsEnabled ? (
                       <CheckCircle className="w-5 h-5 text-green-600" />
                     ) : (
-                      <XCircle className="w-5 h-5 text-red-600" />
+                      <XCircle className="w-5 h-5 text-red-500" />
                     )}
                   </div>
                 </div>
@@ -390,7 +456,7 @@ export default function EarningsPage() {
                   <Button
                     onClick={handleStripeConnectLogin}
                     variant="outline"
-                    className="w-full"
+                    className="w-full shadow-sm hover:shadow-md transition-all"
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
                     Manage Account in Stripe
@@ -398,36 +464,38 @@ export default function EarningsPage() {
                 )}
 
                 {!accountStatus.accountStatus.detailsSubmitted && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-blue-800">
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 shadow-sm">
+                    <p className="text-sm text-blue-900 font-medium">
                       Complete your account setup to enable payouts
                     </p>
                   </div>
                 )}
               </div>
             ) : null}
-          </Card>
+          </div>
 
           {/* Withdrawal Section */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-2xl p-8 shadow-lg">
+            <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">Withdrawals</h2>
-                <p className="text-sm text-gray-600">Withdraw your earnings</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Withdrawals</h2>
+                <p className="text-sm text-gray-500">Withdraw your earnings</p>
               </div>
-              <Wallet className="w-8 h-8 text-gray-400" />
+              <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl">
+                <Wallet className="w-8 h-8 text-green-600" />
+              </div>
             </div>
 
             {earningsStats.pendingEarnings > 0 ? (
-              <div className="space-y-4">
-                <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
-                  <p className="text-sm font-medium text-gray-900 mb-1">
+              <div className="space-y-5">
+                <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-blue-50 p-6 rounded-xl shadow-sm">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">
                     Available for Withdrawal
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
                     ${earningsStats.pendingEarnings.toFixed(2)}
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">
+                  <p className="text-xs text-gray-500">
                     Platform fee: 10% (${(earningsStats.pendingEarnings * 0.1).toFixed(2)})
                   </p>
                 </div>
@@ -435,7 +503,7 @@ export default function EarningsPage() {
                 <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
                   <DialogTrigger asChild>
                     <Button
-                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md hover:shadow-lg transition-all"
                       disabled={!accountStatus?.hasAccount || !accountStatus?.accountStatus?.payoutsEnabled}
                     >
                       <Wallet className="w-4 h-4 mr-2" />
@@ -459,22 +527,22 @@ export default function EarningsPage() {
                           <span className="text-gray-600">Platform Fee (10%):</span>
                           <span className="font-medium">-${(earningsStats.pendingEarnings * 0.1).toFixed(2)}</span>
                         </div>
-                        <div className="border-t pt-2 flex justify-between font-semibold">
-                          <span>You'll Receive:</span>
+                        <div className="pt-3 mt-3 border-t border-gray-200 flex justify-between font-semibold">
+                          <span className="text-gray-900">You'll Receive:</span>
                           <span className="text-green-600">
                             ${(earningsStats.pendingEarnings * 0.9).toFixed(2)}
                           </span>
                         </div>
                       </div>
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p className="text-xs text-blue-800">
+                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 shadow-sm">
+                        <p className="text-xs text-blue-900 font-medium">
                           Funds will be transferred to your connected bank account within 2-5 business days.
                         </p>
                       </div>
                       <Button
                         onClick={handleWithdrawMoney}
                         disabled={withdrawing}
-                        className="w-full bg-green-600 hover:bg-green-700"
+                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md hover:shadow-lg transition-all"
                       >
                         {withdrawing ? (
                           <>
@@ -493,8 +561,8 @@ export default function EarningsPage() {
                 </Dialog>
 
                 {(!accountStatus?.hasAccount || !accountStatus?.accountStatus?.payoutsEnabled) && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <p className="text-xs text-yellow-800">
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 shadow-sm">
+                    <p className="text-xs text-gray-700 font-medium">
                       {!accountStatus?.hasAccount
                         ? "Set up your payment account to withdraw money"
                         : "Complete your account setup to enable withdrawals"}
@@ -503,56 +571,65 @@ export default function EarningsPage() {
                 )}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <Wallet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-600">No pending earnings available</p>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Wallet className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500 font-medium">No pending earnings available</p>
               </div>
             )}
-          </Card>
+          </div>
         </div>
 
         {/* Withdrawal History */}
-        <Card className="p-6 mt-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white rounded-2xl p-8 shadow-lg mt-6">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-1">Withdrawal History</h2>
-              <p className="text-sm text-gray-600">View your past withdrawals</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Withdrawal History</h2>
+              <p className="text-sm text-gray-500">View your past withdrawals</p>
             </div>
-            <Building2 className="w-8 h-8 text-gray-400" />
+            <div className="p-3 bg-gradient-to-br from-[#434c9d]/10 to-[#96cbc3]/10 rounded-xl">
+              <Building2 className="w-8 h-8 text-[#434c9d]" />
+            </div>
           </div>
 
           {withdrawals.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Date</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Amount</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Platform Fee</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Total Earnings</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Status</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Transfer ID</th>
+                  <tr>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Date</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Amount</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Platform Fee</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Total Earnings</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Status</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Transfer ID</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {withdrawals.map((withdrawal) => (
-                    <tr key={withdrawal.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 text-sm text-gray-900">
+                  {withdrawals.map((withdrawal, index) => (
+                    <tr 
+                      key={withdrawal.id} 
+                      className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/50 transition-colors ${
+                        index !== withdrawals.length - 1 ? 'border-b border-gray-100' : ''
+                      }`}
+                    >
+                      <td className="py-4 px-4 text-sm text-gray-900 font-medium">
                         {new Date(withdrawal.created_at).toLocaleDateString()}
                       </td>
-                      <td className="py-3 px-4 text-sm font-medium text-gray-900">
+                      <td className="py-4 px-4 text-sm font-semibold text-gray-900">
                         ${withdrawal.amount.toFixed(2)}
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
+                      <td className="py-4 px-4 text-sm text-gray-600">
                         ${withdrawal.platform_fee.toFixed(2)}
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
+                      <td className="py-4 px-4 text-sm text-gray-600">
                         ${withdrawal.total_earnings.toFixed(2)}
                       </td>
-                      <td className="py-3 px-4 text-sm">
+                      <td className="py-4 px-4 text-sm">
                         {getStatusBadge(withdrawal.status)}
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-500 font-mono text-xs">
+                      <td className="py-4 px-4 text-sm text-gray-500 font-mono text-xs">
                         {withdrawal.stripe_transfer_id.substring(0, 20)}...
                       </td>
                     </tr>
@@ -561,12 +638,14 @@ export default function EarningsPage() {
               </table>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm text-gray-600">No withdrawal history yet</p>
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-gray-400" />
+              </div>
+              <p className="text-sm text-gray-500 font-medium">No withdrawal history yet</p>
             </div>
           )}
-        </Card>
+        </div>
       </div>
     </DashboardLayout>
   );

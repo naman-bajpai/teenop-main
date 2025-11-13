@@ -130,10 +130,12 @@ export async function GET(request: NextRequest) {
 
     // Update user profile with Stripe Connect account ID
     const supabase = await createServerClient();
-    const { error: updateError } = await (supabase as any)
+    const { data: updatedProfile, error: updateError } = await (supabase as any)
       .from('profiles')
       .update({ stripe_connect_account_id: accountId })
-      .eq('id', state);
+      .eq('id', state)
+      .select('stripe_connect_account_id')
+      .single();
 
     if (updateError) {
       console.error('Error updating profile with Stripe account ID:', updateError);
@@ -144,7 +146,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('Successfully linked Stripe Connect account to user:', state);
+    // Verify the update was successful
+    if (!updatedProfile || updatedProfile.stripe_connect_account_id !== accountId) {
+      console.error('Profile update verification failed:', { updatedProfile, accountId });
+      return NextResponse.redirect(
+        `${baseUrl}/earnings?stripe_error=profile_verification_failed`
+      );
+    }
+
+    console.log('Successfully linked Stripe Connect account to user:', {
+      userId: state,
+      accountId: accountId,
+      verified: updatedProfile.stripe_connect_account_id === accountId
+    });
 
     // Redirect back to earnings page with success
     return NextResponse.redirect(

@@ -20,6 +20,8 @@ export interface Service {
   qualifications?: string | null;
   address?: string | null;
   pricing_model: string;
+  delivery_method?: string | null;
+  location_type?: string | null;
   banner_url?: string | null;
   created_at: string;
   rating?: number | null;
