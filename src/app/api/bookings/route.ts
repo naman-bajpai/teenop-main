@@ -63,6 +63,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Prevent direct booking for quote-based services
+    if (serviceData.pricing_model === "quote") {
+      return NextResponse.json(
+        { success: false, error: "This service requires a quote. Please request a quote first." },
+        { status: 400 }
+      );
+    }
+
     // Prevent users from booking their own services
     if (serviceData.user_id === user.id) {
       return NextResponse.json(

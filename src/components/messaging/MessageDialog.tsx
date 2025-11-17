@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { Send, MessageCircle, User, ExternalLink } from "lucide-react";
+import { Send, MessageCircle, User, ExternalLink, Image as ImageIcon, X } from "lucide-react";
 
 interface Message {
   id: string;
@@ -18,6 +18,7 @@ interface Message {
   receiver_id: string;
   booking_id: string;
   content: string;
+  image_url?: string | null;
   created_at: string;
   sender_name: string;
 }
@@ -39,9 +40,13 @@ export default function MessageDialog({
 }: MessageDialogProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [currentUserId, setCurrentUserId] = useState<string>("");
 
@@ -68,6 +73,15 @@ export default function MessageDialog({
     }
   }, [isOpen, bookingId]);
 
+  // Cleanup image preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
   const fetchMessages = async () => {
     try {
       setLoading(true);
@@ -88,11 +102,75 @@ export default function MessageDialog({
     }
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "File size must be less than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedImage(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const removeImage = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() && !selectedImage) return;
 
     try {
       setSending(true);
+      let imageUrl = null;
+
+      // Upload image if selected
+      if (selectedImage) {
+        setUploadingImage(true);
+        const formData = new FormData();
+        formData.append('file', selectedImage);
+        formData.append('booking_id', bookingId);
+
+        const uploadResponse = await fetch("/api/messages/upload-image", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || "Failed to upload image");
+        }
+
+        const uploadData = await uploadResponse.json();
+        imageUrl = uploadData.url;
+        setUploadingImage(false);
+      }
+
+      // Send message with image
       const response = await fetch("/api/messages", {
         method: "POST",
         headers: {
@@ -101,7 +179,8 @@ export default function MessageDialog({
         body: JSON.stringify({
           booking_id: bookingId,
           receiver_id: recipientId,
-          content: newMessage.trim(),
+          content: newMessage.trim() || null,
+          image_url: imageUrl,
         }),
       });
 
@@ -114,6 +193,7 @@ export default function MessageDialog({
       if (data.success) {
         setMessages(prev => [...prev, data.message]);
         setNewMessage("");
+        removeImage();
         toast({
           title: "Message sent",
           description: "Your message has been sent successfully. You can continue the conversation in the Messages page.",
@@ -128,6 +208,7 @@ export default function MessageDialog({
         }));
       }
     } catch (error: any) {
+      setUploadingImage(false);
       toast({
         title: "Error",
         description: error.message,
@@ -144,6 +225,13 @@ export default function MessageDialog({
       sendMessage();
     }
   };
+
+  // Cleanup when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      removeImage();
+    }
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -214,7 +302,20 @@ export default function MessageDialog({
                           {isOwn ? "You" : message.sender_name}
                         </span>
                       </div>
-                      <p className="text-sm">{message.content}</p>
+                      {message.image_url && (
+                        <div className="mb-2 rounded-lg overflow-hidden">
+                          <img
+                            src={message.image_url}
+                            alt="Message attachment"
+                            className="max-w-full max-h-64 object-contain rounded-lg"
+                            onClick={() => window.open(message.image_url!, '_blank')}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        </div>
+                      )}
+                      {message.content && (
+                        <p className="text-sm">{message.content}</p>
+                      )}
                       <p className="text-xs mt-1 opacity-70">
                         {new Date(message.created_at).toLocaleTimeString()}
                       </p>
@@ -226,22 +327,64 @@ export default function MessageDialog({
           </div>
 
           {/* Message Input */}
-          <div className="flex gap-2 p-4 border-t">
-            <Textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              className="flex-1 resize-none"
-              rows={2}
-            />
-            <Button
-              onClick={sendMessage}
-              disabled={!newMessage.trim() || sending}
-              className="self-end"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
+          <div className="p-4 border-t space-y-2">
+            {imagePreview && (
+              <div className="relative inline-block">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="max-w-xs max-h-48 rounded-lg object-contain border border-gray-200"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-2 right-2 h-6 w-6 p-0"
+                  onClick={removeImage}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={sending || uploadingImage}
+                className="self-end"
+              >
+                <ImageIcon className="w-4 h-4" />
+              </Button>
+              <Textarea
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                className="flex-1 resize-none"
+                rows={2}
+                disabled={uploadingImage}
+              />
+              <Button
+                onClick={sendMessage}
+                disabled={(!newMessage.trim() && !selectedImage) || sending || uploadingImage}
+                className="self-end"
+              >
+                {uploadingImage ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     console.log('Signup attempt for:', { email, firstName, lastName, age, role });
 
     // Validate required fields
-    if (!email || !password || !firstName || !lastName || !age) {
+    if (!email || !password || !firstName || !lastName) {
       console.log('Missing required fields');
       return NextResponse.json(
         { error: "All required fields must be provided" },
@@ -16,12 +16,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate age for teen accounts
-    if (age < 13 || age > 19) {
-      return NextResponse.json(
-        { error: 'Age must be between 13 and 19' },
-        { status: 400 }
-      );
+    // Validate age for teen accounts only
+    if (role === 'teen') {
+      if (!age) {
+        return NextResponse.json(
+          { error: 'Age is required for teen accounts' },
+          { status: 400 }
+        );
+      }
+      if (age < 13 || age > 19) {
+        return NextResponse.json(
+          { error: 'Age must be between 13 and 19' },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate password strength

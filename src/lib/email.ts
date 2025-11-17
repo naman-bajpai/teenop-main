@@ -308,6 +308,73 @@ export class EmailService {
     return this.sendEmail(data.buyerEmail, subject, html);
   }
 
+  // Buyer 1-hour reminder email
+  async sendBuyer1HourReminder(data: {
+    buyerName: string;
+    buyerEmail: string;
+    serviceName: string;
+    teenName: string;
+    time: string;
+    timeZone: string;
+    location: string;
+    bookingId: string;
+  }) {
+    const subject = 'Reminder: Your TeenOp booking is in 1 hour!';
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Booking Reminder</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #fff3cd; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107; }
+          .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
+          .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
+          .urgent { color: #dc3545; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>⏰ Reminder: Your TeenOp booking is in 1 hour!</h1>
+          </div>
+          
+          <div class="content">
+            <p>Hi ${data.buyerName},</p>
+            
+            <p class="urgent">Your TeenOp booking is starting in 1 hour! Make sure you're ready.</p>
+            
+            <div class="booking-details">
+              <h3>Booking Details</h3>
+              <p><strong>Service:</strong> ${data.serviceName}</p>
+              <p><strong>With:</strong> ${data.teenName}</p>
+              <p><strong>Time:</strong> ${data.time} ${data.timeZone}</p>
+              <p><strong>Location:</strong> ${data.location}</p>
+              <p><strong>Booking ID:</strong> #${data.bookingId}</p>
+            </div>
+
+            <p>Please be on time and ready for your service. If you need to make changes, contact the provider through TeenOp messages.</p>
+            <p>Remember to keep all communication and payments on TeenOp for safety.</p>
+            
+            <p>Thanks for supporting the new wave of teen entrepreneurs!</p>
+          </div>
+
+          <div class="footer">
+            <p>Best,<br>The TeenOp Team</p>
+            <p>teenop.co@gmail.com | www.teenop.com</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail(data.buyerEmail, subject, html);
+  }
+
   // Buyer 3-hour reminder email
   async sendBuyer3HourReminder(data: {
     buyerName: string;

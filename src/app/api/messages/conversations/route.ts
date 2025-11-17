@@ -148,6 +148,7 @@ export async function GET(request: NextRequest) {
           },
           last_message: lastMessage ? {
             content: (lastMessage as any).content,
+            image_url: (lastMessage as any).image_url,
             created_at: (lastMessage as any).created_at,
             sender_id: (lastMessage as any).sender_id,
             sender_name: (lastMessage as any).sender ? 

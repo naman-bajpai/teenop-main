@@ -63,3 +63,83 @@ export const getServiceImageUrl = (filePath: string): string => {
   
   return publicUrl;
 };
+
+export const uploadMessageImage = async (
+  file: File,
+  bookingId: string,
+  userId: string
+): Promise<{ url: string; error: string | null }> => {
+  try {
+    const supabase = createClient();
+    
+    // Generate unique filename
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    // Use same pattern as service images: userId/folder/filename
+    const filePath = `${userId}/messages/${bookingId}/${fileName}`;
+
+    // Upload file to storage (using service-images bucket)
+    const { error } = await supabase.storage
+      .from('service-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      return { url: '', error: error.message };
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('service-images')
+      .getPublicUrl(filePath);
+
+    return { url: publicUrl, error: null };
+  } catch (error) {
+    return { 
+      url: '', 
+      error: error instanceof Error ? error.message : 'Upload failed' 
+    };
+  }
+};
+
+export const uploadQuoteRequestImage = async (
+  file: File,
+  quoteRequestId: string,
+  userId: string
+): Promise<{ url: string; error: string | null }> => {
+  try {
+    const supabase = createClient();
+    
+    // Generate unique filename
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    // Use same pattern as service images: userId/folder/filename
+    const filePath = `${userId}/quote-requests/${quoteRequestId}/${fileName}`;
+
+    // Upload file to storage (using service-images bucket)
+    const { error } = await supabase.storage
+      .from('service-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      return { url: '', error: error.message };
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('service-images')
+      .getPublicUrl(filePath);
+
+    return { url: publicUrl, error: null };
+  } catch (error) {
+    return { 
+      url: '', 
+      error: error instanceof Error ? error.message : 'Upload failed' 
+    };
+  }
+};

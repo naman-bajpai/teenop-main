@@ -40,7 +40,9 @@ import {
   MessageCircle,
   CheckCircle,
   Wallet,
+  FileText,
 } from "lucide-react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
@@ -294,6 +296,7 @@ export default function TeenHustlePage() {
   const [locationType, setLocationType] = useState<"public_address" | "client_location">("public_address");
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [serviceImages, setServiceImages] = useState<ServiceImage[]>([]);
+  const [pendingQuoteRequestsCount, setPendingQuoteRequestsCount] = useState(0);
 
 
   // Handle URL parameters for Stripe Connect callbacks
@@ -364,6 +367,15 @@ export default function TeenHustlePage() {
           const earningsData = await earningsRes.json();
           if (earningsData.success) {
             setEarningsStats(earningsData.stats);
+          }
+        }
+
+        // Fetch pending quote requests count
+        const quoteRequestsRes = await fetch("/api/quotes/request?role=provider&status=pending", { cache: "no-store" });
+        if (quoteRequestsRes.ok) {
+          const quoteRequestsData = await quoteRequestsRes.json();
+          if (quoteRequestsData.success) {
+            setPendingQuoteRequestsCount(quoteRequestsData.quote_requests?.length || 0);
           }
         }
 
@@ -774,6 +786,15 @@ export default function TeenHustlePage() {
               <p className="text-gray-600">Manage your services, bookings, and earnings</p>
             </div>
             <div className="flex gap-3">
+              <Link href="/provider/quote-requests">
+                <Button variant="outline" className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white relative">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Quote Requests
+                  {pendingQuoteRequestsCount > 0 && (
+                    <Badge className="ml-2 bg-[#434c9d] text-white">{pendingQuoteRequestsCount}</Badge>
+                  )}
+                </Button>
+              </Link>
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90">
@@ -1061,7 +1082,7 @@ export default function TeenHustlePage() {
                         id="quote-description" 
                         value={description} 
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} 
-                        placeholder="Describe what you offer. Customers will message you to request a custom quote." 
+                        placeholder="Describe what you offer. Customers will request quotes through the quote request system." 
                         rows={4}
                         className="w-full resize-none"
                       />

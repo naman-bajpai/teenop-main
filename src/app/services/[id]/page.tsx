@@ -8,13 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Clock, Star, ArrowLeft, User, MessageCircle, Shield, CheckCircle, AlertCircle, Calendar } from "lucide-react";
+import { MapPin, Clock, Star, ArrowLeft, User, MessageCircle, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useUser } from "@/hooks/useUser";
 import { Service } from "@/types/service";
 import { CreateBookingRequest, BookingResponse } from "@/types/booking";
 import { createClient } from "@/lib/supabase/client";
-import MessageDialog from "@/components/messaging/MessageDialog";
 
 export default function ServiceDetailsPage() {
 const params = useParams();
@@ -28,7 +27,17 @@ const [error, setError] = useState<string | null>(null);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [providerScheduleUrl, setProviderScheduleUrl] = useState<string | null>(null);
   const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
-  const [quoteBookingId, setQuoteBookingId] = useState<string | null>(null);
+  const [quoteRequestLoading, setQuoteRequestLoading] = useState(false);
+  const [quoteRequestSuccess, setQuoteRequestSuccess] = useState(false);
+  const [quoteRequestForm, setQuoteRequestForm] = useState({
+    requested_date: "",
+    requested_time: "",
+    special_instructions: "",
+  });
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
 const [bookingForm, setBookingForm] = useState<CreateBookingRequest>({
   service_id: "",
@@ -44,6 +53,15 @@ useEffect(() => {
     void fetchServiceDetails(serviceId);
   }
 }, [serviceId]);
+
+// Cleanup image preview URL on unmount
+useEffect(() => {
+  return () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+  };
+}, [imagePreview]);
 
 const fetchServiceDetails = async (id: string) => {
   try {
@@ -169,7 +187,40 @@ const handleBookingSubmit = async (e: React.FormEvent) => {
   }
 };
 
-const handleQuoteRequest = async () => {
+const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    alert("Please select an image file");
+    return;
+  }
+
+  // Validate file size (5MB limit)
+  if (file.size > 5 * 1024 * 1024) {
+    alert("File size must be less than 5MB");
+    return;
+  }
+
+  setSelectedImage(file);
+  setImagePreview(URL.createObjectURL(file));
+};
+
+const removeImage = () => {
+  if (imagePreview) {
+    URL.revokeObjectURL(imagePreview);
+  }
+  setSelectedImage(null);
+  setImagePreview(null);
+  if (fileInputRef.current) {
+    fileInputRef.current.value = '';
+  }
+};
+
+const handleQuoteRequest = async (e?: React.FormEvent) => {
+  if (e) e.preventDefault();
+  
   if (!user) {
     router.push("/login");
     return;
@@ -177,35 +228,108 @@ const handleQuoteRequest = async () => {
 
   if (!service) return;
 
-  try {
-    setBookingLoading(true);
+  if (!quoteRequestForm.requested_date || !quoteRequestForm.requested_time) {
+    alert("Please select a date and time for your quote request");
+    return;
+  }
 
-    // Create a quote request booking
-    const response = await fetch("/api/bookings", {
+  try {
+    setQuoteRequestLoading(true);
+    let imageUrl = null;
+
+    // Upload image if selected
+    if (selectedImage) {
+      setUploadingImage(true);
+      // First create the quote request to get an ID
+      const tempResponse = await fetch("/api/quotes/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service_id: service.id,
+          requested_date: quoteRequestForm.requested_date,
+          requested_time: quoteRequestForm.requested_time,
+          special_instructions: quoteRequestForm.special_instructions || undefined,
+        }),
+      });
+
+      const tempResult = await tempResponse.json();
+
+      if (!tempResponse.ok || !tempResult?.success) {
+        throw new Error(tempResult?.error || "Failed to create quote request");
+      }
+
+      const quoteRequestId = tempResult.quote_request.id;
+
+      // Upload image
+      const formData = new FormData();
+      formData.append('file', selectedImage);
+      formData.append('quote_request_id', quoteRequestId);
+
+      const uploadResponse = await fetch("/api/quotes/request/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || "Failed to upload image");
+      }
+
+      const uploadData = await uploadResponse.json();
+      imageUrl = uploadData.url;
+      setUploadingImage(false);
+
+      setQuoteRequestSuccess(true);
+      setQuoteRequestForm({
+        requested_date: "",
+        requested_time: "",
+        special_instructions: "",
+      });
+      removeImage();
+      
+      setTimeout(() => {
+        setIsQuoteDialogOpen(false);
+        setQuoteRequestSuccess(false);
+        router.push("/my-quote-requests");
+      }, 2000);
+    } else {
+      // No image, create quote request normally
+      const response = await fetch("/api/quotes/request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         service_id: service.id,
-        requested_date: new Date().toISOString().split("T")[0],
-        requested_time: "00:00",
-        special_instructions: "Quote request - please provide a custom quote for this service.",
+          requested_date: quoteRequestForm.requested_date,
+          requested_time: quoteRequestForm.requested_time,
+          special_instructions: quoteRequestForm.special_instructions || undefined,
       }),
     });
 
-    const result: BookingResponse = await response.json();
+      const result = await response.json();
 
     if (!response.ok || !result?.success) {
       throw new Error(result?.error || "Failed to create quote request");
     }
 
-    // Open message dialog with the booking
-    setQuoteBookingId(result.booking?.id || null);
-    setIsQuoteDialogOpen(true);
+      setQuoteRequestSuccess(true);
+      setQuoteRequestForm({
+        requested_date: "",
+        requested_time: "",
+        special_instructions: "",
+      });
+      
+      setTimeout(() => {
+        setIsQuoteDialogOpen(false);
+        setQuoteRequestSuccess(false);
+        router.push("/my-quote-requests");
+      }, 2000);
+    }
   } catch (err: any) {
     console.error("Error creating quote request:", err);
     alert(err?.message || "Failed to create quote request. Please try again.");
   } finally {
-    setBookingLoading(false);
+    setQuoteRequestLoading(false);
+    setUploadingImage(false);
   }
 };
 
@@ -474,13 +598,125 @@ return (
                     </div>
                   </div>
                   <div className="space-y-3">
+                    <Dialog open={isQuoteDialogOpen} onOpenChange={setIsQuoteDialogOpen}>
+                      <DialogTrigger asChild>
                     <Button
-                      onClick={handleQuoteRequest}
                       className="w-full bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
-                      disabled={service.status !== "active" || bookingLoading}
-                    >
-                      {bookingLoading ? "Creating..." : service.status === "active" ? "Request Quote" : "Service Unavailable"}
+                          disabled={service.status !== "active"}
+                        >
+                          {service.status === "active" ? "Request Quote" : "Service Unavailable"}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Request Quote</DialogTitle>
+                          <DialogDescription>
+                            Fill out the form below to request a quote from {service.provider_name}.
+                          </DialogDescription>
+                        </DialogHeader>
+                        {quoteRequestSuccess ? (
+                          <div className="text-center py-6">
+                            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Quote Request Sent!</h3>
+                            <p className="text-gray-600">The provider will review your request and send you a quote soon.</p>
+                          </div>
+                        ) : (
+                          <form onSubmit={handleQuoteRequest} className="space-y-4">
+                            <div>
+                              <Label htmlFor="quote-date">Preferred Date</Label>
+                              <Input
+                                id="quote-date"
+                                type="date"
+                                value={quoteRequestForm.requested_date}
+                                onChange={(e) => setQuoteRequestForm((prev) => ({ ...prev, requested_date: e.target.value }))}
+                                min={new Date().toISOString().split("T")[0]}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="quote-time">Preferred Time</Label>
+                              <Input
+                                id="quote-time"
+                                type="time"
+                                value={quoteRequestForm.requested_time}
+                                onChange={(e) => setQuoteRequestForm((prev) => ({ ...prev, requested_time: e.target.value }))}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="quote-instructions">Special Instructions (Optional)</Label>
+                              <Textarea
+                                id="quote-instructions"
+                                placeholder="Any specific requirements or details you'd like the provider to know..."
+                                value={quoteRequestForm.special_instructions}
+                                onChange={(e) =>
+                                  setQuoteRequestForm((prev) => ({ ...prev, special_instructions: e.target.value }))
+                                }
+                                rows={3}
+                              />
+                            </div>
+                            <div>
+                              <Label>Upload Image (Optional)</Label>
+                              <div className="space-y-2">
+                                {imagePreview && (
+                                  <div className="relative inline-block">
+                                    <img
+                                      src={imagePreview}
+                                      alt="Preview"
+                                      className="max-w-full max-h-48 rounded-lg object-contain border border-gray-200"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="destructive"
+                                      size="sm"
+                                      className="absolute top-2 right-2 h-6 w-6 p-0"
+                                      onClick={removeImage}
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                                <div className="flex gap-2">
+                                  <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageSelect}
+                                    className="hidden"
+                                    disabled={uploadingImage}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploadingImage || quoteRequestLoading}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <ImageIcon className="w-4 h-4" />
+                                    {selectedImage ? "Change Image" : "Select Image"}
+                                  </Button>
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                  Upload an image to help the provider understand your request better (max 5MB)
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                              <Button type="button" variant="outline" onClick={() => {
+                                setIsQuoteDialogOpen(false);
+                                removeImage();
+                              }} className="flex-1" disabled={quoteRequestLoading || uploadingImage}>
+                                Cancel
+                              </Button>
+                              <Button type="submit" disabled={quoteRequestLoading || uploadingImage} className="flex-1 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90">
+                                {uploadingImage ? "Uploading..." : quoteRequestLoading ? "Sending..." : "Request Quote"}
                     </Button>
+                            </div>
+                          </form>
+                        )}
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </>
               ) : (
@@ -492,15 +728,29 @@ return (
                     </div>
                   </div>
                   <div className="space-y-3">
+                    <div className="flex gap-3">
                     <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
                       <DialogTrigger asChild>
                         <Button
-                          className="w-full bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
+                            className="flex-1 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
                           disabled={service.status !== "active"}
                         >
                           {service.status === "active" ? "Request Service" : "Service Unavailable"}
                         </Button>
                       </DialogTrigger>
+                      </Dialog>
+                      {providerScheduleUrl && (
+                        <Button
+                          variant="outline"
+                          className="border-2 border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10 hover:border-[#434c9d] transition-all duration-200 py-3 text-lg font-semibold"
+                          onClick={() => window.open(providerScheduleUrl, '_blank')}
+                        >
+                          <Calendar className="w-5 h-5 mr-2" />
+                          View Schedule
+                        </Button>
+                      )}
+                    </div>
+                    <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Request Service</DialogTitle>
@@ -508,6 +758,26 @@ return (
                       Fill out the form below to request this service from {service.provider_name}.
                     </DialogDescription>
                   </DialogHeader>
+                  {providerScheduleUrl && (
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Calendar className="w-5 h-5 text-blue-600" />
+                        <h4 className="font-semibold text-gray-900">Provider Schedule</h4>
+                      </div>
+                      <a
+                        href={providerScheduleUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                      >
+                        <span className="font-medium">View Availability Schedule</span>
+                        <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
+                      </a>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Check when the provider is available for bookings
+                      </p>
+                    </div>
+                  )}
                   <form onSubmit={handleBookingSubmit} className="space-y-4">
                     <div>
                       <Label htmlFor="date">Preferred Date</Label>
@@ -627,19 +897,6 @@ return (
       </div>
     </div>
 
-    {/* Quote Request Message Dialog */}
-    {service && quoteBookingId && service.user_id && (
-      <MessageDialog
-        isOpen={isQuoteDialogOpen}
-        onClose={() => {
-          setIsQuoteDialogOpen(false);
-          setQuoteBookingId(null);
-        }}
-        bookingId={quoteBookingId}
-        recipientId={service.user_id}
-        recipientName={service.provider_name || "Provider"}
-      />
-    )}
   </DashboardLayout>
 );
 }

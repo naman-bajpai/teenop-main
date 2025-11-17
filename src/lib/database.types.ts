@@ -22,6 +22,7 @@ export type Database = {
           payment_completed_at: string | null
           payment_intent_id: string | null
           platform_fee: number
+          quote_id: string | null
           requested_date: string
           requested_time: string
           service_id: string
@@ -39,6 +40,7 @@ export type Database = {
           payment_completed_at?: string | null
           payment_intent_id?: string | null
           platform_fee?: number
+          quote_id?: string | null
           requested_date: string
           requested_time: string
           service_id: string
@@ -56,6 +58,7 @@ export type Database = {
           payment_completed_at?: string | null
           payment_intent_id?: string | null
           platform_fee?: number
+          quote_id?: string | null
           requested_date?: string
           requested_time?: string
           service_id?: string
@@ -67,6 +70,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_service_id_fkey"
             columns: ["service_id"]
@@ -191,6 +201,7 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
+          image_url: string | null
           read_at: string | null
           receiver_id: string
           sender_id: string
@@ -201,6 +212,7 @@ export type Database = {
           content: string
           created_at?: string | null
           id?: string
+          image_url?: string | null
           read_at?: string | null
           receiver_id: string
           sender_id: string
@@ -211,6 +223,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           id?: string
+          image_url?: string | null
           read_at?: string | null
           receiver_id?: string
           sender_id?: string
@@ -333,6 +346,118 @@ export type Database = {
           zip_code?: string | null
         }
         Relationships: []
+      }
+      quote_requests: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          id: string
+          requested_date: string | null
+          requested_time: string | null
+          service_id: string
+          special_instructions: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          requested_date?: string | null
+          requested_time?: string | null
+          service_id: string
+          special_instructions?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          requested_date?: string | null
+          requested_time?: string | null
+          service_id?: string
+          special_instructions?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_requests_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_requests_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "v_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          created_at: string | null
+          estimated_duration: number | null
+          id: string
+          notes: string | null
+          price: number
+          provider_id: string
+          quote_request_id: string
+          status: string
+          updated_at: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          estimated_duration?: number | null
+          id?: string
+          notes?: string | null
+          price: number
+          provider_id: string
+          quote_request_id: string
+          status?: string
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          estimated_duration?: number | null
+          id?: string
+          notes?: string | null
+          price?: number
+          provider_id?: string
+          quote_request_id?: string
+          status?: string
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_quote_request_id_fkey"
+            columns: ["quote_request_id"]
+            isOneToOne: false
+            referencedRelation: "quote_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_images: {
         Row: {
@@ -474,6 +599,71 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          created_at: string | null
+          email_booking_confirmations: boolean
+          email_booking_reminders: boolean
+          email_marketing: boolean
+          email_messages: boolean
+          email_notifications_enabled: boolean
+          email_quote_updates: boolean
+          id: string
+          profile_visibility: string
+          show_email: boolean
+          show_location: boolean
+          show_phone: boolean
+          show_ratings: boolean
+          show_services: boolean
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email_booking_confirmations?: boolean
+          email_booking_reminders?: boolean
+          email_marketing?: boolean
+          email_messages?: boolean
+          email_notifications_enabled?: boolean
+          email_quote_updates?: boolean
+          id?: string
+          profile_visibility?: string
+          show_email?: boolean
+          show_location?: boolean
+          show_phone?: boolean
+          show_ratings?: boolean
+          show_services?: boolean
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email_booking_confirmations?: boolean
+          email_booking_reminders?: boolean
+          email_marketing?: boolean
+          email_messages?: boolean
+          email_notifications_enabled?: boolean
+          email_quote_updates?: boolean
+          id?: string
+          profile_visibility?: string
+          show_email?: boolean
+          show_location?: boolean
+          show_phone?: boolean
+          show_ratings?: boolean
+          show_services?: boolean
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_sessions: {
         Row: {
           created_at: string | null
@@ -603,13 +793,11 @@ export type Database = {
           banner_url: string | null
           category: string | null
           created_at: string | null
-          delivery_method: string | null
           description: string | null
           duration: number | null
           education: string | null
           id: string | null
           location: string | null
-          location_type: string | null
           price: number | null
           pricing_model: Database["public"]["Enums"]["pricing_model"] | null
           qualifications: string | null
@@ -624,13 +812,11 @@ export type Database = {
           banner_url?: string | null
           category?: string | null
           created_at?: string | null
-          delivery_method?: string | null
           description?: string | null
           duration?: number | null
           education?: string | null
           id?: string | null
           location?: string | null
-          location_type?: string | null
           price?: number | null
           pricing_model?: Database["public"]["Enums"]["pricing_model"] | null
           qualifications?: string | null
@@ -645,13 +831,11 @@ export type Database = {
           banner_url?: string | null
           category?: string | null
           created_at?: string | null
-          delivery_method?: string | null
           description?: string | null
           duration?: number | null
           education?: string | null
           id?: string | null
           location?: string | null
-          location_type?: string | null
           price?: number | null
           pricing_model?: Database["public"]["Enums"]["pricing_model"] | null
           qualifications?: string | null
@@ -906,4 +1090,4 @@ export const Constants = {
       user_status: ["active", "inactive", "suspended", "pending_verification"],
     },
   },
-} as const
+} as const;

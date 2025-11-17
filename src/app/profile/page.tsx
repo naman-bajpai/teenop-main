@@ -16,6 +16,9 @@ import {
   X,
   Camera,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import EmailNotificationSettings from "@/components/settings/EmailNotificationSettings";
+import PrivacySettings from "@/components/settings/PrivacySettings";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { RatingDisplay } from "@/components/ui/rating";
@@ -34,6 +37,7 @@ type Profile = {
   created_at: string | null;
   updated_at?: string | null;
   avatar_url: string | null;
+  schedule_url: string | null;
 };
 
 export default function ProfilePage() {
@@ -45,6 +49,8 @@ export default function ProfilePage() {
 
   const [profile, setProfile] = React.useState<Profile | null>(null);
   const [isEditing, setIsEditing] = React.useState(false);
+  const [isEmailSettingsOpen, setIsEmailSettingsOpen] = React.useState(false);
+  const [isPrivacySettingsOpen, setIsPrivacySettingsOpen] = React.useState(false);
 
   // Derived UI fields
   const name = profile ? `${profile.first_name} ${profile.last_name}`.trim() : "";
@@ -104,7 +110,7 @@ export default function ProfilePage() {
         const { data: p, error: pErr } = await supabase
           .from("profiles")
           .select(
-            "id, first_name, last_name, email, phone, city, state, bio, role, created_at, avatar_url"
+            "id, first_name, last_name, email, phone, city, state, bio, role, created_at, avatar_url, schedule_url"
           )
           .eq("id", authUser.id)
           .single();
@@ -446,37 +452,131 @@ export default function ProfilePage() {
               </h3>
 
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="font-medium text-gray-900">Email Notifications</h4>
-                    <p className="text-sm text-gray-600">
-                      Receive updates about bookings and messages
-                    </p>
+                <Dialog open={isEmailSettingsOpen} onOpenChange={setIsEmailSettingsOpen}>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Email Notifications</h4>
+                      <p className="text-sm text-gray-600">
+                        Receive updates about bookings and messages
+                      </p>
+                    </div>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        Manage
+                      </Button>
+                    </DialogTrigger>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => alert("Email notification settings coming soon!")}
-                  >
-                    Manage
-                  </Button>
-                </div>
+                  <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Email Notification Settings</DialogTitle>
+                      <DialogDescription>
+                        Customize which email notifications you want to receive
+                      </DialogDescription>
+                    </DialogHeader>
+                    <EmailNotificationSettings />
+                  </DialogContent>
+                </Dialog>
 
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="font-medium text-gray-900">Privacy Settings</h4>
-                    <p className="text-sm text-gray-600">
-                      Control who can see your profile and services
-                    </p>
+                <Dialog open={isPrivacySettingsOpen} onOpenChange={setIsPrivacySettingsOpen}>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Privacy Settings</h4>
+                      <p className="text-sm text-gray-600">
+                        Control who can see your profile and services
+                      </p>
+                    </div>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        Manage
+                      </Button>
+                    </DialogTrigger>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => alert("Privacy settings coming soon!")}
-                  >
-                    Manage
-                  </Button>
-                </div>
+                  <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Privacy Settings</DialogTitle>
+                      <DialogDescription>
+                        Control your profile visibility and what information is shown
+                      </DialogDescription>
+                    </DialogHeader>
+                    <PrivacySettings />
+                  </DialogContent>
+                </Dialog>
+
+                {profile?.role === "teen" && (
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Upload Schedule</h4>
+                      <p className="text-sm text-gray-600">
+                        Upload your availability schedule for customers to view
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="file"
+                        id="schedule-upload"
+                        accept=".pdf,.doc,.docx,image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+
+                          try {
+                            setSaving(true);
+                            const formData = new FormData();
+                            formData.append('file', file);
+
+                            const response = await fetch('/api/schedule/upload', {
+                              method: 'POST',
+                              body: formData,
+                            });
+
+                            const result = await response.json();
+
+                            if (!response.ok) {
+                              throw new Error(result.error || 'Failed to upload schedule');
+                            }
+
+                            // Reload profile to get updated schedule_url
+                            const { data: updatedProfile } = await supabase
+                              .from('profiles')
+                              .select('schedule_url')
+                              .eq('id', profile.id)
+                              .single();
+
+                            if (updatedProfile) {
+                              setProfile({ ...profile, schedule_url: (updatedProfile as any).schedule_url });
+                            }
+
+                            alert('Schedule uploaded successfully!');
+                          } catch (error: any) {
+                            alert(error.message || 'Failed to upload schedule');
+                          } finally {
+                            setSaving(false);
+                            // Reset file input
+                            e.target.value = '';
+                          }
+                        }}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => document.getElementById('schedule-upload')?.click()}
+                        disabled={saving}
+                      >
+                        {saving ? "Uploading..." : profile.schedule_url ? "Update Schedule" : "Upload Schedule"}
+                      </Button>
+                      {profile.schedule_url && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => window.open(profile.schedule_url!, '_blank')}
+                        >
+                          View
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-center">
                   <div>

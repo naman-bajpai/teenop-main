@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
           receiver_id: message.receiver_id,
           booking_id: message.booking_id,
           content: message.content,
+          image_url: message.image_url,
           created_at: message.created_at,
           sender_name: senderProfile ? 
             [(senderProfile as any).first_name, (senderProfile as any).last_name].filter(Boolean).join(" ").trim() || "User" : 
@@ -138,12 +139,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { booking_id, receiver_id, content } = body;
+    const { booking_id, receiver_id, content, image_url } = body;
 
-    // Validate required fields
-    if (!booking_id || !receiver_id || !content) {
+    // Validate required fields - either content or image_url must be provided
+    if (!booking_id || !receiver_id || (!content && !image_url)) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields" },
+        { success: false, error: "Missing required fields - either content or image_url must be provided" },
         { status: 400 }
       );
     }
@@ -197,7 +198,8 @@ export async function POST(request: NextRequest) {
         sender_id: user.id,
         receiver_id,
         booking_id,
-        content: content.trim(),
+        content: content ? content.trim() : null,
+        image_url: image_url || null,
       } as any)
       .select("*")
       .single();
@@ -235,6 +237,7 @@ export async function POST(request: NextRequest) {
         receiver_id: messageData.receiver_id,
         booking_id: messageData.booking_id,
         content: messageData.content,
+        image_url: messageData.image_url,
         created_at: messageData.created_at,
         sender_name: senderProfile ? 
           [(senderProfile as any).first_name, (senderProfile as any).last_name].filter(Boolean).join(" ").trim() || "User" : 
