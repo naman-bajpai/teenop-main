@@ -11,11 +11,14 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
+      console.error('Stripe Connect setup: Authentication error', authError);
       return NextResponse.json(
         { success: false, error: "Authentication required" },
         { status: 401 }
       );
     }
+
+    console.log('Stripe Connect setup: User authenticated', { userId: user.id });
 
     // Get user's profile
     const { data: profile, error: profileError } = await supabase
@@ -25,14 +28,21 @@ export async function POST(request: NextRequest) {
       .single() as { data: { first_name: string; last_name: string; email: string; stripe_connect_account_id: string | null } | null; error: any };
 
     if (profileError || !profile) {
+      console.error('Stripe Connect setup: Profile error', profileError);
       return NextResponse.json(
         { success: false, error: "User profile not found" },
         { status: 404 }
       );
     }
 
+    console.log('Stripe Connect setup: Profile found', { 
+      hasAccount: !!profile.stripe_connect_account_id,
+      accountId: profile.stripe_connect_account_id 
+    });
+
     // Check if user already has a Stripe Connect account
     if (profile.stripe_connect_account_id) {
+      console.log('Stripe Connect setup: Account already exists', { accountId: profile.stripe_connect_account_id });
       return NextResponse.json(
         { 
           success: false, 
@@ -46,6 +56,7 @@ export async function POST(request: NextRequest) {
     // Create OAuth link for Stripe Connect
     // ⚠️ Stripe requires HTTPS for redirect URIs (even in test mode)
     let baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').trim();
+    const originalBaseUrl = baseUrl;
     
     // Normalize the URL - handle various formats
     // Remove any duplicate https:// prefixes
@@ -59,14 +70,23 @@ export async function POST(request: NextRequest) {
     
     const clientId = process.env.STRIPE_CLIENT_ID;
     
+    console.log('Stripe Connect setup: Environment check', {
+      originalBaseUrl,
+      normalizedBaseUrl: baseUrl,
+      hasClientId: !!clientId,
+      clientIdPrefix: clientId ? clientId.substring(0, 10) + '...' : 'MISSING'
+    });
+    
     // Validate that we're using HTTPS for Stripe Connect
     if (baseUrl.startsWith('http://')) {
+      console.error('Stripe Connect setup: HTTP URL detected (HTTPS required)', { baseUrl });
       return NextResponse.json(
         { 
           success: false, 
           error: "Stripe Connect requires HTTPS. For local development, deploy to a staging environment or use a deployment URL (e.g., Vercel preview).",
           details: {
             currentUrl: baseUrl,
+            originalUrl: originalBaseUrl,
             instructions: [
               "1. Deploy your app to Vercel/Netlify and use the preview URL",
               "2. Copy the HTTPS deployment URL (e.g., https://your-app.vercel.app)",
@@ -86,13 +106,24 @@ export async function POST(request: NextRequest) {
     console.log('Stripe Connect redirect URI:', redirectUri);
     
     if (!clientId) {
+      console.error('Stripe Connect setup: Missing STRIPE_CLIENT_ID', {
+        redirectUri,
+        baseUrl,
+        envKeys: Object.keys(process.env).filter(k => k.includes('STRIPE'))
+      });
       return NextResponse.json(
         { 
           success: false, 
           error: "Stripe Connect not properly configured. Missing STRIPE_CLIENT_ID environment variable.",
           debug: {
             hasClientId: false,
-            redirectUri: redirectUri
+            redirectUri: redirectUri,
+            instructions: [
+              "1. Go to Stripe Dashboard → Connect → Settings → OAuth settings",
+              "2. Copy your Client ID (starts with 'ca_')",
+              "3. Add STRIPE_CLIENT_ID=ca_... to your .env.local file",
+              "4. Restart your development server"
+            ]
           }
         },
         { status: 500 }

@@ -27,6 +27,13 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state'); // This is the user ID
     const error = searchParams.get('error');
 
+    console.log('Stripe Connect callback received:', {
+      hasCode: !!code,
+      hasState: !!state,
+      hasError: !!error,
+      baseUrl
+    });
+
     // Handle OAuth errors
     if (error) {
       console.error('Stripe Connect OAuth error:', error);
@@ -46,6 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!code || !state) {
+      console.error('Stripe Connect callback: Missing parameters', { code: !!code, state: !!state });
       return NextResponse.redirect(
         `${baseUrl}/earnings?stripe_error=missing_parameters`
       );
@@ -66,7 +74,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Construct the redirect URI that was used in the initial authorization
+    // This must match exactly what was sent to Stripe
+    const redirectUri = `${baseUrl}/api/stripe/connect/callback`.replace(/([^:]\/)\/+/g, '$1');
+    
+    console.log('Exchanging authorization code for token:', {
+      redirectUri,
+      hasCode: !!code,
+      hasClientId: !!process.env.STRIPE_CLIENT_ID
+    });
+
     // Exchange authorization code for access token
+    // IMPORTANT: Stripe requires the redirect_uri to match the one used in authorization
     const response = await fetch('https://connect.stripe.com/oauth/token', {
       method: 'POST',
       headers: {
@@ -77,6 +96,7 @@ export async function GET(request: NextRequest) {
         client_id: process.env.STRIPE_CLIENT_ID,
         client_secret: process.env.STRIPE_SECRET_KEY,
         code: code,
+        redirect_uri: redirectUri, // Required by Stripe - must match authorization request
       }),
     });
 
@@ -115,12 +135,22 @@ export async function GET(request: NextRequest) {
     }
 
     const accountId = tokenData.stripe_user_id;
-    console.log('Stripe Connect account created:', accountId);
+    console.log('Stripe Connect account created:', {
+      accountId,
+      userId: state,
+      accessToken: tokenData.access_token ? 'present' : 'missing'
+    });
 
     // Get account details from Stripe
     let account;
     try {
       account = await stripe.accounts.retrieve(accountId);
+      console.log('Stripe account retrieved:', {
+        accountId,
+        detailsSubmitted: account.details_submitted,
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled
+      });
     } catch (stripeError: any) {
       console.error('Error retrieving Stripe account:', stripeError);
       return NextResponse.redirect(
@@ -130,6 +160,8 @@ export async function GET(request: NextRequest) {
 
     // Update user profile with Stripe Connect account ID
     const supabase = await createServerClient();
+    console.log('Updating profile with Stripe account ID:', { userId: state, accountId });
+    
     const { data: updatedProfile, error: updateError } = await (supabase as any)
       .from('profiles')
       .update({ stripe_connect_account_id: accountId })
@@ -138,7 +170,11 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (updateError) {
-      console.error('Error updating profile with Stripe account ID:', updateError);
+      console.error('Error updating profile with Stripe account ID:', {
+        error: updateError,
+        userId: state,
+        accountId
+      });
       // Account was created in Stripe but failed to save to database
       // This is a critical error - the account exists but isn't linked
       return NextResponse.redirect(
@@ -148,7 +184,12 @@ export async function GET(request: NextRequest) {
 
     // Verify the update was successful
     if (!updatedProfile || updatedProfile.stripe_connect_account_id !== accountId) {
-      console.error('Profile update verification failed:', { updatedProfile, accountId });
+      console.error('Profile update verification failed:', { 
+        updatedProfile, 
+        accountId,
+        expectedAccountId: accountId,
+        actualAccountId: updatedProfile?.stripe_connect_account_id
+      });
       return NextResponse.redirect(
         `${baseUrl}/earnings?stripe_error=profile_verification_failed`
       );
@@ -157,7 +198,8 @@ export async function GET(request: NextRequest) {
     console.log('Successfully linked Stripe Connect account to user:', {
       userId: state,
       accountId: accountId,
-      verified: updatedProfile.stripe_connect_account_id === accountId
+      verified: updatedProfile.stripe_connect_account_id === accountId,
+      profileData: updatedProfile
     });
 
     // Redirect back to earnings page with success

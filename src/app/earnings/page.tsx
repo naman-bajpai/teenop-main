@@ -84,25 +84,32 @@ export default function EarningsPage() {
     const success = params.get('stripe_success');
     
     if (error) {
+      console.error('Stripe connection error from URL:', error);
       toast({
         title: "Stripe Connection Error",
         description: decodeURIComponent(error),
         variant: "destructive",
+        duration: 10000,
       });
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
+      // Refresh account status to see current state
+      setTimeout(() => {
+        fetchAccountStatus(0, true);
+      }, 1000);
     }
     
     if (success === 'true') {
+      console.log('Stripe connection success detected');
       toast({
         title: "Stripe Account Connected!",
         description: "Your payment account has been successfully set up.",
       });
       // Clean up URL and refresh account status with a small delay to ensure DB update is complete
       window.history.replaceState({}, '', window.location.pathname);
-      // Wait a moment for the database update to propagate, then fetch
+      // Wait a moment for the database update to propagate, then fetch with retries
       setTimeout(() => {
-        fetchAccountStatus();
+        fetchAccountStatus(0, true);
       }, 500);
     }
   }, []);
@@ -136,10 +143,13 @@ export default function EarningsPage() {
       setRefreshingAccount(true);
     }
     try {
+      console.log(`Fetching account status (attempt ${retryCount + 1})...`);
       const res = await fetch("/api/stripe/connect/setup", { 
+        method: 'GET',
         cache: "no-store",
         headers: {
           'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
         }
       });
       
@@ -149,28 +159,42 @@ export default function EarningsPage() {
         if (data.success) {
           setAccountStatus(data);
           setRefreshingAccount(false);
+          console.log("Account status updated:", {
+            hasAccount: data.hasAccount,
+            accountId: data.accountStatus?.id
+          });
           return;
+        } else {
+          console.warn("Account status response not successful:", data);
         }
       } else {
         const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
-        console.error("Failed to fetch account status:", errorData);
+        console.error("Failed to fetch account status:", {
+          status: res.status,
+          statusText: res.statusText,
+          error: errorData
+        });
       }
       
       // If account not found and we haven't retried, wait a bit and retry (in case DB update is still propagating)
-      if (retryCount < 2) {
+      if (retryCount < 3) {
+        const delay = 1000 * (retryCount + 1); // Wait 1s, 2s, 3s
+        console.log(`Retrying account status fetch in ${delay}ms...`);
         setTimeout(() => {
           fetchAccountStatus(retryCount + 1, false);
-        }, 1000 * (retryCount + 1)); // Wait 1s, then 2s
+        }, delay);
       } else {
+        console.error("Max retries reached for account status fetch");
         setRefreshingAccount(false);
       }
     } catch (error) {
       console.error("Error fetching account status:", error);
       // Retry on network errors
-      if (retryCount < 2) {
+      if (retryCount < 3) {
+        const delay = 1000 * (retryCount + 1);
         setTimeout(() => {
           fetchAccountStatus(retryCount + 1, false);
-        }, 1000 * (retryCount + 1));
+        }, delay);
       } else {
         setRefreshingAccount(false);
       }
@@ -198,20 +222,70 @@ export default function EarningsPage() {
         headers: { "Content-Type": "application/json" },
       });
 
+      // Get response text first to handle empty or malformed JSON
+      const responseText = await res.text();
+      console.log("Stripe Connect setup response:", {
+        status: res.status,
+        statusText: res.statusText,
+        responseText: responseText.substring(0, 500)
+      });
+
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || "Failed to create payment account");
+        let err: any = {};
+        try {
+          err = JSON.parse(responseText);
+        } catch (parseError) {
+          // If JSON parsing fails, create a meaningful error
+          err = {
+            error: `Server returned ${res.status}: ${res.statusText}`,
+            responseText: responseText || "Empty response"
+          };
+        }
+        
+        console.error("Stripe Connect setup error:", err);
+        
+        // Build detailed error message
+        let errorMessage = err.error || "Failed to create payment account";
+        
+        // If there are details/instructions, include them
+        if (err.details) {
+          if (err.details.instructions && Array.isArray(err.details.instructions)) {
+            errorMessage += "\n\n" + err.details.instructions.join("\n");
+          }
+          if (err.details.currentUrl) {
+            errorMessage += `\n\nCurrent URL: ${err.details.currentUrl}`;
+          }
+          if (err.details.originalUrl) {
+            errorMessage += `\nOriginal URL: ${err.details.originalUrl}`;
+          }
+        }
+        
+        // If account already exists, show different message
+        if (err.error === "Stripe Connect account already exists" && err.accountId) {
+          errorMessage = `You already have a Stripe Connect account linked. Account ID: ${err.accountId}`;
+        }
+        
+        // If there are debug instructions, include them
+        if (err.debug && err.debug.instructions) {
+          errorMessage += "\n\n" + err.debug.instructions.join("\n");
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      const data = await res.json();
+      const data = JSON.parse(responseText);
       if (data.success && data.authUrl) {
         window.location.href = data.authUrl;
+      } else {
+        throw new Error(data.error || "Failed to get authorization URL");
       }
     } catch (e: any) {
+      console.error("Stripe Connect setup exception:", e);
       toast({
         title: "Could not set up payment account",
-        description: e.message,
+        description: e.message || "An unexpected error occurred",
         variant: "destructive",
+        duration: 10000, // Show for 10 seconds to read longer messages
       });
     }
   }

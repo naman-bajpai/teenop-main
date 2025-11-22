@@ -737,21 +737,71 @@ export default function TeenHustlePage() {
         headers: { "Content-Type": "application/json" },
       });
 
+      // Get response text first to handle empty or malformed JSON
+      const responseText = await res.text();
+      console.log("Stripe Connect setup response:", {
+        status: res.status,
+        statusText: res.statusText,
+        responseText: responseText.substring(0, 500)
+      });
+
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || "Failed to create payment account");
+        let err: any = {};
+        try {
+          err = JSON.parse(responseText);
+        } catch (parseError) {
+          // If JSON parsing fails, create a meaningful error
+          err = {
+            error: `Server returned ${res.status}: ${res.statusText}`,
+            responseText: responseText || "Empty response"
+          };
+        }
+        
+        console.error("Stripe Connect setup error:", err);
+        
+        // Build detailed error message
+        let errorMessage = err.error || "Failed to create payment account";
+        
+        // If there are details/instructions, include them
+        if (err.details) {
+          if (err.details.instructions && Array.isArray(err.details.instructions)) {
+            errorMessage += "\n\n" + err.details.instructions.join("\n");
+          }
+          if (err.details.currentUrl) {
+            errorMessage += `\n\nCurrent URL: ${err.details.currentUrl}`;
+          }
+          if (err.details.originalUrl) {
+            errorMessage += `\nOriginal URL: ${err.details.originalUrl}`;
+          }
+        }
+        
+        // If account already exists, show different message
+        if (err.error === "Stripe Connect account already exists" && err.accountId) {
+          errorMessage = `You already have a Stripe Connect account linked. Account ID: ${err.accountId}`;
+        }
+        
+        // If there are debug instructions, include them
+        if (err.debug && err.debug.instructions) {
+          errorMessage += "\n\n" + err.debug.instructions.join("\n");
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      const data = await res.json();
+      const data = JSON.parse(responseText);
       if (data.success && data.authUrl) {
         // Redirect to Stripe OAuth
         window.location.href = data.authUrl;
+      } else {
+        throw new Error(data.error || "Failed to get authorization URL");
       }
     } catch (e: any) {
+      console.error("Stripe Connect setup exception:", e);
       toast({ 
         title: "Could not set up payment account", 
-        description: e.message, 
-        variant: "destructive" 
+        description: e.message || "An unexpected error occurred",
+        variant: "destructive",
+        duration: 10000, // Show for 10 seconds to read longer messages
       });
     }
   }
