@@ -162,23 +162,56 @@ export async function GET(request: NextRequest) {
     const supabase = await createServerClient();
     console.log('Updating profile with Stripe account ID:', { userId: state, accountId });
     
-    const { data: updatedProfile, error: updateError } = await (supabase as any)
+    // First, check if profile exists
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('profiles')
+      .select('id, stripe_connect_account_id')
+      .eq('id', state)
+      .single() as { data: { id: string; stripe_connect_account_id: string | null } | null; error: any };
+    
+    if (checkError || !existingProfile) {
+      console.error('Error checking profile before update:', {
+        error: checkError,
+        userId: state,
+        existingProfile
+      });
+      return NextResponse.redirect(
+        `${baseUrl}/earnings?stripe_error=profile_not_found&account_id=${accountId}`
+      );
+    }
+    
+    console.log('Profile found before update:', {
+      userId: state,
+      existingAccountId: existingProfile.stripe_connect_account_id,
+      newAccountId: accountId
+    });
+    
+    // Update the profile
+    const updateResult = await (supabase as any)
       .from('profiles')
       .update({ stripe_connect_account_id: accountId })
       .eq('id', state)
       .select('stripe_connect_account_id')
       .single();
+    
+    const { data: updatedProfile, error: updateError } = updateResult as { 
+      data: { stripe_connect_account_id: string | null } | null; 
+      error: any 
+    };
 
     if (updateError) {
       console.error('Error updating profile with Stripe account ID:', {
         error: updateError,
+        errorCode: updateError.code,
+        errorMessage: updateError.message,
+        errorDetails: updateError.details,
         userId: state,
         accountId
       });
       // Account was created in Stripe but failed to save to database
       // This is a critical error - the account exists but isn't linked
       return NextResponse.redirect(
-        `${baseUrl}/earnings?stripe_error=profile_update_failed&account_id=${accountId}`
+        `${baseUrl}/earnings?stripe_error=profile_update_failed&account_id=${accountId}&error=${encodeURIComponent(updateError.message || 'Unknown error')}`
       );
     }
 
@@ -190,8 +223,22 @@ export async function GET(request: NextRequest) {
         expectedAccountId: accountId,
         actualAccountId: updatedProfile?.stripe_connect_account_id
       });
+      
+      // Try to fetch the profile again to see what's actually in the database
+      const { data: verifyProfile, error: verifyError } = await supabase
+        .from('profiles')
+        .select('stripe_connect_account_id')
+        .eq('id', state)
+        .single() as { data: { stripe_connect_account_id: string | null } | null; error: any };
+      
+      console.error('Profile verification fetch:', {
+        verifyProfile,
+        verifyError,
+        expected: accountId
+      });
+      
       return NextResponse.redirect(
-        `${baseUrl}/earnings?stripe_error=profile_verification_failed`
+        `${baseUrl}/earnings?stripe_error=profile_verification_failed&account_id=${accountId}`
       );
     }
 

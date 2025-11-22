@@ -82,6 +82,30 @@ export default function EarningsPage() {
     const params = new URLSearchParams(window.location.search);
     const error = params.get('stripe_error');
     const success = params.get('stripe_success');
+    const code = params.get('code'); // OAuth code from Stripe
+    const state = params.get('state'); // User ID from Stripe
+    
+    // Log all URL parameters for debugging
+    console.log('Earnings page URL parameters:', {
+      hasError: !!error,
+      hasSuccess: !!success,
+      hasCode: !!code,
+      hasState: !!state,
+      allParams: Object.fromEntries(params.entries())
+    });
+    
+    // If we have code/state but no success/error, the callback might not have been called
+    if (code && state && !success && !error) {
+      console.warn('OAuth code received but callback may not have processed it');
+      toast({
+        title: "Processing Stripe Connection",
+        description: "Please wait while we complete the connection...",
+      });
+      // The callback should have handled this, but if we're here, something went wrong
+      setTimeout(() => {
+        fetchAccountStatus(0, true);
+      }, 2000);
+    }
     
     if (error) {
       console.error('Stripe connection error from URL:', error);
