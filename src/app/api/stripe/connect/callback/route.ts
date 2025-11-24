@@ -161,7 +161,17 @@ export async function GET(request: NextRequest) {
     // Update user profile with Stripe Connect account ID
     // Use service role client to bypass RLS since this is a server-side OAuth callback
     // The user ID is from the state parameter which we control, so it's safe
-    const supabaseService = createServiceRoleClient();
+    let supabaseService;
+    try {
+      supabaseService = createServiceRoleClient();
+      console.log('Service role client created successfully');
+    } catch (serviceError: any) {
+      console.error('Failed to create service role client:', serviceError);
+      return NextResponse.redirect(
+        `${baseUrl}/earnings?stripe_error=service_client_failed&error=${encodeURIComponent(serviceError.message || 'Failed to create service client')}`
+      );
+    }
+    
     console.log('Updating profile with Stripe account ID:', { userId: state, accountId });
     
     // First, check if profile exists
@@ -171,12 +181,23 @@ export async function GET(request: NextRequest) {
       .eq('id', state)
       .single();
     
-    if (checkError || !existingProfile) {
+    if (checkError) {
+      const errorDetails = checkError as any;
       console.error('Error checking profile before update:', {
         error: checkError,
-        userId: state,
-        existingProfile
+        errorCode: errorDetails.code,
+        errorMessage: errorDetails.message,
+        errorDetails: errorDetails.details,
+        errorHint: errorDetails.hint,
+        userId: state
       });
+      return NextResponse.redirect(
+        `${baseUrl}/earnings?stripe_error=profile_check_failed&account_id=${accountId}&error=${encodeURIComponent(errorDetails.message || 'Unknown error')}`
+      );
+    }
+    
+    if (!existingProfile) {
+      console.error('Profile not found:', { userId: state });
       return NextResponse.redirect(
         `${baseUrl}/earnings?stripe_error=profile_not_found&account_id=${accountId}`
       );
@@ -189,12 +210,20 @@ export async function GET(request: NextRequest) {
     });
     
     // Update the profile using service role (bypasses RLS)
+    console.log('Attempting to update profile...');
     const { data: updatedProfile, error: updateError } = await supabaseService
       .from('profiles')
       .update({ stripe_connect_account_id: accountId })
       .eq('id', state)
       .select('stripe_connect_account_id')
       .single();
+    
+    console.log('Update result:', {
+      hasData: !!updatedProfile,
+      hasError: !!updateError,
+      updatedAccountId: updatedProfile?.stripe_connect_account_id,
+      error: updateError
+    });
 
     if (updateError) {
       console.error('Error updating profile with Stripe account ID:', {
@@ -213,12 +242,50 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify the update was successful
-    if (!updatedProfile || updatedProfile.stripe_connect_account_id !== accountId) {
-      console.error('Profile update verification failed:', { 
+    if (updateError) {
+      const errorDetails = updateError as any;
+      console.error('Error updating profile with Stripe account ID:', {
+        error: updateError,
+        errorCode: errorDetails.code,
+        errorMessage: errorDetails.message,
+        errorDetails: errorDetails.details,
+        errorHint: errorDetails.hint,
+        userId: state,
+        accountId
+      });
+      // Account was created in Stripe but failed to save to database
+      // This is a critical error - the account exists but isn't linked
+      return NextResponse.redirect(
+        `${baseUrl}/earnings?stripe_error=profile_update_failed&account_id=${accountId}&error=${encodeURIComponent(errorDetails.message || 'Unknown error')}`
+      );
+    }
+    
+    if (!updatedProfile) {
+      console.error('Update returned no data:', { userId: state, accountId });
+      // Try to fetch the profile again to see what's actually in the database
+      const { data: verifyProfile, error: verifyError } = await supabaseService
+        .from('profiles')
+        .select('stripe_connect_account_id')
+        .eq('id', state)
+        .single();
+      
+      console.error('Profile verification fetch after null update:', {
+        verifyProfile,
+        verifyError: verifyError as any,
+        expected: accountId
+      });
+      
+      return NextResponse.redirect(
+        `${baseUrl}/earnings?stripe_error=profile_update_no_data&account_id=${accountId}`
+      );
+    }
+    
+    if (updatedProfile.stripe_connect_account_id !== accountId) {
+      console.error('Profile update verification failed - ID mismatch:', { 
         updatedProfile, 
         accountId,
         expectedAccountId: accountId,
-        actualAccountId: updatedProfile?.stripe_connect_account_id
+        actualAccountId: updatedProfile.stripe_connect_account_id
       });
       
       // Try to fetch the profile again to see what's actually in the database
@@ -228,14 +295,15 @@ export async function GET(request: NextRequest) {
         .eq('id', state)
         .single();
       
-      console.error('Profile verification fetch:', {
+      console.error('Profile verification fetch after mismatch:', {
         verifyProfile,
-        verifyError,
-        expected: accountId
+        verifyError: verifyError as any,
+        expected: accountId,
+        actual: verifyProfile?.stripe_connect_account_id
       });
       
       return NextResponse.redirect(
-        `${baseUrl}/earnings?stripe_error=profile_verification_failed&account_id=${accountId}`
+        `${baseUrl}/earnings?stripe_error=profile_verification_failed&account_id=${accountId}&actual=${verifyProfile?.stripe_connect_account_id || 'null'}`
       );
     }
 
