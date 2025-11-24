@@ -140,6 +140,10 @@ export default function EarningsPage() {
 
   useEffect(() => {
     if (!userLoading && user) {
+      // Log user ID for debugging
+      console.log('🔍 Current User ID:', user.id);
+      console.log('🔍 Debug URL:', `/api/stripe/connect/debug?userId=${user.id}`);
+      
       fetchEarningsData();
       fetchAccountStatus();
       fetchWithdrawals();

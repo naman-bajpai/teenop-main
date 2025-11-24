@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
       baseUrl,
       fullUrl: request.url,
       code: code ? code.substring(0, 20) + '...' : null,
-      state: state
+      state: state,
+      timestamp: new Date().toISOString()
     });
     console.log('═══════════════════════════════════════════════════════');
 
@@ -79,8 +80,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Construct the redirect URI that was used in the initial authorization
-    // This must match exactly what was sent to Stripe
     const redirectUri = `${baseUrl}/api/stripe/connect/callback`.replace(/([^:]\/)\/+/g, '$1');
     
     console.log('Exchanging authorization code for token:', {
@@ -300,12 +299,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('Successfully linked Stripe Connect account to user:', {
+    console.log('✅✅✅ SUCCESS - Stripe Connect account linked:', {
       userId: state,
       accountId: accountId,
       verified: updatedProfile.stripe_connect_account_id === accountId,
-      profileData: updatedProfile
+      profileData: updatedProfile,
+      timestamp: new Date().toISOString()
     });
+    console.log('═══════════════════════════════════════════════════════');
 
     // Redirect back to earnings page with success
     return NextResponse.redirect(
