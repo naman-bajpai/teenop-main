@@ -211,37 +211,24 @@ export async function GET(request: NextRequest) {
     
     // Update the profile using service role (bypasses RLS)
     console.log('Attempting to update profile...');
-    const { data: updatedProfile, error: updateError } = await supabaseService
+    const updateResult = await supabaseService
       .from('profiles')
       .update({ stripe_connect_account_id: accountId })
       .eq('id', state)
       .select('stripe_connect_account_id')
       .single();
     
+    const { data: updatedProfile, error: updateError } = updateResult;
+    
     console.log('Update result:', {
       hasData: !!updatedProfile,
       hasError: !!updateError,
       updatedAccountId: updatedProfile?.stripe_connect_account_id,
-      error: updateError
+      error: updateError,
+      rawResult: JSON.stringify(updateResult, null, 2)
     });
 
-    if (updateError) {
-      console.error('Error updating profile with Stripe account ID:', {
-        error: updateError,
-        errorCode: updateError.code,
-        errorMessage: updateError.message,
-        errorDetails: updateError.details,
-        userId: state,
-        accountId
-      });
-      // Account was created in Stripe but failed to save to database
-      // This is a critical error - the account exists but isn't linked
-      return NextResponse.redirect(
-        `${baseUrl}/earnings?stripe_error=profile_update_failed&account_id=${accountId}&error=${encodeURIComponent(updateError.message || 'Unknown error')}`
-      );
-    }
-
-    // Verify the update was successful
+    // Check for update errors
     if (updateError) {
       const errorDetails = updateError as any;
       console.error('Error updating profile with Stripe account ID:', {
@@ -251,7 +238,8 @@ export async function GET(request: NextRequest) {
         errorDetails: errorDetails.details,
         errorHint: errorDetails.hint,
         userId: state,
-        accountId
+        accountId,
+        fullError: JSON.stringify(updateError, null, 2)
       });
       // Account was created in Stripe but failed to save to database
       // This is a critical error - the account exists but isn't linked
