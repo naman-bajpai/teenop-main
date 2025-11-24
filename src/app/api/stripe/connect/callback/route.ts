@@ -27,12 +27,17 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state'); // This is the user ID
     const error = searchParams.get('error');
 
-    console.log('Stripe Connect callback received:', {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔔 Stripe Connect callback received:', {
       hasCode: !!code,
       hasState: !!state,
       hasError: !!error,
-      baseUrl
+      baseUrl,
+      fullUrl: request.url,
+      code: code ? code.substring(0, 20) + '...' : null,
+      state: state
     });
+    console.log('═══════════════════════════════════════════════════════');
 
     // Handle OAuth errors
     if (error) {
