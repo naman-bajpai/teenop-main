@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 
 // Helper function to normalize and get base URL
@@ -159,15 +159,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Update user profile with Stripe Connect account ID
-    const supabase = await createServerClient();
+    // Use service role client to bypass RLS since this is a server-side OAuth callback
+    // The user ID is from the state parameter which we control, so it's safe
+    const supabaseService = createServiceRoleClient();
     console.log('Updating profile with Stripe account ID:', { userId: state, accountId });
     
     // First, check if profile exists
-    const { data: existingProfile, error: checkError } = await supabase
+    const { data: existingProfile, error: checkError } = await supabaseService
       .from('profiles')
       .select('id, stripe_connect_account_id')
       .eq('id', state)
-      .single() as { data: { id: string; stripe_connect_account_id: string | null } | null; error: any };
+      .single();
     
     if (checkError || !existingProfile) {
       console.error('Error checking profile before update:', {
@@ -186,18 +188,13 @@ export async function GET(request: NextRequest) {
       newAccountId: accountId
     });
     
-    // Update the profile
-    const updateResult = await (supabase as any)
+    // Update the profile using service role (bypasses RLS)
+    const { data: updatedProfile, error: updateError } = await supabaseService
       .from('profiles')
       .update({ stripe_connect_account_id: accountId })
       .eq('id', state)
       .select('stripe_connect_account_id')
       .single();
-    
-    const { data: updatedProfile, error: updateError } = updateResult as { 
-      data: { stripe_connect_account_id: string | null } | null; 
-      error: any 
-    };
 
     if (updateError) {
       console.error('Error updating profile with Stripe account ID:', {
@@ -225,11 +222,11 @@ export async function GET(request: NextRequest) {
       });
       
       // Try to fetch the profile again to see what's actually in the database
-      const { data: verifyProfile, error: verifyError } = await supabase
+      const { data: verifyProfile, error: verifyError } = await supabaseService
         .from('profiles')
         .select('stripe_connect_account_id')
         .eq('id', state)
-        .single() as { data: { stripe_connect_account_id: string | null } | null; error: any };
+        .single();
       
       console.error('Profile verification fetch:', {
         verifyProfile,
