@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { Database } from '@/lib/database.types';
+import { getStripeConnectRedirectUri, getStripeConnectBaseUrl } from '@/lib/stripe-connect';
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,18 +56,8 @@ export async function POST(request: NextRequest) {
 
     // Create OAuth link for Stripe Connect
     // ⚠️ Stripe requires HTTPS for redirect URIs (even in test mode)
-    let baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').trim();
-    const originalBaseUrl = baseUrl;
-    
-    // Normalize the URL - handle various formats
-    // Remove any duplicate https:// prefixes
-    baseUrl = baseUrl.replace(/^https?:\/\/https?:\/\//, 'https://');
-    // Remove trailing slashes
-    baseUrl = baseUrl.replace(/\/+$/, '');
-    // Ensure it starts with a protocol
-    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
-      baseUrl = `https://${baseUrl}`;
-    }
+    const baseUrl = getStripeConnectBaseUrl();
+    const originalBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     
     const clientId = process.env.STRIPE_CLIENT_ID;
     
@@ -99,11 +90,12 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Construct redirect URI - ensure no double slashes (except after protocol)
-    const redirectUri = `${baseUrl}/api/stripe/connect/callback`.replace(/([^:]\/)\/+/g, '$1');
+    // Use shared function to ensure consistency with callback route
+    const redirectUri = getStripeConnectRedirectUri();
     
-    // Log for debugging
-    console.log('Stripe Connect redirect URI:', redirectUri);
+    // Log for debugging - CRITICAL for debugging redirect URI mismatches
+    console.log('🔗 Stripe Connect SETUP - Redirect URI:', redirectUri);
+    console.log('🔗 This EXACT URI must be in Stripe Dashboard → Connect → Settings → OAuth → Redirect URIs');
     
     if (!clientId) {
       console.error('Stripe Connect setup: Missing STRIPE_CLIENT_ID', {

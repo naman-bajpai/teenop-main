@@ -1,27 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
-
-// Helper function to normalize and get base URL
-function getBaseUrl(): string {
-  let baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').trim();
-  
-  // Normalize the URL - handle various formats
-  // Remove any duplicate https:// prefixes
-  baseUrl = baseUrl.replace(/^https?:\/\/https?:\/\//, 'https://');
-  // Remove trailing slashes
-  baseUrl = baseUrl.replace(/\/+$/, '');
-  // Ensure it starts with a protocol
-  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
-    baseUrl = `https://${baseUrl}`;
-  }
-  
-  return baseUrl;
-}
+import { getStripeConnectRedirectUri, getStripeConnectBaseUrl } from '@/lib/stripe-connect';
 
 export async function GET(request: NextRequest) {
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = getStripeConnectBaseUrl();
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
     const state = searchParams.get('state'); // This is the user ID
@@ -80,12 +64,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const redirectUri = `${baseUrl}/api/stripe/connect/callback`.replace(/([^:]\/)\/+/g, '$1');
+    // Use shared function to ensure EXACT match with setup route
+    const redirectUri = getStripeConnectRedirectUri();
     
+    console.log('🔗 Stripe Connect CALLBACK - Redirect URI:', redirectUri);
     console.log('Exchanging authorization code for token:', {
       redirectUri,
       hasCode: !!code,
-      hasClientId: !!process.env.STRIPE_CLIENT_ID
+      hasClientId: !!process.env.STRIPE_CLIENT_ID,
+      envAppUrl: process.env.NEXT_PUBLIC_APP_URL
     });
 
     // Exchange authorization code for access token
@@ -315,7 +302,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Stripe Connect callback error:', error);
-    const baseUrl = getBaseUrl();
+    const baseUrl = getStripeConnectBaseUrl();
     return NextResponse.redirect(
       `${baseUrl}/earnings?stripe_error=callback_failed`
     );
