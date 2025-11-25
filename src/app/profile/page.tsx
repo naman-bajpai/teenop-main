@@ -19,6 +19,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import EmailNotificationSettings from "@/components/settings/EmailNotificationSettings";
 import PrivacySettings from "@/components/settings/PrivacySettings";
+import WeeklyAvailabilityCalendar from "@/components/availability/WeeklyAvailabilityCalendar";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { RatingDisplay } from "@/components/ui/rating";
@@ -503,79 +504,91 @@ export default function ProfilePage() {
                 </Dialog>
 
                 {profile?.role === "teen" && (
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h4 className="font-medium text-gray-900">Upload Schedule</h4>
-                      <p className="text-sm text-gray-600">
-                        Upload your availability schedule for customers to view
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="file"
-                        id="schedule-upload"
-                        accept=".pdf,.doc,.docx,image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
+                  <>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="font-medium text-gray-900">Upload Schedule</h4>
+                        <p className="text-sm text-gray-600">
+                          Upload your availability schedule for customers to view
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="file"
+                          id="schedule-upload"
+                          accept=".pdf,.doc,.docx,image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
 
-                          try {
-                            setSaving(true);
-                            const formData = new FormData();
-                            formData.append('file', file);
+                            try {
+                              setSaving(true);
+                              const formData = new FormData();
+                              formData.append('file', file);
 
-                            const response = await fetch('/api/schedule/upload', {
-                              method: 'POST',
-                              body: formData,
-                            });
+                              const response = await fetch('/api/schedule/upload', {
+                                method: 'POST',
+                                body: formData,
+                              });
 
-                            const result = await response.json();
+                              const result = await response.json();
 
-                            if (!response.ok) {
-                              throw new Error(result.error || 'Failed to upload schedule');
+                              if (!response.ok) {
+                                throw new Error(result.error || 'Failed to upload schedule');
+                              }
+
+                              // Reload profile to get updated schedule_url
+                              const { data: updatedProfile } = await supabase
+                                .from('profiles')
+                                .select('schedule_url')
+                                .eq('id', profile.id)
+                                .single();
+
+                              if (updatedProfile) {
+                                setProfile({ ...profile, schedule_url: (updatedProfile as any).schedule_url });
+                              }
+
+                              alert('Schedule uploaded successfully!');
+                            } catch (error: any) {
+                              alert(error.message || 'Failed to upload schedule');
+                            } finally {
+                              setSaving(false);
+                              // Reset file input
+                              e.target.value = '';
                             }
-
-                            // Reload profile to get updated schedule_url
-                            const { data: updatedProfile } = await supabase
-                              .from('profiles')
-                              .select('schedule_url')
-                              .eq('id', profile.id)
-                              .single();
-
-                            if (updatedProfile) {
-                              setProfile({ ...profile, schedule_url: (updatedProfile as any).schedule_url });
-                            }
-
-                            alert('Schedule uploaded successfully!');
-                          } catch (error: any) {
-                            alert(error.message || 'Failed to upload schedule');
-                          } finally {
-                            setSaving(false);
-                            // Reset file input
-                            e.target.value = '';
-                          }
-                        }}
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => document.getElementById('schedule-upload')?.click()}
-                        disabled={saving}
-                      >
-                        {saving ? "Uploading..." : profile.schedule_url ? "Update Schedule" : "Upload Schedule"}
-                      </Button>
-                      {profile.schedule_url && (
+                          }}
+                        />
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => window.open(profile.schedule_url!, '_blank')}
+                          onClick={() => document.getElementById('schedule-upload')?.click()}
+                          disabled={saving}
                         >
-                          View
+                          {saving ? "Uploading..." : profile.schedule_url ? "Update Schedule" : "Upload Schedule"}
                         </Button>
-                      )}
+                        {profile.schedule_url && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.open(profile.schedule_url!, '_blank')}
+                          >
+                            View
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                    
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <WeeklyAvailabilityCalendar 
+                        userId={profile.id}
+                        readOnly={false}
+                        onSave={() => {
+                          // Optionally refresh data after save
+                        }}
+                      />
+                    </div>
+                  </>
                 )}
 
                 <div className="flex justify-between items-center">

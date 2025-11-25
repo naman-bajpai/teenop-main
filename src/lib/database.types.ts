@@ -347,6 +347,41 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_availability: {
+        Row: {
+          availability: Json
+          created_at: string | null
+          id: string
+          timezone: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          availability?: Json
+          created_at?: string | null
+          id?: string
+          timezone?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          availability?: Json
+          created_at?: string | null
+          id?: string
+          timezone?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_availability_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_requests: {
         Row: {
           created_at: string | null
@@ -1090,4 +1125,4 @@ export const Constants = {
       user_status: ["active", "inactive", "suspended", "pending_verification"],
     },
   },
-} as const;
+} as const

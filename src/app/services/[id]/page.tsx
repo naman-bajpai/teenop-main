@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MapPin, Clock, Star, ArrowLeft, User, MessageCircle, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import WeeklyAvailabilityCalendar from "@/components/availability/WeeklyAvailabilityCalendar";
 import { useUser } from "@/hooks/useUser";
 import { Service } from "@/types/service";
 import { CreateBookingRequest, BookingResponse } from "@/types/booking";
@@ -91,8 +92,10 @@ const fetchServiceDetails = async (id: string) => {
      let provider_name: string | null = null;
      let provider_rating: number | null = null;
      let provider_schedule_url: string | null = null;
+     let provider_user_id: string | null = null;
 
      if (serviceData.user_id) {
+       provider_user_id = serviceData.user_id;
        const { data: prof, error: profErr } = await supabase
          .from("profiles")
          .select("first_name, last_name, rating, schedule_url")
@@ -127,11 +130,15 @@ const fetchServiceDetails = async (id: string) => {
        pricing_model: (serviceData.pricing_model as any) ?? "per_job",
        provider_name,
        images: images || [],
+       user_id: serviceData.user_id, // Already included in serviceData
      };
 
      setService(normalizedServiceData);
      setProviderScheduleUrl(provider_schedule_url);
      setBookingForm((prev) => ({ ...prev, service_id: id }));
+     
+     // Debug: Log schedule URL for troubleshooting
+     console.log('Provider schedule URL:', provider_schedule_url);
   } catch (err: any) {
     console.error("Error fetching service:", err);
     setError(err?.message || "Failed to load service details");
@@ -546,6 +553,42 @@ return (
 
                 <p className="text-gray-700 text-lg leading-relaxed mb-6">{service.description}</p>
 
+                {/* Provider Schedule - Prominent Display */}
+                {providerScheduleUrl && (
+                  <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-sm">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Calendar className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">Provider Schedule</h3>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Check {service.provider_name ? `${service.provider_name}'s` : "the provider's"} uploaded schedule document.
+                        </p>
+                        <a
+                          href={providerScheduleUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+                        >
+                          <span>View Schedule</span>
+                          <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Provider Weekly Availability Calendar */}
+                {service.user_id && (
+                  <div className="mb-6 p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
+                    <WeeklyAvailabilityCalendar 
+                      userId={service.user_id}
+                      readOnly={true}
+                    />
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div className="flex items-center gap-3">
                     <MapPin className="w-5 h-5 text-gray-400" />
@@ -614,6 +657,28 @@ return (
                             Fill out the form below to request a quote from {service.provider_name}.
                           </DialogDescription>
                         </DialogHeader>
+                        {providerScheduleUrl && (
+                          <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
+                            <div className="flex items-start gap-3 mb-3">
+                              <Calendar className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 mb-1">Check Provider Availability</h4>
+                                <p className="text-xs text-gray-600 mb-3">
+                                  View {service.provider_name ? `${service.provider_name}'s` : "the provider's"} schedule to find the best time for your quote request.
+                                </p>
+                                <a
+                                  href={providerScheduleUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+                                >
+                                  <span>Open Schedule</span>
+                                  <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                         {quoteRequestSuccess ? (
                           <div className="text-center py-6">
                             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
@@ -728,28 +793,31 @@ return (
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div className="flex gap-3">
                     <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
                       <DialogTrigger asChild>
                         <Button
-                            className="flex-1 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
+                            className="w-full bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
                           disabled={service.status !== "active"}
                         >
                           {service.status === "active" ? "Request Service" : "Service Unavailable"}
                         </Button>
                       </DialogTrigger>
                       </Dialog>
-                      {providerScheduleUrl && (
-                        <Button
-                          variant="outline"
-                          className="border-2 border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10 hover:border-[#434c9d] transition-all duration-200 py-3 text-lg font-semibold"
-                          onClick={() => window.open(providerScheduleUrl, '_blank')}
-                        >
-                          <Calendar className="w-5 h-5 mr-2" />
-                          View Schedule
-                        </Button>
-                      )}
-                    </div>
+                      <Button
+                        variant="outline"
+                        className="w-full border-2 border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10 hover:border-[#434c9d] transition-all duration-200 py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => {
+                          if (providerScheduleUrl) {
+                            window.open(providerScheduleUrl, '_blank');
+                          } else {
+                            alert('Schedule not available. The provider has not uploaded their schedule yet.');
+                          }
+                        }}
+                        disabled={!providerScheduleUrl}
+                      >
+                        <Calendar className="w-5 h-5 mr-2" />
+                        View Schedule
+                      </Button>
                     <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
@@ -759,23 +827,25 @@ return (
                     </DialogDescription>
                   </DialogHeader>
                   {providerScheduleUrl && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Calendar className="w-5 h-5 text-blue-600" />
-                        <h4 className="font-semibold text-gray-900">Provider Schedule</h4>
+                    <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
+                      <div className="flex items-start gap-3 mb-3">
+                        <Calendar className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 mb-1">Check Provider Availability</h4>
+                          <p className="text-xs text-gray-600 mb-3">
+                            View {service.provider_name ? `${service.provider_name}'s` : "the provider's"} schedule to find the best time for your booking.
+                          </p>
+                          <a
+                            href={providerScheduleUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+                          >
+                            <span>Open Schedule</span>
+                            <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
+                          </a>
+                        </div>
                       </div>
-                      <a
-                        href={providerScheduleUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between text-sm text-blue-600 hover:text-blue-700 hover:underline"
-                      >
-                        <span className="font-medium">View Availability Schedule</span>
-                        <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
-                      </a>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Check when the provider is available for bookings
-                      </p>
                     </div>
                   )}
                   <form onSubmit={handleBookingSubmit} className="space-y-4">
@@ -839,26 +909,26 @@ return (
                 </>
               )}
 
-              {/* Provider Schedule */}
+              {/* Provider Schedule - Sidebar */}
               {providerScheduleUrl && (
                 <div className="mt-6 pt-6 border-t border-gray-100">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Calendar className="w-5 h-5 text-blue-600" />
-                    <h3 className="font-semibold text-gray-900">Provider Schedule</h3>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Calendar className="w-5 h-5 text-blue-600" />
+                      <h3 className="font-semibold text-gray-900">Provider Schedule</h3>
+                    </div>
+                    <p className="text-xs text-gray-600 mb-3">
+                      Check availability before booking
+                    </p>
                     <a
                       href={providerScheduleUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-between text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                      className="inline-flex items-center gap-2 w-full justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
                     >
-                      <span className="font-medium">View Availability Schedule</span>
+                      <span>View Schedule</span>
                       <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
                     </a>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Check when the provider is available for bookings
-                    </p>
                   </div>
                 </div>
               )}

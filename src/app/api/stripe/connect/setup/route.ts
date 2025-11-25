@@ -144,9 +144,19 @@ export async function POST(request: NextRequest) {
 
     const authUrlString = authUrl.toString();
     
+    // Extract and verify the redirect_uri from the generated URL
+    const generatedUrl = new URL(authUrlString);
+    const redirectUriFromUrl = generatedUrl.searchParams.get('redirect_uri');
+    
     // Log the full OAuth URL to verify redirect_uri parameter
     console.log('Generated OAuth URL (first 200 chars):', authUrlString.substring(0, 200));
-    console.log('🔍 Verify redirect_uri in OAuth URL matches:', redirectUri);
+    console.log('🔍 Redirect URI verification:', {
+      original: redirectUri,
+      inUrl: redirectUriFromUrl,
+      match: redirectUri === redirectUriFromUrl,
+      encoded: encodeURIComponent(redirectUri)
+    });
+    console.log('🔍 Full OAuth URL redirect_uri param:', redirectUriFromUrl);
     console.log('═══════════════════════════════════════════════════════');
 
     return NextResponse.json({

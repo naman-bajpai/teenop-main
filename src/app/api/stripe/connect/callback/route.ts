@@ -90,18 +90,29 @@ export async function GET(request: NextRequest) {
 
     // Exchange authorization code for access token
     // IMPORTANT: Stripe requires the redirect_uri to match the one used in authorization
+    const tokenExchangeParams = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: process.env.STRIPE_CLIENT_ID,
+      client_secret: process.env.STRIPE_SECRET_KEY,
+      code: code,
+      redirect_uri: redirectUri, // Required by Stripe - must match authorization request
+    });
+    
+    console.log('📤 Token exchange request params:', {
+      grant_type: 'authorization_code',
+      hasClientId: !!process.env.STRIPE_CLIENT_ID,
+      hasClientSecret: !!process.env.STRIPE_SECRET_KEY,
+      hasCode: !!code,
+      redirect_uri: redirectUri,
+      redirect_uri_encoded: encodeURIComponent(redirectUri)
+    });
+    
     const response = await fetch('https://connect.stripe.com/oauth/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: process.env.STRIPE_CLIENT_ID,
-        client_secret: process.env.STRIPE_SECRET_KEY,
-        code: code,
-        redirect_uri: redirectUri, // Required by Stripe - must match authorization request
-      }),
+      body: tokenExchangeParams,
     });
 
     if (!response.ok) {
