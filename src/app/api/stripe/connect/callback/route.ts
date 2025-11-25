@@ -67,13 +67,26 @@ export async function GET(request: NextRequest) {
     // Use shared function to ensure EXACT match with setup route
     const redirectUri = getStripeConnectRedirectUri();
     
+    // Also check what Stripe sent us in the callback URL
+    const callbackUrl = new URL(request.url);
+    const receivedRedirectUri = `${callbackUrl.protocol}//${callbackUrl.host}${callbackUrl.pathname}`;
+    
+    console.log('═══════════════════════════════════════════════════════');
     console.log('🔗 Stripe Connect CALLBACK - Redirect URI:', redirectUri);
+    console.log('🔗 Received callback URL:', receivedRedirectUri);
+    console.log('🔍 Comparison:', {
+      calculated: redirectUri,
+      received: receivedRedirectUri,
+      match: redirectUri === receivedRedirectUri
+    });
     console.log('Exchanging authorization code for token:', {
       redirectUri,
       hasCode: !!code,
       hasClientId: !!process.env.STRIPE_CLIENT_ID,
-      envAppUrl: process.env.NEXT_PUBLIC_APP_URL
+      envAppUrl: process.env.NEXT_PUBLIC_APP_URL,
+      codePrefix: code ? code.substring(0, 20) : null
     });
+    console.log('═══════════════════════════════════════════════════════');
 
     // Exchange authorization code for access token
     // IMPORTANT: Stripe requires the redirect_uri to match the one used in authorization
@@ -93,11 +106,18 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      console.error('Stripe OAuth token exchange failed:', {
+      console.error('❌❌❌ Stripe OAuth token exchange failed:', {
         status: response.status,
         statusText: response.statusText,
-        error: errorData
+        error: errorData,
+        redirectUriUsed: redirectUri,
+        envAppUrl: process.env.NEXT_PUBLIC_APP_URL
       });
+      console.error('🔍 TROUBLESHOOTING:');
+      console.error('1. Check that redirect_uri in token exchange matches authorization request');
+      console.error('2. Check that redirect_uri is in Stripe Dashboard → Connect → Settings → OAuth → Redirect URIs');
+      console.error('3. Verify NEXT_PUBLIC_APP_URL in Vercel matches your actual domain');
+      console.error('4. The redirect_uri must match EXACTLY (including protocol, domain, path, no trailing slash)');
       
       let errorMessage = 'token_exchange_failed';
       if (errorData.error) {

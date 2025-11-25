@@ -122,14 +122,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log redirect URI for debugging
+    // Log redirect URI for debugging - CRITICAL for debugging redirect URI mismatches
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔗 Stripe Connect SETUP - Redirect URI:', redirectUri);
+    console.log('🔗 This EXACT URI must be in Stripe Dashboard → Connect → Settings → OAuth → Redirect URIs');
     console.log('Stripe Connect OAuth setup:', {
       redirectUri,
       clientId: clientId ? `${clientId.substring(0, 10)}...` : 'MISSING',
       userId: user.id,
-      baseUrl
+      baseUrl,
+      envAppUrl: process.env.NEXT_PUBLIC_APP_URL
     });
-    console.log('Make sure this exact URI is added to Stripe Dashboard → Connect → Settings → OAuth settings');
 
     // Create OAuth authorization URL
     const authUrl = new URL('https://connect.stripe.com/oauth/authorize');
@@ -140,7 +143,11 @@ export async function POST(request: NextRequest) {
     authUrl.searchParams.set('state', user.id); // Pass user ID as state
 
     const authUrlString = authUrl.toString();
-    console.log('Generated OAuth URL:', authUrlString.substring(0, 100) + '...');
+    
+    // Log the full OAuth URL to verify redirect_uri parameter
+    console.log('Generated OAuth URL (first 200 chars):', authUrlString.substring(0, 200));
+    console.log('🔍 Verify redirect_uri in OAuth URL matches:', redirectUri);
+    console.log('═══════════════════════════════════════════════════════');
 
     return NextResponse.json({
       success: true,
