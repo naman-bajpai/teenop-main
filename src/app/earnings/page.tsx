@@ -39,11 +39,12 @@ interface StripeAccountStatus {
   hasAccount: boolean;
   accountStatus: {
     id: string;
+    type?: 'express' | 'standard'; // Account type: Express or Standard
     detailsSubmitted: boolean;
     chargesEnabled: boolean;
     payoutsEnabled: boolean;
     requirements: any;
-    loginUrl: string | null;
+    loginUrl: string | null; // Only available for Express accounts
   } | null;
 }
 
@@ -335,6 +336,14 @@ export default function EarningsPage() {
         const data = await res.json();
         if (data.success && data.accountStatus?.loginUrl) {
           window.open(data.accountStatus.loginUrl, "_blank");
+        } else if (data.success && data.accountStatus?.type === 'standard') {
+          // Standard accounts don't have login links - direct users to Stripe Dashboard
+          toast({
+            title: "Standard Account",
+            description: "Please log in to Stripe Dashboard directly to manage your account.",
+            variant: "default",
+          });
+          window.open("https://dashboard.stripe.com", "_blank");
         } else {
           toast({
             title: "Account not ready",
@@ -564,7 +573,7 @@ export default function EarningsPage() {
                   </div>
                 </div>
 
-                {accountStatus.accountStatus.loginUrl && (
+                {accountStatus.accountStatus.loginUrl ? (
                   <Button
                     onClick={handleStripeConnectLogin}
                     variant="outline"
@@ -573,7 +582,13 @@ export default function EarningsPage() {
                     <ExternalLink className="w-4 h-4 mr-2" />
                     Manage Account in Stripe
                   </Button>
-                )}
+                ) : accountStatus.accountStatus.type === 'standard' ? (
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 shadow-sm">
+                    <p className="text-sm text-blue-900 font-medium">
+                      Standard Account: Log in to <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" className="underline">Stripe Dashboard</a> to manage your account
+                    </p>
+                  </div>
+                ) : null}
 
                 {!accountStatus.accountStatus.detailsSubmitted && (
                   <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 shadow-sm">

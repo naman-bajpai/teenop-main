@@ -169,10 +169,22 @@ export async function GET(request: NextRequest) {
       account = await stripe.accounts.retrieve(accountId);
       console.log('Stripe account retrieved:', {
         accountId,
+        accountType: account.type, // 'express' or 'standard'
         detailsSubmitted: account.details_submitted,
         chargesEnabled: account.charges_enabled,
         payoutsEnabled: account.payouts_enabled
       });
+      
+      // Verify account type - Express accounts are recommended
+      if (account.type !== 'express') {
+        console.warn('⚠️ Account created is not Express type:', {
+          accountId,
+          accountType: account.type,
+          note: 'Express accounts are recommended. Configure Stripe Dashboard → Connect → Settings → Account types to default to Express.'
+        });
+      } else {
+        console.log('✅ Express account created successfully');
+      }
     } catch (stripeError: any) {
       console.error('Error retrieving Stripe account:', stripeError);
       return NextResponse.redirect(

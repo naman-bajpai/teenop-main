@@ -219,11 +219,34 @@ export async function GET(request: NextRequest) {
     try {
       const account = await stripe.accounts.retrieve(profile.stripe_connect_account_id);
       
-      // Create login link if account is complete
+      // Create login link if account is complete and is an Express account
+      // Note: Login links only work for Express accounts, not Standard accounts
       let loginUrl = null;
       if (account.details_submitted && account.charges_enabled) {
-        const loginLink = await stripe.accounts.createLoginLink(profile.stripe_connect_account_id);
-        loginUrl = loginLink.url;
+        // Only create login link for Express accounts
+        // Standard accounts require users to log in directly to Stripe
+        if (account.type === 'express') {
+          try {
+            const loginLink = await stripe.accounts.createLoginLink(profile.stripe_connect_account_id);
+            loginUrl = loginLink.url;
+          } catch (loginLinkError: any) {
+            // If login link creation fails (e.g., account doesn't have Express Dashboard access),
+            // log the error but don't fail the entire request
+            console.warn('Could not create login link for account:', {
+              accountId: profile.stripe_connect_account_id,
+              accountType: account.type,
+              error: loginLinkError.message
+            });
+            // loginUrl remains null, which is fine - user can still access their account via Stripe directly
+          }
+        } else {
+          // For Standard accounts, provide a link to Stripe Dashboard
+          // Users with Standard accounts need to log in directly to Stripe
+          console.log('Account is Standard type, login link not available:', {
+            accountId: profile.stripe_connect_account_id,
+            accountType: account.type
+          });
+        }
       }
 
       return NextResponse.json({
@@ -231,11 +254,12 @@ export async function GET(request: NextRequest) {
         hasAccount: true,
         accountStatus: {
           id: account.id,
+          type: account.type, // 'express' or 'standard'
           detailsSubmitted: account.details_submitted,
           chargesEnabled: account.charges_enabled,
           payoutsEnabled: account.payouts_enabled,
           requirements: account.requirements,
-          loginUrl
+          loginUrl // Only available for Express accounts
         }
       });
     } catch (stripeError: any) {
