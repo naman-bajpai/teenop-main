@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { Database } from '@/lib/database.types';
 import { getStripeConnectRedirectUri, getStripeConnectBaseUrl } from '@/lib/stripe-connect';
@@ -216,27 +216,71 @@ export async function GET(request: NextRequest) {
     }
 
     // Get account details from Stripe
-    const account = await stripe.accounts.retrieve(profile.stripe_connect_account_id);
-    
-    // Create login link if account is complete
-    let loginUrl = null;
-    if (account.details_submitted && account.charges_enabled) {
-      const loginLink = await stripe.accounts.createLoginLink(profile.stripe_connect_account_id);
-      loginUrl = loginLink.url;
-    }
-
-    return NextResponse.json({
-      success: true,
-      hasAccount: true,
-      accountStatus: {
-        id: account.id,
-        detailsSubmitted: account.details_submitted,
-        chargesEnabled: account.charges_enabled,
-        payoutsEnabled: account.payouts_enabled,
-        requirements: account.requirements,
-        loginUrl
+    try {
+      const account = await stripe.accounts.retrieve(profile.stripe_connect_account_id);
+      
+      // Create login link if account is complete
+      let loginUrl = null;
+      if (account.details_submitted && account.charges_enabled) {
+        const loginLink = await stripe.accounts.createLoginLink(profile.stripe_connect_account_id);
+        loginUrl = loginLink.url;
       }
-    });
+
+      return NextResponse.json({
+        success: true,
+        hasAccount: true,
+        accountStatus: {
+          id: account.id,
+          detailsSubmitted: account.details_submitted,
+          chargesEnabled: account.charges_enabled,
+          payoutsEnabled: account.payouts_enabled,
+          requirements: account.requirements,
+          loginUrl
+        }
+      });
+    } catch (stripeError: any) {
+      // Check if the error is due to invalid account (disconnected, doesn't exist, or access revoked)
+      const isInvalidAccount = 
+        stripeError.code === 'account_invalid' ||
+        stripeError.type === 'StripePermissionError' ||
+        (stripeError.message && stripeError.message.includes('does not have access to account'));
+
+      if (isInvalidAccount) {
+        console.warn('Stripe Connect account is invalid, clearing from profile:', {
+          accountId: profile.stripe_connect_account_id,
+          error: stripeError.message,
+          code: stripeError.code
+        });
+
+        // Clear the invalid account ID from the user's profile
+        try {
+          const supabaseService = createServiceRoleClient();
+          const { error: updateError } = await supabaseService
+            .from('profiles')
+            .update({ stripe_connect_account_id: null })
+            .eq('id', user.id);
+
+          if (updateError) {
+            console.error('Failed to clear invalid Stripe account ID:', updateError);
+          } else {
+            console.log('Cleared invalid Stripe account ID from profile');
+          }
+        } catch (clearError) {
+          console.error('Error clearing invalid Stripe account ID:', clearError);
+        }
+
+        // Return response indicating account needs to be reconnected
+        return NextResponse.json({
+          success: true,
+          hasAccount: false,
+          accountStatus: null,
+          message: 'Your Stripe Connect account was disconnected or is no longer accessible. Please reconnect your account.'
+        });
+      }
+
+      // Re-throw if it's a different error
+      throw stripeError;
+    }
 
   } catch (error: any) {
     console.error('Error fetching Stripe Connect account status:', error);
