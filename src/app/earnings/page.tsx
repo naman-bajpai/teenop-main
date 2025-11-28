@@ -191,6 +191,16 @@ export default function EarningsPage() {
             hasAccount: data.hasAccount,
             accountId: data.accountStatus?.id
           });
+          
+          // Show message if account was cleared (invalid account)
+          if (data.message) {
+            toast({
+              title: "Account Disconnected",
+              description: data.message,
+              variant: "default",
+            });
+          }
+          
           return;
         } else {
           console.warn("Account status response not successful:", data);
