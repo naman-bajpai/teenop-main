@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       // Update existing
-      const { data: updated, error: updateError } = await supabase
+      const { data: updated, error: updateError } = await (supabase as any)
         .from("provider_availability")
         .update({
           availability,
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       result = updated;
     } else {
       // Create new
-      const { data: created, error: createError } = await supabase
+      const { data: created, error: createError } = await (supabase as any)
         .from("provider_availability")
         .insert({
           user_id: user.id,
