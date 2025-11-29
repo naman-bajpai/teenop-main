@@ -6,6 +6,7 @@ import { checkAdminAccess, getAllUsers, updateUserStatus, getUserStats, getAllSe
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
 import { 
   Users, 
   Search, 
@@ -17,24 +18,20 @@ import {
   MapPin,
   Calendar,
   Filter,
-  Download,
   LogOut,
-  Settings,
-  BarChart3,
   Activity,
   AlertTriangle,
-  TrendingUp,
-  Database,
-  Eye,
-  EyeOff,
   Briefcase,
-  Edit,
   Trash2,
   DollarSign,
   Clock,
-  Star
+  Star,
+  Eye,
+  EyeOff,
+  X
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { Toaster } from "@/components/ui/toaster";
 
 interface UserProfile {
   id: string;
@@ -99,7 +96,9 @@ export default function AdminDashboard() {
     pausedServices: 0,
   });
   const [showSensitiveData, setShowSensitiveData] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     const initializeAdmin = async () => {
@@ -193,6 +192,7 @@ export default function AdminDashboard() {
   }, [services, searchTerm, serviceStatusFilter, serviceCategoryFilter]);
 
   const handleUpdateUserStatus = async (userId: string, newStatus: "active" | "inactive" | "suspended" | "pending_verification") => {
+    setActionLoading(userId);
     try {
       await updateUserStatus(userId, newStatus);
       
@@ -205,8 +205,24 @@ export default function AdminDashboard() {
       setFilteredUsers(prev => prev.map(user => 
         user.id === userId ? { ...user, status: newStatus } : user
       ));
+
+      // Update stats
+      const updatedStats = await getUserStats();
+      setStats(updatedStats);
+
+      toast({
+        title: "Status updated",
+        description: `User status changed to ${newStatus.replace('_', ' ')}`,
+      });
     } catch (error) {
       console.error('Error updating user status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -215,18 +231,36 @@ export default function AdminDashboard() {
       return;
     }
     
+    setActionLoading(userId);
     try {
       await deleteUser(userId);
       
       // Update local state
       setUsers(prev => prev.filter(user => user.id !== userId));
       setFilteredUsers(prev => prev.filter(user => user.id !== userId));
+
+      // Update stats
+      const updatedStats = await getUserStats();
+      setStats(updatedStats);
+
+      toast({
+        title: "User deleted",
+        description: "User has been successfully deleted.",
+      });
     } catch (error) {
       console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleUpdateServiceStatus = async (serviceId: string, newStatus: string) => {
+    setActionLoading(serviceId);
     try {
       await updateServiceStatus(serviceId, newStatus);
       
@@ -239,8 +273,24 @@ export default function AdminDashboard() {
       setFilteredServices(prev => prev.map(service => 
         service.id === serviceId ? { ...service, status: newStatus } : service
       ));
+
+      // Update stats
+      const updatedStats = await getServiceStats();
+      setServiceStats(updatedStats);
+
+      toast({
+        title: "Status updated",
+        description: `Service status changed to ${newStatus}`,
+      });
     } catch (error) {
       console.error('Error updating service status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update service status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -249,14 +299,31 @@ export default function AdminDashboard() {
       return;
     }
     
+    setActionLoading(serviceId);
     try {
       await deleteService(serviceId);
       
       // Update local state
       setServices(prev => prev.filter(service => service.id !== serviceId));
       setFilteredServices(prev => prev.filter(service => service.id !== serviceId));
+
+      // Update stats
+      const updatedStats = await getServiceStats();
+      setServiceStats(updatedStats);
+
+      toast({
+        title: "Service deleted",
+        description: "Service has been successfully deleted.",
+      });
     } catch (error) {
       console.error('Error deleting service:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete service. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -273,71 +340,72 @@ export default function AdminDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'inactive': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'suspended': return 'bg-red-100 text-red-800 border-red-200';
-      case 'pending_verification': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'active': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'inactive': return 'bg-gray-50 text-gray-700 border-gray-200';
+      case 'suspended': return 'bg-red-50 text-red-700 border-red-200';
+      case 'pending_verification': return 'bg-amber-50 text-amber-700 border-amber-200';
+      default: return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'teen': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'parent': return 'bg-orange-100 text-orange-800 border-orange-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'admin': return 'bg-slate-100 text-slate-700 border-slate-200';
+      case 'teen': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'parent': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      default: return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
   const getServiceStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'paused': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'inactive': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'active': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'paused': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'inactive': return 'bg-gray-50 text-gray-700 border-gray-200';
+      default: return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400 mx-auto mb-4"></div>
-          <p className="text-gray-300">Loading admin dashboard...</p>
+      <AdminLayout>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-slate-900 mx-auto mb-4"></div>
+            <p className="text-gray-600 text-sm">Loading dashboard...</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout>
-      {/* Dashboard Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-[#434c9d] to-[#ff725a] rounded-xl">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-700">Admin Dashboard</h1>
-                <p className="text-sm text-slate-600">Platform administration & user management</p>
-              </div>
+    <>
+      <Toaster />
+      <AdminLayout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Dashboard Header */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+              <p className="text-sm text-gray-500 mt-1">Manage users and services</p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <Button 
                 onClick={() => setShowSensitiveData(!showSensitiveData)}
                 variant="outline"
-                className="border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10"
+                size="sm"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 {showSensitiveData ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-                {showSensitiveData ? "Hide" : "Show"} Sensitive Data
+                {showSensitiveData ? "Hide" : "Show"} Data
               </Button>
               <Button 
                 onClick={handleLogout}
                 variant="outline"
-                className="border-red-300 text-red-600 hover:bg-red-50"
+                size="sm"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
@@ -345,89 +413,86 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-            <div className="flex items-center">
-              <div className="p-3 bg-[#96cbc3]/20 rounded-xl">
-                <Users className="h-8 w-8 text-[#434c9d]" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Users</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.totalUsers}</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-slate-600">Total Users</p>
-                <p className="text-2xl font-bold text-gray-700">{stats.totalUsers}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-            <div className="flex items-center">
-              <div className="p-3 bg-[#96cbc3]/20 rounded-xl">
-                <UserCheck className="h-8 w-8 text-[#434c9d]" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-slate-600">Active Users</p>
-                <p className="text-2xl font-bold text-gray-700">{stats.activeUsers}</p>
+              <div className="p-2 bg-slate-100 rounded-lg">
+                <Users className="h-5 w-5 text-slate-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-            <div className="flex items-center">
-              <div className="p-3 bg-[#96cbc3]/20 rounded-xl">
-                <Shield className="h-8 w-8 text-[#434c9d]" />
+          <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Active Users</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.activeUsers}</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-slate-600">Teens</p>
-                <p className="text-2xl font-bold text-gray-700">{stats.teenUsers}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-            <div className="flex items-center">
-              <div className="p-3 bg-[#96cbc3]/20 rounded-xl">
-                <Briefcase className="h-8 w-8 text-[#434c9d]" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-slate-600">Total Services</p>
-                <p className="text-2xl font-bold text-gray-700">{serviceStats.totalServices}</p>
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <UserCheck className="h-5 w-5 text-emerald-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-            <div className="flex items-center">
-              <div className="p-3 bg-[#96cbc3]/20 rounded-xl">
-                <Activity className="h-8 w-8 text-[#434c9d]" />
+          <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Teens</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.teenUsers}</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-slate-600">Active Services</p>
-                <p className="text-2xl font-bold text-gray-700">{serviceStats.activeServices}</p>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Shield className="h-5 w-5 text-blue-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-            <div className="flex items-center">
-              <div className="p-3 bg-[#96cbc3]/20 rounded-xl">
-                <AlertTriangle className="h-8 w-8 text-[#434c9d]" />
+          <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Services</p>
+                <p className="text-2xl font-semibold text-gray-900">{serviceStats.totalServices}</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-slate-600">Pending Users</p>
-                <p className="text-2xl font-bold text-gray-700">{stats.pendingUsers}</p>
+              <div className="p-2 bg-indigo-100 rounded-lg">
+                <Briefcase className="h-5 w-5 text-indigo-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Active Services</p>
+                <p className="text-2xl font-semibold text-gray-900">{serviceStats.activeServices}</p>
+              </div>
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <Activity className="h-5 w-5 text-emerald-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Pending</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.pendingUsers}</p>
+              </div>
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-2xl shadow-lg mb-6 border border-gray-100">
-          <div className="p-6">
-            <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+        <div className="bg-white rounded-lg border border-gray-200 mb-4 shadow-sm">
+          <div className="p-1">
+            <div className="flex space-x-1">
               <button
                 onClick={() => setActiveTab("users")}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${
                   activeTab === "users"
-                    ? "bg-white text-[#434c9d] shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 }`}
               >
                 <Users className="w-4 h-4 inline mr-2" />
@@ -435,10 +500,10 @@ export default function AdminDashboard() {
               </button>
               <button
                 onClick={() => setActiveTab("services")}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${
                   activeTab === "services"
-                    ? "bg-white text-[#434c9d] shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 }`}
               >
                 <Briefcase className="w-4 h-4 inline mr-2" />
@@ -449,49 +514,49 @@ export default function AdminDashboard() {
         </div>
 
         {/* Filters and Search */}
-        <div className="bg-white rounded-2xl shadow-lg mb-6 border border-gray-100">
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 mb-4 shadow-sm">
+          <div className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder={activeTab === "users" ? "Search users..." : "Search services..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white/80 border-[#96cbc3] focus:border-[#434c9d] text-gray-700 placeholder:text-slate-500"
+                  className="pl-10 border-gray-300 focus:border-slate-900 focus:ring-slate-900"
                 />
               </div>
               
               {activeTab === "users" ? (
                 <>
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                    className="px-3 py-2 bg-white border border-[#96cbc3] rounded-md focus:outline-none focus:ring-2 focus:ring-[#434c9d] text-gray-700"
-              >
-                <option value="all">All Roles</option>
-                <option value="teen">Teens</option>
-                <option value="parent">Parents</option>
-                <option value="admin">Admins</option>
-              </select>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 bg-white border border-[#96cbc3] rounded-md focus:outline-none focus:ring-2 focus:ring-[#434c9d] text-gray-700"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-                <option value="pending_verification">Pending</option>
-              </select>
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-gray-700 text-sm"
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="teen">Teens</option>
+                    <option value="parent">Parents</option>
+                    <option value="admin">Admins</option>
+                  </select>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-gray-700 text-sm"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="pending_verification">Pending</option>
+                  </select>
                 </>
               ) : (
                 <>
                   <select
                     value={serviceStatusFilter}
                     onChange={(e) => setServiceStatusFilter(e.target.value)}
-                    className="px-3 py-2 bg-white border border-[#96cbc3] rounded-md focus:outline-none focus:ring-2 focus:ring-[#434c9d] text-gray-700"
+                    className="px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-gray-700 text-sm"
                   >
                     <option value="all">All Status</option>
                     <option value="active">Active</option>
@@ -501,7 +566,7 @@ export default function AdminDashboard() {
                   <select
                     value={serviceCategoryFilter}
                     onChange={(e) => setServiceCategoryFilter(e.target.value)}
-                    className="px-3 py-2 bg-white border border-[#96cbc3] rounded-md focus:outline-none focus:ring-2 focus:ring-[#434c9d] text-gray-700"
+                    className="px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-gray-700 text-sm"
                   >
                     <option value="all">All Categories</option>
                     <option value="pet_care">Pet Care</option>
@@ -519,27 +584,28 @@ export default function AdminDashboard() {
                 onClick={() => {
                   setSearchTerm("");
                   if (activeTab === "users") {
-                  setRoleFilter("all");
-                  setStatusFilter("all");
+                    setRoleFilter("all");
+                    setStatusFilter("all");
                   } else {
                     setServiceStatusFilter("all");
                     setServiceCategoryFilter("all");
                   }
                 }}
                 variant="outline"
-                className="flex items-center space-x-2 border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10"
+                size="sm"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
               >
-                <Filter className="h-4 w-4" />
-                <span>Clear Filters</span>
+                <Filter className="h-4 w-4 mr-2" />
+                Clear
               </Button>
             </div>
           </div>
         </div>
 
         {/* Data Table */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-700">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
               {activeTab === "users" ? `Users (${filteredUsers.length})` : `Services (${filteredServices.length})`}
             </h3>
           </div>
@@ -601,42 +667,42 @@ export default function AdminDashboard() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {activeTab === "users" ? filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={user.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-r from-[#434c9d] to-[#ff725a] flex items-center justify-center">
+                          <div className="h-10 w-10 rounded-full bg-slate-900 flex items-center justify-center">
                             <span className="text-sm font-medium text-white">
                               {user.first_name?.[0]}{user.last_name?.[0]}
                             </span>
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-700">
+                          <div className="text-sm font-medium text-gray-900">
                             {user.first_name} {user.last_name}
                           </div>
-                          <div className="text-sm text-slate-600">
+                          <div className="text-sm text-gray-500">
                             Age: {user.age || 'N/A'}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-700">
-                        <div className="flex items-center space-x-1">
-                          <Mail className="h-4 w-4 text-slate-400" />
-                          <span>{user.email}</span>
+                      <div className="text-sm text-gray-900">
+                        <div className="flex items-center space-x-1.5">
+                          <Mail className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="text-gray-700">{user.email}</span>
                         </div>
                         {showSensitiveData && user.phone && (
-                          <div className="flex items-center space-x-1 mt-1">
-                            <Phone className="h-4 w-4 text-slate-400" />
-                            <span className="text-sm text-slate-600">{user.phone}</span>
+                          <div className="flex items-center space-x-1.5 mt-1.5">
+                            <Phone className="h-3.5 w-3.5 text-gray-400" />
+                            <span className="text-sm text-gray-600">{user.phone}</span>
                           </div>
                         )}
                         {showSensitiveData && user.parent_email && (
-                          <div className="flex items-center space-x-1 mt-1">
-                            <Mail className="h-4 w-4 text-slate-400" />
-                            <span className="text-sm text-slate-600">Parent: {user.parent_email}</span>
+                          <div className="flex items-center space-x-1.5 mt-1.5">
+                            <Mail className="h-3.5 w-3.5 text-gray-400" />
+                            <span className="text-sm text-gray-600">Parent: {user.parent_email}</span>
                           </div>
                         )}
                       </div>
@@ -652,16 +718,16 @@ export default function AdminDashboard() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-1 text-sm text-slate-600">
-                        <MapPin className="h-4 w-4" />
+                      <div className="flex items-center space-x-1.5 text-sm text-gray-600">
+                        <MapPin className="h-3.5 w-3.5" />
                         <span>
                           {user.city && user.state ? `${user.city}, ${user.state}` : 'N/A'}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-1 text-sm text-slate-600">
-                        <Calendar className="h-4 w-4" />
+                      <div className="flex items-center space-x-1.5 text-sm text-gray-600">
+                        <Calendar className="h-3.5 w-3.5" />
                         <span>
                           {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
                         </span>
@@ -674,7 +740,8 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleUpdateUserStatus(user.id, 'suspended')}
-                            className="border-red-400/50 text-red-300 hover:bg-red-500/20"
+                            disabled={actionLoading === user.id}
+                            className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
                           >
                             Suspend
                           </Button>
@@ -683,7 +750,8 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleUpdateUserStatus(user.id, 'active')}
-                            className="border-green-400/50 text-green-300 hover:bg-green-500/20"
+                            disabled={actionLoading === user.id}
+                            className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
                           >
                             Activate
                           </Button>
@@ -692,7 +760,8 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleUpdateUserStatus(user.id, 'active')}
-                            className="border-green-400/50 text-green-300 hover:bg-green-500/20"
+                            disabled={actionLoading === user.id}
+                            className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
                           >
                             Verify
                           </Button>
@@ -701,7 +770,8 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleUpdateUserStatus(user.id, 'active')}
-                            className="border-blue-400/50 text-blue-300 hover:bg-blue-500/20"
+                            disabled={actionLoading === user.id}
+                            className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
                           >
                             Activate
                           </Button>
@@ -710,54 +780,55 @@ export default function AdminDashboard() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleDeleteUser(user.id)}
-                          className="border-red-400/50 text-red-600 hover:bg-red-50"
+                          disabled={actionLoading === user.id}
+                          className="border-red-300 text-red-600 hover:bg-red-50 text-xs"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </td>
                   </tr>
                 )) : filteredServices.map((service) => (
-                  <tr key={service.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={service.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-r from-[#434c9d] to-[#ff725a] flex items-center justify-center">
+                          <div className="h-10 w-10 rounded-lg bg-slate-900 flex items-center justify-center">
                             <Briefcase className="h-5 w-5 text-white" />
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-700">
+                          <div className="text-sm font-medium text-gray-900">
                             {service.title}
                           </div>
-                          <div className="text-sm text-slate-600 max-w-xs truncate">
+                          <div className="text-sm text-gray-500 max-w-xs truncate">
                             {service.description}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-700">
+                      <div className="text-sm text-gray-900">
                         <div className="font-medium">
                           {service.profiles.first_name} {service.profiles.last_name}
                         </div>
-                        <div className="text-slate-600">{service.profiles.email}</div>
+                        <div className="text-gray-500 text-xs">{service.profiles.email}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                      <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200">
                         {service.category.replace('_', ' ')}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-700">
-                        <div className="flex items-center space-x-1">
-                          <DollarSign className="h-4 w-4 text-slate-400" />
-                          <span>${service.price}</span>
+                      <div className="text-sm text-gray-900">
+                        <div className="flex items-center space-x-1.5">
+                          <DollarSign className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="font-medium">${service.price}</span>
                         </div>
-                        <div className="flex items-center space-x-1 text-slate-600">
-                          <Clock className="h-4 w-4" />
-                          <span>{service.duration} min</span>
+                        <div className="flex items-center space-x-1.5 text-gray-500 mt-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span className="text-xs">{service.duration} min</span>
                         </div>
                       </div>
                     </td>
@@ -767,15 +838,15 @@ export default function AdminDashboard() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-700">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-4 w-4 text-slate-400" />
-                          <span>{service.total_bookings}</span>
+                      <div className="text-sm text-gray-900">
+                        <div className="flex items-center space-x-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="font-medium">{service.total_bookings}</span>
                         </div>
                         {service.rating && (
-                          <div className="flex items-center space-x-1 text-slate-600">
-                            <Star className="h-4 w-4" />
-                            <span>{service.rating.toFixed(1)}</span>
+                          <div className="flex items-center space-x-1.5 text-gray-500 mt-1">
+                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                            <span className="text-xs">{service.rating.toFixed(1)}</span>
                           </div>
                         )}
                       </div>
@@ -787,7 +858,8 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleUpdateServiceStatus(service.id, 'paused')}
-                            className="border-yellow-400/50 text-yellow-600 hover:bg-yellow-50"
+                            disabled={actionLoading === service.id}
+                            className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
                           >
                             Pause
                           </Button>
@@ -796,7 +868,8 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleUpdateServiceStatus(service.id, 'active')}
-                            className="border-green-400/50 text-green-600 hover:bg-green-50"
+                            disabled={actionLoading === service.id}
+                            className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
                           >
                             Activate
                           </Button>
@@ -805,7 +878,8 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleUpdateServiceStatus(service.id, 'active')}
-                            className="border-green-400/50 text-green-600 hover:bg-green-50"
+                            disabled={actionLoading === service.id}
+                            className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
                           >
                             Activate
                           </Button>
@@ -814,9 +888,10 @@ export default function AdminDashboard() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleDeleteService(service.id)}
-                          className="border-red-400/50 text-red-600 hover:bg-red-50"
+                          disabled={actionLoading === service.id}
+                          className="border-red-300 text-red-600 hover:bg-red-50 text-xs"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </td>
@@ -828,21 +903,22 @@ export default function AdminDashboard() {
         </div>
 
         {(activeTab === "users" ? filteredUsers.length === 0 : filteredServices.length === 0) && (
-          <div className="text-center py-12">
+          <div className="text-center py-16 bg-white">
             {activeTab === "users" ? (
-            <Users className="mx-auto h-12 w-12 text-gray-400" />
+              <Users className="mx-auto h-12 w-12 text-gray-300" />
             ) : (
-              <Briefcase className="mx-auto h-12 w-12 text-gray-400" />
+              <Briefcase className="mx-auto h-12 w-12 text-gray-300" />
             )}
-            <h3 className="mt-2 text-sm font-medium text-gray-700">
+            <h3 className="mt-4 text-sm font-medium text-gray-900">
               No {activeTab} found
             </h3>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-gray-500">
               Try adjusting your search or filter criteria.
             </p>
           </div>
         )}
       </div>
-    </AdminLayout>
+      </AdminLayout>
+    </>
   );
 }

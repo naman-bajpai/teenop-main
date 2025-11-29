@@ -12,6 +12,16 @@ import AdminLayout from "@/components/admin/AdminLayout";
 export default function AdminLoginPage() {
   const router = useRouter();
   
+  // Clear any URL parameters on mount for security
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search) {
+      // Remove query parameters from URL without reload
+      const url = new URL(window.location.href);
+      url.search = '';
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
+  
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -53,8 +63,9 @@ export default function AdminLoginPage() {
     if (error) setError("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     
     // Check if we should wait before retrying
     if (shouldWaitForRetry()) {
@@ -63,6 +74,12 @@ export default function AdminLoginPage() {
       const remainingTime = Math.ceil((waitTime - timeSinceLastAttempt) / 1000);
       setCountdown(remainingTime);
       setError(`Please wait ${remainingTime} seconds before trying again.`);
+      return;
+    }
+
+    // Validate form data
+    if (!formData.email || !formData.password) {
+      setError("Please enter both email and password.");
       return;
     }
 
@@ -104,21 +121,68 @@ export default function AdminLoginPage() {
         console.log("Admin user authenticated:", data.user.id);
 
         // Check if user is actually an admin
-        const { data: profile, error: profileError } = await supabase
+        // Users should be able to view their own profile via RLS policy
+        let profile: any = null;
+        let profileError: any = null;
+        
+        // First try: Query by user ID (should work with "Users can view their own profile" policy)
+        const { data: profileById, error: errorById } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", data.user.id)
           .single();
 
-        if (profileError || !profile) {
-          console.error("Profile error:", profileError);
-          setError("Admin profile not found. Please contact support.");
+        if (errorById || !profileById) {
+          console.error("Profile lookup by ID failed:", errorById);
+          
+          // Second try: Query by email (in case there's a policy allowing this)
+          const { data: profileByEmail, error: errorByEmail } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("email", data.user.email || formData.email)
+            .single();
+          
+          if (errorByEmail || !profileByEmail) {
+            console.error("Profile lookup by email also failed:", errorByEmail);
+            
+            // Show detailed error for debugging
+            const errorMessage = errorById?.message || errorByEmail?.message || "Unknown error";
+            const errorCode = errorById?.code || errorByEmail?.code || "Unknown";
+            
+            console.error("Full error details:", {
+              errorById: errorById,
+              errorByEmail: errorByEmail,
+              userId: data.user.id,
+              userEmail: data.user.email
+            });
+            
+            setError(
+              `Unable to verify admin status. Error: ${errorMessage} (Code: ${errorCode}). ` +
+              `Please ensure you have a profile with role='admin' and that RLS policies allow users to view their own profile.`
+            );
+            setIsSubmitting(false);
+            return;
+          }
+          
+          profile = profileByEmail;
+        } else {
+          profile = profileById;
+        }
+
+        if (!profile) {
+          console.error("Profile is null after all attempts");
+          setError("Admin profile not found. Please ensure your profile exists and has role='admin'.");
+          setIsSubmitting(false);
           return;
         }
 
+        console.log("Profile found:", { id: profile.id, email: profile.email, role: profile.role });
+
         // Verify admin role
-        if ((profile as any).role !== "admin") {
-          setError("Access denied. Admin privileges required.");
+        if (profile.role !== "admin") {
+          console.error("User is not an admin:", { role: profile.role, email: profile.email });
+          setError(`Access denied. Your account role is '${profile.role}', but 'admin' is required.`);
+          setIsSubmitting(false);
           return;
         }
 
@@ -128,7 +192,19 @@ export default function AdminLoginPage() {
         }
 
         console.log("Admin login successful, redirecting to admin dashboard");
-        router.push("/admin/dashboard");
+        // Clear any URL parameters before redirecting
+        const cleanUrl = "/admin/dashboard";
+        // Use router.push for client-side navigation (cleaner)
+        router.push(cleanUrl);
+        // Fallback to window.location if router doesn't work
+        setTimeout(() => {
+          if (window.location.pathname !== "/admin/dashboard") {
+            window.location.href = cleanUrl;
+          }
+        }, 100);
+      } else {
+        setError("Login failed. Please try again.");
+        setIsSubmitting(false);
       }
     } catch (err) {
       console.error("Admin login exception:", err);
@@ -141,58 +217,41 @@ export default function AdminLoginPage() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-[#96cbc3]/20 to-[#ff725a]/20 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-[#434c9d]/20 to-[#96cbc3]/20 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-[#ff725a]/10 to-[#434c9d]/10 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-3 bg-white px-6 py-3 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5">
-            <div className="p-2 bg-gradient-to-r from-[#434c9d] to-[#ff725a] rounded-xl">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-gray-700">
-              Admin Portal
-            </span>
-          </div>
-        </div>
-
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-700 mb-3">Admin Access</h1>
-          <p className="text-lg text-slate-600">Secure administrative login</p>
-        </div>
-      </div>
-
-      <div className="relative sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-10 px-6 shadow-2xl sm:rounded-3xl sm:px-10 border border-gray-200">
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-2 duration-300">
-              <div className="p-1 bg-red-100 rounded-full">
-                <AlertCircle className="w-4 h-4 text-red-600" />
+      <div className="flex flex-col justify-center min-h-[calc(100vh-200px)] py-12 px-4 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-slate-900 rounded-lg">
+                <Shield className="w-8 h-8 text-white" />
               </div>
+            </div>
+            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Admin Login</h1>
+            <p className="text-sm text-gray-500">Sign in to access the admin portal</p>
+          </div>
+
+          <div className="bg-white py-8 px-6 shadow-sm sm:rounded-lg sm:px-8 border border-gray-200">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <span className="text-sm text-red-700 font-medium">{error}</span>
+                <p className="text-sm text-red-700 font-medium">{error}</p>
                 {countdown && countdown > 0 && (
-                  <div className="mt-1 text-xs text-red-600">
+                  <p className="mt-1 text-xs text-red-600">
                     Retry available in {countdown} second{countdown !== 1 ? 's' : ''}
-                  </div>
+                  </p>
                 )}
               </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-700">
-                Admin Email
+          <form onSubmit={handleSubmit} method="post" className="space-y-5" action="#">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-slate-400" />
+                  <User className="h-4 w-4 text-gray-400" />
                 </div>
                 <Input
                   id="email"
@@ -202,20 +261,20 @@ export default function AdminLoginPage() {
                   required
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full h-12 pl-10 pr-4 bg-white border-[#96cbc3] rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-[#434c9d] transition-all duration-200 placeholder:text-slate-500 text-gray-700"
-                  placeholder="admin@teenop.com"
+                  className="w-full h-11 pl-10 pr-4 border-gray-300 focus:border-slate-900 focus:ring-slate-900"
+                  placeholder="admin@example.com"
                   disabled={isSubmitting}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
-                Admin Password
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-400" />
+                  <Lock className="h-4 w-4 text-gray-400" />
                 </div>
                 <Input
                   id="password"
@@ -225,41 +284,45 @@ export default function AdminLoginPage() {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full h-12 pl-10 pr-12 bg-white border-[#96cbc3] rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-[#434c9d] transition-all duration-200 placeholder:text-slate-500 text-gray-700"
-                  placeholder="Enter admin password"
+                  className="w-full h-11 pl-10 pr-12 border-gray-300 focus:border-slate-900 focus:ring-slate-900"
+                  placeholder="Enter your password"
                   disabled={isSubmitting}
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-gray-50 rounded-r-xl transition-colors duration-200"
-                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center z-10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowPassword(!showPassword);
+                  }}
                   disabled={isSubmitting}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                    <EyeOff className="h-4 w-4 text-gray-500 hover:text-gray-700 transition-colors cursor-pointer" />
                   ) : (
-                    <Eye className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                    <Eye className="h-4 w-4 text-gray-500 hover:text-gray-700 transition-colors cursor-pointer" />
                   )}
                 </button>
               </div>
             </div>
 
-            <div className="pt-4">
+            <div className="pt-2">
               <Button
                 type="submit"
-                className="w-full h-12 bg-gradient-to-r from-[#434c9d] to-[#ff725a] hover:from-[#434c9d]/90 hover:to-[#ff725a]/90 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 disabled:transform-none disabled:opacity-50"
+                className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting || (countdown !== null && countdown > 0)}  
               >
                 {isSubmitting ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    Authenticating...
+                    <span>Signing in...</span>
                   </div>
                 ) : countdown && countdown > 0 ? (
                   `Wait ${countdown}s`
                 ) : (
-                  "Access Admin Portal"
+                  "Sign In"
                 )}
               </Button>
             </div>
@@ -267,12 +330,12 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Back to main site link */}
-        <div className="mt-8 text-center">
+        <div className="mt-6 text-center">
           <Link
             href="/"
-            className="text-slate-600 hover:text-[#434c9d] transition-colors duration-200 text-sm"
+            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
           >
-            ← Back to TeenOp
+            ← Back to TeenOps
           </Link>
         </div>
         </div>
