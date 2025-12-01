@@ -735,6 +735,69 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawal_requests: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          notes: string | null
+          platform_fee: number
+          processed_at: string | null
+          processed_by: string | null
+          status: string
+          stripe_connect_account_id: string | null
+          stripe_transfer_id: string | null
+          total_earnings: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          platform_fee: number
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          stripe_connect_account_id?: string | null
+          stripe_transfer_id?: string | null
+          total_earnings: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          platform_fee?: number
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          stripe_connect_account_id?: string | null
+          stripe_transfer_id?: string | null
+          total_earnings?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_requests_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withdrawal_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       withdrawals: {
         Row: {
           amount: number
@@ -938,6 +1001,7 @@ export type Database = {
           total_earned: number
         }[]
       }
+      is_admin: { Args: never; Returns: boolean }
       process_withdrawal: {
         Args: {
           p_amount: number

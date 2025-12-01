@@ -77,6 +77,8 @@ export default function EarningsPage() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [refreshingAccount, setRefreshingAccount] = useState(false);
+  const [requestingWithdrawal, setRequestingWithdrawal] = useState(false);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<any[]>([]);
 
   // Check URL parameters for Stripe callback results
   useEffect(() => {
@@ -148,6 +150,7 @@ export default function EarningsPage() {
       fetchEarningsData();
       fetchAccountStatus();
       fetchWithdrawals();
+      fetchWithdrawalRequests();
     }
   }, [user, userLoading]);
 
@@ -396,6 +399,54 @@ export default function EarningsPage() {
     }
   }
 
+  async function handleRequestWithdrawal() {
+    setRequestingWithdrawal(true);
+    try {
+      const res = await fetch("/api/withdrawal-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || "Failed to submit withdrawal request");
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: "Withdrawal request submitted",
+          description: data.message || "An admin will process your request shortly.",
+        });
+        // Refresh data
+        fetchEarningsData();
+        fetchWithdrawalRequests();
+      }
+    } catch (e: any) {
+      toast({
+        title: "Could not submit withdrawal request",
+        description: e.message,
+        variant: "destructive",
+      });
+    } finally {
+      setRequestingWithdrawal(false);
+    }
+  }
+
+  async function fetchWithdrawalRequests() {
+    try {
+      const res = await fetch("/api/withdrawal-requests", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setWithdrawalRequests(data.withdrawalRequests || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching withdrawal requests:", error);
+    }
+  }
+
   function getStatusBadge(status: string) {
     switch (status) {
       case "completed":
@@ -627,16 +678,17 @@ export default function EarningsPage() {
                   </p>
                 </div>
 
-                <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md hover:shadow-lg transition-all"
-                      disabled={!accountStatus?.hasAccount || !accountStatus?.accountStatus?.payoutsEnabled}
-                    >
-                      <Wallet className="w-4 h-4 mr-2" />
-                      Withdraw Money
-                    </Button>
-                  </DialogTrigger>
+                <div className="flex gap-3">
+                  <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md hover:shadow-lg transition-all"
+                        disabled={!accountStatus?.hasAccount || !accountStatus?.accountStatus?.payoutsEnabled}
+                      >
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Withdraw Money
+                      </Button>
+                    </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Confirm Withdrawal</DialogTitle>
@@ -685,7 +737,26 @@ export default function EarningsPage() {
                       </Button>
                     </div>
                   </DialogContent>
-                </Dialog>
+                  </Dialog>
+                  <Button
+                    onClick={handleRequestWithdrawal}
+                    disabled={requestingWithdrawal || !accountStatus?.hasAccount}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={!accountStatus?.hasAccount ? "Please set up your payment account first" : ""}
+                  >
+                    {requestingWithdrawal ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="w-4 h-4 mr-2" />
+                        Request Withdrawal
+                      </>
+                    )}
+                  </Button>
+                </div>
 
                 {(!accountStatus?.hasAccount || !accountStatus?.accountStatus?.payoutsEnabled) && (
                   <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 shadow-sm">
@@ -698,11 +769,37 @@ export default function EarningsPage() {
                 )}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Wallet className="w-8 h-8 text-gray-400" />
+              <div className="space-y-5">
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Wallet className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-sm text-gray-500 font-medium mb-4">No pending earnings available</p>
                 </div>
-                <p className="text-sm text-gray-500 font-medium">No pending earnings available</p>
+                {accountStatus?.hasAccount && (
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 shadow-sm">
+                    <p className="text-xs text-blue-900 font-medium mb-3">
+                      You can still request a withdrawal if you have earnings that haven't been processed yet.
+                    </p>
+                    <Button
+                      onClick={handleRequestWithdrawal}
+                      disabled={requestingWithdrawal}
+                      className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-md hover:shadow-lg transition-all"
+                    >
+                      {requestingWithdrawal ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-4 h-4 mr-2" />
+                          Request Withdrawal
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>

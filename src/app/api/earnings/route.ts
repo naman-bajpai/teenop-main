@@ -62,13 +62,32 @@ export async function GET(request: NextRequest) {
       pending_earnings: 0
     };
 
+    // Get pending withdrawal requests for this user to exclude their earnings from available pending
+    const { data: pendingWithdrawalRequests, error: withdrawalRequestsError } = await (supabase as any)
+      .from('withdrawal_requests')
+      .select('notes, total_earnings')
+      .eq('user_id', user.id)
+      .eq('status', 'pending');
+
+    let earningsInPendingRequests = 0;
+    if (pendingWithdrawalRequests && !withdrawalRequestsError) {
+      // Sum up the total_earnings from all pending withdrawal requests
+      earningsInPendingRequests = pendingWithdrawalRequests.reduce((sum: number, req: any) => {
+        return sum + (parseFloat(req.total_earnings) || 0);
+      }, 0);
+    }
+
+    // Calculate available pending earnings (total pending minus earnings in pending withdrawal requests)
+    const totalPendingEarnings = parseFloat(stats.pending_earnings) || 0;
+    const availablePendingEarnings = Math.max(0, totalPendingEarnings - earningsInPendingRequests);
+
     return NextResponse.json({
       success: true,
       stats: {
         totalEarned: parseFloat(stats.total_earned) || 0,
         thisWeekEarned: parseFloat(stats.this_week_earned) || 0,
         thisMonthEarned: parseFloat(stats.this_month_earned) || 0,
-        pendingEarnings: parseFloat(stats.pending_earnings) || 0
+        pendingEarnings: availablePendingEarnings // Use available pending (excludes earnings in pending withdrawal requests)
       },
       recentEarnings: recentEarnings || []
     });

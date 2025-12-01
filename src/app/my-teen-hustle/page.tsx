@@ -118,43 +118,62 @@ const getStatusColor = (status: string) => {
 
 function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: (service: Service) => void; onDelete: (serviceId: string) => void }) {
   return (
-    <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#434c9d] hover:shadow-xl transition-all transform hover:-translate-y-1">
       <div className="flex gap-4">
         {service.banner_url ? (
           <img
             src={service.banner_url}
             alt={service.title}
-            className="w-36 h-24 object-cover rounded-lg border"
+            className="w-36 h-24 object-cover rounded-xl border-2 border-gray-200 shadow-md"
           />
         ) : (
-          <div className="w-36 h-24 rounded-lg border bg-gray-50 flex items-center justify-center">
-            <Star className="w-6 h-6 text-gray-400" />
+          <div className="w-36 h-24 rounded-xl border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center shadow-md">
+            <Star className="w-8 h-8 text-gray-400" />
           </div>
         )}
         <div className="flex-1">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">{service.title}</h3>
-              <p className="text-sm text-gray-600 line-clamp-2">{service.description}</p>
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{service.title}</h3>
+              <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">{service.description}</p>
             </div>
-            <Badge className={getStatusColor(service.status)}>
+            <Badge className={`${getStatusColor(service.status)} text-xs font-semibold px-3 py-1`}>
               {service.status.charAt(0).toUpperCase() + service.status.slice(1)}
             </Badge>
           </div>
-          <div className="grid grid-cols-2 gap-3 mb-4 text-sm text-gray-600">
-            <div className="flex items-center gap-2"><DollarSign className="w-4 h-4" /><span className="font-semibold">${service.price}</span> <span className="text-xs text-gray-500">/{service.pricing_model === 'per_hour' ? 'hr' : 'job'}</span></div>
-            <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{service.location}</div>
-            <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{service.duration || 60} min</div>
+          <div className="grid grid-cols-2 gap-3 mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-green-600" />
+              <span className="font-bold text-gray-900">${service.price}</span>
+              <span className="text-xs text-gray-500">/{service.pricing_model === 'per_hour' ? 'hr' : 'job'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-blue-600" />
+              <span className="truncate">{service.location}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-purple-600" />
+              <span>{service.duration || 60} min</span>
+            </div>
             <div className="flex items-center gap-2">
               <RatingDisplay rating={service.rating || 0} size="sm" showCount={false} />
-              {service.rating ? `${service.rating}/5` : "—"}
+              <span className="text-xs">{service.rating ? `${service.rating}/5` : "No ratings"}</span>
             </div>
-            <div className="flex items-center gap-2"><Users className="w-4 h-4" />{service.total_bookings} bookings</div>
+            <div className="flex items-center gap-2 col-span-2">
+              <Users className="w-4 h-4 text-indigo-600" />
+              <span className="font-semibold">{service.total_bookings} {service.total_bookings === 1 ? 'booking' : 'bookings'}</span>
+            </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm"><Eye className="w-4 h-4 mr-1" />View</Button>
-            <Button variant="outline" size="sm" onClick={() => onEdit(service)}><Edit className="w-4 h-4 mr-1" />Edit</Button>
-            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => onDelete(service.id)}><Trash2 className="w-4 h-4 mr-1" />Delete</Button>
+            <Button variant="outline" size="sm" className="border-gray-300 hover:border-[#434c9d] hover:text-[#434c9d]">
+              <Eye className="w-4 h-4 mr-1" />View
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => onEdit(service)} className="border-gray-300 hover:border-blue-500 hover:text-blue-600">
+              <Edit className="w-4 h-4 mr-1" />Edit
+            </Button>
+            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50" onClick={() => onDelete(service.id)}>
+              <Trash2 className="w-4 h-4 mr-1" />Delete
+            </Button>
           </div>
         </div>
       </div>
@@ -192,62 +211,77 @@ function BookingCard({ booking, onStatusUpdate }: {
 
 
   return (
-    <div className="bg-white rounded-xl p-6 border border-gray-200">
+    <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#434c9d] hover:shadow-xl transition-all">
       <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">{booking.service.title}</h3>
-          <p className="text-sm text-gray-600">
+        <div className="flex-1">
+          <h3 className="text-xl font-bold text-gray-900 mb-2">{booking.service.title}</h3>
+          <p className="text-sm text-gray-600 flex items-center gap-2">
+            <Users className="w-4 h-4" />
             {booking.customer_name ? `Requested by ${booking.customer_name}` : 'Customer request'}
           </p>
         </div>
-        <Badge className={getStatusColor(booking.status)}>
+        <Badge className={`${getStatusColor(booking.status)} text-xs font-semibold px-3 py-1`}>
           {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
         </Badge>
       </div>
       {booking.special_instructions && (
-        <p className="text-gray-700 mb-4">{booking.special_instructions}</p>
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r-lg mb-4">
+          <p className="text-sm text-gray-700 font-medium">{booking.special_instructions}</p>
+        </div>
       )}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Calendar className="w-4 h-4" />
-          {new Date(booking.requested_date).toLocaleDateString()} at {formatTime(booking.requested_time)}
+      <div className="grid grid-cols-2 gap-4 mb-4 bg-gray-50 p-4 rounded-xl">
+        <div className="flex items-center gap-2 text-sm">
+          <Calendar className="w-5 h-5 text-blue-600" />
+          <div>
+            <p className="font-semibold text-gray-900">{new Date(booking.requested_date).toLocaleDateString()}</p>
+            <p className="text-xs text-gray-600">{formatTime(booking.requested_time)}</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <DollarSign className="w-4 h-4" />
-          <span className="font-semibold">${booking.total_price}</span>
+        <div className="flex items-center gap-2 text-sm">
+          <DollarSign className="w-5 h-5 text-green-600" />
+          <div>
+            <p className="font-bold text-gray-900 text-lg">${booking.total_price}</p>
+            <p className="text-xs text-gray-600">Total price</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Clock className="w-4 h-4" />
-          {booking.duration} minutes
+        <div className="flex items-center gap-2 text-sm">
+          <Clock className="w-5 h-5 text-purple-600" />
+          <div>
+            <p className="font-semibold text-gray-900">{booking.duration} min</p>
+            <p className="text-xs text-gray-600">Duration</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <MapPin className="w-4 h-4" />
-          {booking.service.location}
+        <div className="flex items-center gap-2 text-sm">
+          <MapPin className="w-5 h-5 text-red-600" />
+          <div>
+            <p className="font-semibold text-gray-900 truncate">{booking.service.location}</p>
+            <p className="text-xs text-gray-600">Location</p>
+          </div>
         </div>
       </div>
       <div className="flex gap-2">
         {booking.status === "pending" && (
           <>
-            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleAccept}>
-              Accept
+            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6" onClick={handleAccept}>
+              ✓ Accept
             </Button>
-            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={handleDecline}>
-              Decline
+            <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50 font-semibold px-6" onClick={handleDecline}>
+              ✕ Decline
             </Button>
           </>
         )}
         {booking.status === "confirmed" && (
-          <Button variant="outline" size="sm" onClick={handleViewDetails}>
+          <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white">
             <MessageCircle className="w-4 h-4 mr-1" />View Details
           </Button>
         )}
         {(booking.status === "completed" || booking.status === "paid") && (
-          <Button variant="outline" size="sm" onClick={handleViewDetails}>
-            View Details
+          <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-green-500 text-green-600 hover:bg-green-50">
+            <CheckCircle className="w-4 h-4 mr-1" />View Details
           </Button>
         )}
         {booking.status === "rejected" && (
-          <Button variant="outline" size="sm" onClick={handleViewDetails}>
+          <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-gray-300 text-gray-600 hover:bg-gray-50">
             View Details
           </Button>
         )}
@@ -832,8 +866,10 @@ export default function TeenHustlePage() {
         <div className="mb-8">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">My Teen Hustle</h1>
-              <p className="text-gray-600">Manage your services, bookings, and earnings</p>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent mb-3">
+                My Teen Hustle
+              </h1>
+              <p className="text-gray-600 text-lg">Manage your services, bookings, and earnings</p>
             </div>
             <div className="flex gap-3">
               <Link href="/provider/quote-requests">
@@ -1248,141 +1284,171 @@ export default function TeenHustlePage() {
         </div>
 
         {/* Earnings Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center"><TrendingUp className="w-6 h-6 text-green-600" /></div>
-              <div>
-                <p className="text-sm text-gray-600">This Week</p>
-                <p className="text-2xl font-bold text-gray-900">${earningsStats.thisWeekEarned.toFixed(2)}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Link href="/earnings" className="group">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border-2 border-green-200 hover:border-green-400 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 cursor-pointer">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center shadow-md">
+                  <TrendingUp className="w-7 h-7 text-white" />
+                </div>
+                <div className="text-green-600 group-hover:translate-x-1 transition-transform">
+                  →
+                </div>
               </div>
+              <p className="text-sm font-medium text-gray-600 mb-1">This Week</p>
+              <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                ${earningsStats.thisWeekEarned.toFixed(2)}
+              </p>
             </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center"><Calendar className="w-6 h-6 text-gray-600" /></div>
-              <div>
-                <p className="text-sm text-gray-600">This Month</p>
-                <p className="text-2xl font-bold text-gray-900">${earningsStats.thisMonthEarned.toFixed(2)}</p>
+          </Link>
+          <Link href="/earnings" className="group">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl border-2 border-blue-200 hover:border-blue-400 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 cursor-pointer">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-md">
+                  <Calendar className="w-7 h-7 text-white" />
+                </div>
+                <div className="text-blue-600 group-hover:translate-x-1 transition-transform">
+                  →
+                </div>
               </div>
+              <p className="text-sm font-medium text-gray-600 mb-1">This Month</p>
+              <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                ${earningsStats.thisMonthEarned.toFixed(2)}
+              </p>
             </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center"><DollarSign className="w-6 h-6 text-purple-600" /></div>
-              <div>
-                <p className="text-sm text-gray-600">Total Earned</p>
-                <p className="text-2xl font-bold text-gray-900">${earningsStats.totalEarned.toFixed(2)}</p>
+          </Link>
+          <Link href="/earnings" className="group">
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border-2 border-purple-200 hover:border-purple-400 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 cursor-pointer">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
+                  <DollarSign className="w-7 h-7 text-white" />
+                </div>
+                <div className="text-purple-600 group-hover:translate-x-1 transition-transform">
+                  →
+                </div>
               </div>
+              <p className="text-sm font-medium text-gray-600 mb-1">Total Earned</p>
+              <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                ${earningsStats.totalEarned.toFixed(2)}
+              </p>
             </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center"><Clock className="w-6 h-6 text-yellow-600" /></div>
-              <div>
-                <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-gray-900">${earningsStats.pendingEarnings.toFixed(2)}</p>
+          </Link>
+          <Link href="/earnings" className="group">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-2xl border-2 border-amber-200 hover:border-amber-400 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 cursor-pointer">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
+                  <Clock className="w-7 h-7 text-white" />
+                </div>
+                <div className="text-amber-600 group-hover:translate-x-1 transition-transform">
+                  →
+                </div>
               </div>
+              <p className="text-sm font-medium text-gray-600 mb-1">Pending</p>
+              <p className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                ${earningsStats.pendingEarnings.toFixed(2)}
+              </p>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Payment Setup Section */}
         {!stripeAccountStatus.loading && (
           <div className="mb-8">
             {!stripeAccountStatus.hasAccount ? (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+              <div className="bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 p-8 rounded-2xl shadow-xl text-white">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Wallet className="w-6 h-6 text-blue-600" />
+                  <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30">
+                      <Wallet className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Set Up Payments</h3>
-                      <p className="text-sm text-gray-600">Connect your bank account to receive payments for your services</p>
+                      <h3 className="text-2xl font-bold mb-2">Set Up Payments</h3>
+                      <p className="text-blue-100 text-lg">Connect your bank account to receive payments for your services</p>
                     </div>
                   </div>
                   <Button 
                     onClick={handleStripeConnectSetup}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                    className="bg-white text-blue-600 hover:bg-blue-50 px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
                   >
-                    <Wallet className="w-4 h-4 mr-2" />
+                    <Wallet className="w-5 h-5 mr-2" />
                     Set Up Payments
                   </Button>
                 </div>
               </div>
             ) : !stripeAccountStatus.accountStatus?.chargesEnabled ? (
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-xl border border-yellow-200">
+              <div className="bg-gradient-to-br from-yellow-400 via-orange-400 to-amber-500 p-8 rounded-2xl shadow-xl text-white">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                      <Clock className="w-6 h-6 text-yellow-600" />
+                  <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30">
+                      <Clock className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Complete Payment Setup</h3>
-                      <p className="text-sm text-gray-600">Your payment account is being verified. Complete the setup to receive payments.</p>
+                      <h3 className="text-2xl font-bold mb-2">Complete Payment Setup</h3>
+                      <p className="text-yellow-100 text-lg">Your payment account is being verified. Complete the setup to receive payments.</p>
                     </div>
                   </div>
                   <Button 
                     onClick={handleStripeConnectLogin}
-                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2"
+                    className="bg-white text-orange-600 hover:bg-orange-50 px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
                   >
-                    <Clock className="w-4 h-4 mr-2" />
+                    <Clock className="w-5 h-5 mr-2" />
                     Complete Setup
                   </Button>
                 </div>
               </div>
             ) : earningsStats.pendingEarnings > 0 ? (
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-xl border border-green-200">
+              <div className="bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 p-8 rounded-2xl shadow-xl text-white">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Wallet className="w-6 h-6 text-green-600" />
+                  <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30">
+                      <Wallet className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Ready to Withdraw</h3>
-                      <p className="text-sm text-gray-600">You have ${earningsStats.pendingEarnings.toFixed(2)} available for withdrawal</p>
+                      <h3 className="text-2xl font-bold mb-2">Ready to Withdraw</h3>
+                      <p className="text-green-100 text-lg">You have <span className="font-bold text-2xl">${earningsStats.pendingEarnings.toFixed(2)}</span> available for withdrawal</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline"
-                      onClick={handleStripeConnectLogin}
-                      className="px-4 py-2"
-                    >
-                      <Wallet className="w-4 h-4 mr-2" />
-                      Manage Account
-                    </Button>
+                  <div className="flex gap-3">
+                    <Link href="/earnings">
+                      <Button 
+                        variant="outline"
+                        className="bg-white/20 backdrop-blur-sm border-2 border-white/30 text-white hover:bg-white/30 px-6 py-3 text-base font-semibold shadow-lg hover:shadow-xl transition-all"
+                      >
+                        <Wallet className="w-5 h-5 mr-2" />
+                        Manage Account
+                      </Button>
+                    </Link>
                     <Button 
                       onClick={handleWithdrawMoney}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
+                      className="bg-white text-green-600 hover:bg-green-50 px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
                     >
-                      <Wallet className="w-4 h-4 mr-2" />
+                      <Wallet className="w-5 h-5 mr-2" />
                       Withdraw Money
                     </Button>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-xl border border-gray-200">
+              <div className="bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200 p-8 rounded-2xl border-2 border-gray-300 shadow-lg">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Wallet className="w-6 h-6 text-gray-600" />
+                  <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center shadow-inner">
+                      <Wallet className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Payment Account Ready</h3>
-                      <p className="text-sm text-gray-600">Your payment account is set up. Complete jobs to start earning!</p>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">Payment Account Ready</h3>
+                      <p className="text-gray-600 text-lg">Your payment account is set up. Complete jobs to start earning!</p>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline"
-                    onClick={handleStripeConnectLogin}
-                    className="px-4 py-2"
-                  >
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Manage Account
-                  </Button>
+                  <Link href="/earnings">
+                    <Button 
+                      variant="outline"
+                      className="bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 text-base font-semibold shadow-md hover:shadow-lg transition-all"
+                    >
+                      <Wallet className="w-5 h-5 mr-2" />
+                      Manage Account
+                    </Button>
+                  </Link>
                 </div>
               </div>
             )}
@@ -1391,10 +1457,16 @@ export default function TeenHustlePage() {
 
         {/* Tabs */}
         <Tabs defaultValue="services" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="services">My Services ({services.length})</TabsTrigger>
-            <TabsTrigger value="incoming">Incoming ({incomingBookings.length})</TabsTrigger>
-            <TabsTrigger value="completed">Completed ({completedRequests.length})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-xl">
+            <TabsTrigger value="services" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold">
+              My Services ({services.length})
+            </TabsTrigger>
+            <TabsTrigger value="incoming" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold">
+              Incoming ({incomingBookings.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold">
+              Completed ({completedRequests.length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="services" className="mt-6">

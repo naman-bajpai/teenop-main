@@ -28,7 +28,11 @@ import {
   Star,
   Eye,
   EyeOff,
-  X
+  X,
+  Wallet,
+  CheckCircle,
+  XCircle,
+  Loader2
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Toaster } from "@/components/ui/toaster";
@@ -82,7 +86,9 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [serviceStatusFilter, setServiceStatusFilter] = useState<string>("all");
   const [serviceCategoryFilter, setServiceCategoryFilter] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<"users" | "services">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "services" | "withdrawals">("users");
+  const [withdrawalRequests, setWithdrawalRequests] = useState<any[]>([]);
+  const [processingRequest, setProcessingRequest] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -114,12 +120,13 @@ export default function AdminDashboard() {
 
         setCurrentUser(adminUser);
         
-        // Load users, services, and stats
-        const [usersData, servicesData, statsData, serviceStatsData] = await Promise.all([
+        // Load users, services, stats, and withdrawal requests
+        const [usersData, servicesData, statsData, serviceStatsData, withdrawalRequestsData] = await Promise.all([
           getAllUsers(),
           getAllServices(),
           getUserStats(),
-          getServiceStats()
+          getServiceStats(),
+          fetchWithdrawalRequests()
         ]);
 
         setUsers(usersData);
@@ -128,6 +135,7 @@ export default function AdminDashboard() {
         setFilteredServices(servicesData);
         setStats(statsData);
         setServiceStats(serviceStatsData);
+        setWithdrawalRequests(withdrawalRequestsData || []);
       } catch (error) {
         console.error('Error initializing admin:', error);
         router.push('/admin/login');
@@ -190,6 +198,56 @@ export default function AdminDashboard() {
 
     setFilteredServices(filtered);
   }, [services, searchTerm, serviceStatusFilter, serviceCategoryFilter]);
+
+  async function fetchWithdrawalRequests() {
+    try {
+      const res = await fetch("/api/admin/withdrawal-requests", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          return data.withdrawalRequests || [];
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error("Error fetching withdrawal requests:", error);
+      return [];
+    }
+  }
+
+  async function handleProcessWithdrawal(requestId: string) {
+    setProcessingRequest(requestId);
+    try {
+      const res = await fetch(`/api/admin/withdrawal-requests/${requestId}/process`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || "Failed to process withdrawal");
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: "Withdrawal processed",
+          description: data.message || "Withdrawal has been processed successfully.",
+        });
+        // Refresh withdrawal requests
+        const updatedRequests = await fetchWithdrawalRequests();
+        setWithdrawalRequests(updatedRequests);
+      }
+    } catch (e: any) {
+      toast({
+        title: "Error processing withdrawal",
+        description: e.message,
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingRequest(null);
+    }
+  }
 
   const handleUpdateUserStatus = async (userId: string, newStatus: "active" | "inactive" | "suspended" | "pending_verification") => {
     setActionLoading(userId);
@@ -509,6 +567,17 @@ export default function AdminDashboard() {
                 <Briefcase className="w-4 h-4 inline mr-2" />
                 Services ({filteredServices.length})
               </button>
+              <button
+                onClick={() => setActiveTab("withdrawals")}
+                className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${
+                  activeTab === "withdrawals"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                <Wallet className="w-4 h-4 inline mr-2" />
+                Withdrawals ({withdrawalRequests.filter((r: any) => r.status === 'pending').length})
+              </button>
             </div>
           </div>
         </div>
@@ -520,7 +589,7 @@ export default function AdminDashboard() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder={activeTab === "users" ? "Search users..." : "Search services..."}
+                  placeholder={activeTab === "users" ? "Search users..." : activeTab === "services" ? "Search services..." : "Search withdrawals..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 border-gray-300 focus:border-slate-900 focus:ring-slate-900"
@@ -606,10 +675,123 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-              {activeTab === "users" ? `Users (${filteredUsers.length})` : `Services (${filteredServices.length})`}
+              {activeTab === "users" ? `Users (${filteredUsers.length})` : activeTab === "services" ? `Services (${filteredServices.length})` : `Withdrawal Requests (${withdrawalRequests.length})`}
             </h3>
           </div>
           
+          {activeTab === "withdrawals" ? (
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        User
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Amount
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Platform Fee
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total Earnings
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Requested
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {withdrawalRequests.map((request: any) => (
+                      <tr key={request.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {request.profiles?.first_name} {request.profiles?.last_name}
+                              </div>
+                              <div className="text-sm text-gray-500">{request.profiles?.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-semibold text-gray-900">
+                            ${request.amount?.toFixed(2) || '0.00'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">
+                            ${request.platform_fee?.toFixed(2) || '0.00'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">
+                            ${request.total_earnings?.toFixed(2) || '0.00'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {request.status === 'pending' ? (
+                            <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+                          ) : request.status === 'processed' ? (
+                            <Badge className="bg-green-100 text-green-800">Processed</Badge>
+                          ) : request.status === 'failed' ? (
+                            <Badge className="bg-red-100 text-red-800">Failed</Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-800">{request.status}</Badge>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {request.created_at ? new Date(request.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          {request.status === 'pending' ? (
+                            <Button
+                              onClick={() => handleProcessWithdrawal(request.id)}
+                              disabled={processingRequest === request.id}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              size="sm"
+                            >
+                              {processingRequest === request.id ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Process Payout
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {withdrawalRequests.length === 0 && (
+                <div className="text-center py-16">
+                  <Wallet className="mx-auto h-12 w-12 text-gray-300" />
+                  <h3 className="mt-4 text-sm font-medium text-gray-900">
+                    No withdrawal requests
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Withdrawal requests from users will appear here.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -900,9 +1082,9 @@ export default function AdminDashboard() {
               </tbody>
             </table>
           </div>
+        )}
         </div>
-
-        {(activeTab === "users" ? filteredUsers.length === 0 : filteredServices.length === 0) && (
+        {activeTab !== "withdrawals" && (activeTab === "users" ? filteredUsers.length === 0 : filteredServices.length === 0) && (
           <div className="text-center py-16 bg-white">
             {activeTab === "users" ? (
               <Users className="mx-auto h-12 w-12 text-gray-300" />
