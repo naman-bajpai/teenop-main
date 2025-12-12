@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CreateQuoteRequestRequest = await request.json();
-    const { service_id, requested_date, requested_time, special_instructions, image_url } = body;
+    const { service_id, requested_date, requested_time, special_instructions, image_url, service_address } = body;
 
     // Validate required fields
     if (!service_id || !requested_date || !requested_time) {

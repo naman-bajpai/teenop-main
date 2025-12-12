@@ -248,17 +248,24 @@ export default function MyBookingsPage() {
                       )}
 
                       {booking.status === "completed" && (
-                        <Button
-                          onClick={() => {
-                            setSelectedBooking(booking);
-                            setPaymentModalOpen(true);
-                          }}
-                          size="sm"
-                          className="w-full bg-green-600 hover:bg-green-700"
-                        >
-                          <CreditCard className="w-4 h-4 mr-2" />
-                          Pay Now - {formatPrice(booking.total_price)}
-                        </Button>
+                        <>
+                          <div className="w-full p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center mb-2">
+                            <p className="text-sm text-yellow-800 font-medium">
+                              Payments are temporarily disabled for our initial launch. Please contact the service provider directly.
+                            </p>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              alert("Payments are temporarily disabled for our initial launch. Please contact the service provider directly to arrange payment.");
+                            }}
+                            size="sm"
+                            disabled
+                            className="w-full bg-gray-400 text-white cursor-not-allowed"
+                          >
+                            <CreditCard className="w-4 h-4 mr-2" />
+                            Pay Now - {formatPrice(booking.total_price)} (Disabled)
+                          </Button>
+                        </>
                       )}
 
                       {booking.status === "paid" && (

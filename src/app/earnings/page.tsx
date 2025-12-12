@@ -657,7 +657,7 @@ export default function EarningsPage() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Withdrawals</h2>
-                <p className="text-sm text-gray-500">Withdraw your earnings</p>
+                <p className="text-sm text-gray-500">Withdraw your earnings from current balance</p>
               </div>
               <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl">
                 <Wallet className="w-8 h-8 text-green-600" />

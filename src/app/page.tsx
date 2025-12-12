@@ -135,6 +135,18 @@ export default function Home() {
               <p className="mb-4 text-gray-600">
                 Empowering teens to build their future through entrepreneurship.
               </p>
+              <div className="mt-4 space-y-2">
+                <p className="text-sm text-gray-600">
+                  <a href="mailto:teenop.co@gmail.com" className="hover:text-[#434c9d] transition-colors">
+                    teenop.co@gmail.com
+                  </a>
+                </p>
+                <p className="text-sm text-gray-600">
+                  <a href="tel:614-296-6272" className="hover:text-[#434c9d] transition-colors">
+                    614-296-6272
+                  </a>
+                </p>
+              </div>
             </div>
 
             <div>
@@ -150,7 +162,7 @@ export default function Home() {
               <h3 className="mb-3 text-lg font-semibold">For Communities</h3>
               <ul className="space-y-2 text-gray-600">
                 <li><Link href="/services" className="hover:text-gray-900">Find Services</Link></li>
-                <li><Link href="#" className="hover:text-gray-900">Safety</Link></li>
+                <li><Link href="/our-story" className="hover:text-gray-900">Our Story</Link></li>
                 <li><Link href="#" className="hover:text-gray-900">Support</Link></li>
               </ul>
             </div>

@@ -34,6 +34,7 @@ const [error, setError] = useState<string | null>(null);
     requested_date: "",
     requested_time: "",
     special_instructions: "",
+    service_address: "",
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -256,6 +257,7 @@ const handleQuoteRequest = async (e?: React.FormEvent) => {
           requested_date: quoteRequestForm.requested_date,
           requested_time: quoteRequestForm.requested_time,
           special_instructions: quoteRequestForm.special_instructions || undefined,
+          service_address: quoteRequestForm.service_address || undefined,
         }),
       });
 
@@ -291,6 +293,7 @@ const handleQuoteRequest = async (e?: React.FormEvent) => {
         requested_date: "",
         requested_time: "",
         special_instructions: "",
+        service_address: "",
       });
       removeImage();
       
@@ -323,6 +326,7 @@ const handleQuoteRequest = async (e?: React.FormEvent) => {
         requested_date: "",
         requested_time: "",
         special_instructions: "",
+        service_address: "",
       });
       
       setTimeout(() => {
@@ -553,6 +557,46 @@ return (
 
                 <p className="text-gray-700 text-lg leading-relaxed mb-6">{service.description}</p>
 
+                {(service.qualifications || service.education) && (
+                  <div className="border-t border-gray-100 pt-6 mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Provider Qualifications</h3>
+                    <div className="space-y-3">
+                      {service.qualifications && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-700 mb-1">Experience & Skills</p>
+                          <p className="text-gray-600">{service.qualifications}</p>
+                        </div>
+                      )}
+                      {service.education && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-700 mb-1">Education</p>
+                          <p className="text-gray-600">{service.education}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-t border-gray-100 pt-6 mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Location and Duration</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex items-center gap-3">
+                      <MapPin className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Location</p>
+                        <p className="font-medium text-gray-900">{service.location}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Duration</p>
+                        <p className="font-medium text-gray-900">{service.duration} minutes</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Provider Schedule - Prominent Display */}
                 {providerScheduleUrl && (
                   <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-sm">
@@ -582,47 +626,11 @@ return (
                 {/* Provider Weekly Availability Calendar */}
                 {service.user_id && (
                   <div className="mb-6 p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Availability</h3>
                     <WeeklyAvailabilityCalendar 
                       userId={service.user_id}
                       readOnly={true}
                     />
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Location</p>
-                      <p className="font-medium text-gray-900">{service.location}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Clock className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Duration</p>
-                      <p className="font-medium text-gray-900">{service.duration} minutes</p>
-                    </div>
-                  </div>
-                </div>
-
-                {(service.qualifications || service.education) && (
-                  <div className="border-t border-gray-100 pt-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Provider Qualifications</h3>
-                    <div className="space-y-3">
-                      {service.qualifications && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700 mb-1">Experience & Skills</p>
-                          <p className="text-gray-600">{service.qualifications}</p>
-                        </div>
-                      )}
-                      {service.education && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700 mb-1">Education</p>
-                          <p className="text-gray-600">{service.education}</p>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 )}
               </div>
@@ -721,6 +729,20 @@ return (
                               />
                             </div>
                             <div>
+                              <Label htmlFor="quote-address">Service Address (Optional)</Label>
+                              <Input
+                                id="quote-address"
+                                placeholder="Enter address if service will take place at your location..."
+                                value={quoteRequestForm.service_address}
+                                onChange={(e) =>
+                                  setQuoteRequestForm((prev) => ({ ...prev, service_address: e.target.value }))
+                                }
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Only include if the service will be performed at your address
+                              </p>
+                            </div>
+                            <div>
                               <Label>Upload Image (Optional)</Label>
                               <div className="space-y-2">
                                 {imagePreview && (
@@ -803,21 +825,6 @@ return (
                         </Button>
                       </DialogTrigger>
                       </Dialog>
-                      <Button
-                        variant="outline"
-                        className="w-full border-2 border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10 hover:border-[#434c9d] transition-all duration-200 py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={() => {
-                          if (providerScheduleUrl) {
-                            window.open(providerScheduleUrl, '_blank');
-                          } else {
-                            alert('Schedule not available. The provider has not uploaded their schedule yet.');
-                          }
-                        }}
-                        disabled={!providerScheduleUrl}
-                      >
-                        <Calendar className="w-5 h-5 mr-2" />
-                        View Schedule
-                      </Button>
                     <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>

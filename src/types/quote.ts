@@ -66,6 +66,7 @@ export interface CreateQuoteRequestRequest {
   requested_time: string;
   special_instructions?: string;
   image_url?: string;
+  service_address?: string;
 }
 
 export interface CreateQuoteRequest {

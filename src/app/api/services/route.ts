@@ -131,6 +131,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check user role - only teens can create services
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || (profile as any).role !== "teen") {
+      return NextResponse.json({ 
+        error: "Only teens can create services. Parents can request services through quote requests." 
+      }, { status: 403 });
+    }
+
     // Parse request body
     const body = await request.json();
     const { title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url } = body;
@@ -164,7 +177,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate category
-    const validCategories = ["tutoring", "pet_care", "lawn_care", "cleaning", "tech_support", "delivery", "other"];
+    const validCategories = ["tutoring", "pet_care", "lawn_care", "cleaning", "tech_support", "delivery", "art_commissions", "beauty", "photography", "graphic_design", "other"];
     if (!validCategories.includes(category)) {
       return NextResponse.json({ 
         error: `Invalid category. Must be one of: ${validCategories.join(", ")}` 
@@ -256,6 +269,19 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check user role - only teens can update services
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || (profile as any).role !== "teen") {
+      return NextResponse.json({ 
+        error: "Only teens can update services." 
+      }, { status: 403 });
+    }
+
     // Parse request body
     const body = await request.json();
     const { id, title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url } = body;
@@ -289,7 +315,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Validate category
-    const validCategories = ["tutoring", "pet_care", "lawn_care", "cleaning", "tech_support", "delivery", "other"];
+    const validCategories = ["tutoring", "pet_care", "lawn_care", "cleaning", "tech_support", "delivery", "art_commissions", "beauty", "photography", "graphic_design", "other"];
     if (!validCategories.includes(category)) {
       return NextResponse.json({ 
         error: `Invalid category. Must be one of: ${validCategories.join(", ")}` 

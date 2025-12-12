@@ -924,6 +924,10 @@ export default function TeenHustlePage() {
                             <SelectItem value="cleaning">Cleaning</SelectItem>
                             <SelectItem value="tech_support">Tech Support</SelectItem>
                             <SelectItem value="delivery">Delivery</SelectItem>
+                            <SelectItem value="art_commissions">Art Commissions</SelectItem>
+                            <SelectItem value="beauty">Beauty</SelectItem>
+                            <SelectItem value="photography">Photography</SelectItem>
+                            <SelectItem value="graphic_design">Graphic Design</SelectItem>
                             <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>
@@ -1156,6 +1160,10 @@ export default function TeenHustlePage() {
                             <SelectItem value="cleaning">Cleaning</SelectItem>
                             <SelectItem value="tech_support">Tech Support</SelectItem>
                             <SelectItem value="delivery">Delivery</SelectItem>
+                            <SelectItem value="art_commissions">Art Commissions</SelectItem>
+                            <SelectItem value="beauty">Beauty</SelectItem>
+                            <SelectItem value="photography">Photography</SelectItem>
+                            <SelectItem value="graphic_design">Graphic Design</SelectItem>
                             <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>

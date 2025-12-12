@@ -194,7 +194,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                 )}
               >
                 <MoreVertical className="h-4 w-4" />
-                <span className="hidden xl:inline">More</span>
+                <span className="hidden xl:inline">{user?.role === "parent" ? "Service Requests" : "More"}</span>
                 <ChevronDown className={clsx("h-3 w-3 transition-transform", isMoreMenuOpen && "rotate-180")} />
               </Button>
 

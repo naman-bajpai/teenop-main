@@ -107,7 +107,7 @@ export default function NeighborhoodPage() {
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <Input
-                  placeholder="Search services in your neighborhood..."
+                  placeholder="Search by city or zip code..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-12 pr-4 py-3 bg-white border-2 border-blue-200 focus:border-blue-400 rounded-xl text-lg shadow-sm"

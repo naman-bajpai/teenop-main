@@ -14,6 +14,10 @@ const categories = [
   { id: 'cleaning', label: 'Cleaning', icon: '🧹' },
   { id: 'tech_support', label: 'Tech Support', icon: '💻' },
   { id: 'delivery', label: 'Delivery', icon: '📦' },
+  { id: 'art_commissions', label: 'Art Commissions', icon: '🎨' },
+  { id: 'beauty', label: 'Beauty', icon: '💄' },
+  { id: 'photography', label: 'Photography', icon: '📷' },
+  { id: 'graphic_design', label: 'Graphic Design', icon: '🖼️' },
 ];
 
 export default function CategoryFilter({ selectedCategory, onCategoryChange }: CategoryFilterProps) {

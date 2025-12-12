@@ -73,7 +73,29 @@ export function useUser() {
           return;
         }
 
-        setUser(profile);
+        // Convert null values to undefined to match User interface
+        const userData: User = {
+          id: profile.id,
+          first_name: profile.first_name ?? undefined,
+          last_name: profile.last_name ?? undefined,
+          name: profile.first_name && profile.last_name 
+            ? `${profile.first_name} ${profile.last_name}` 
+            : profile.first_name ?? profile.last_name ?? undefined,
+          email: profile.email ?? undefined,
+          role: profile.role ?? undefined,
+          avatar_url: profile.avatar_url ?? undefined,
+          bio: profile.bio ?? undefined,
+          age: profile.age ?? undefined,
+          city: profile.city ?? undefined,
+          state: profile.state ?? undefined,
+          phone: profile.phone ?? undefined,
+          parent_email: profile.parent_email ?? undefined,
+          parent_phone: profile.parent_phone ?? undefined,
+          is_verified: profile.is_verified ?? undefined,
+          status: profile.status ?? undefined,
+        };
+
+        setUser(userData);
       } catch (error) {
         console.error('Error loading user:', error);
         setError('Failed to load user');

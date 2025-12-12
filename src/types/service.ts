@@ -37,4 +37,8 @@ export type ServiceCategory =
   | "cleaning"
   | "tech_support"
   | "delivery"
+  | "art_commissions"
+  | "beauty"
+  | "photography"
+  | "graphic_design"
   | "other";

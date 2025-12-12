@@ -414,18 +414,32 @@ export default function BookingDetailsPage() {
                       The service has been completed successfully. Please complete your payment to finalize the booking.
                     </p>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">Total Amount</p>
-                      <p className="text-2xl font-bold text-green-600">${booking.total_price.toFixed(2)}</p>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800 font-medium text-center">
+                        Payments are temporarily disabled for our initial launch. Please contact the service provider directly to arrange payment.
+                      </p>
                     </div>
-                    <Button
-                      onClick={() => setPaymentModalOpen(true)}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Pay Now
-                    </Button>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-900">Total Amount</p>
+                        <p className="text-2xl font-bold text-green-600">${booking.total_price.toFixed(2)}</p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          toast({
+                            title: "Payments Disabled",
+                            description: "Payments are temporarily disabled for our initial launch. Please contact the service provider directly.",
+                            variant: "default",
+                          });
+                        }}
+                        disabled
+                        className="bg-gray-400 text-white cursor-not-allowed"
+                      >
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Pay Now (Disabled)
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
