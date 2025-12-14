@@ -581,21 +581,13 @@ function BookingCard({
 
         {booking.status === "completed" && (
           <div className="space-y-2">
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
-              <p className="text-sm text-yellow-800 font-medium">
-                Payments are temporarily disabled for our initial launch. Please contact the service provider directly to arrange payment.
-              </p>
-            </div>
             <Button
-              onClick={() => {
-                alert("Payments are temporarily disabled for our initial launch. Please contact the service provider directly.");
-              }}
+              onClick={onPay}
               size="sm"
-              disabled
-              className="w-full bg-gray-400 text-white cursor-not-allowed shadow-md"
+              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md"
             >
               <CreditCard className="w-4 h-4 mr-2" />
-              Pay Now - {formatPrice(booking.total_price)} (Disabled)
+              Pay Now - {formatPrice(booking.total_price)}
             </Button>
             <Button
               onClick={onMessage}

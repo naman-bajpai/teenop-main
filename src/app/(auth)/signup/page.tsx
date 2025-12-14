@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import TeenProviderDisclaimer from "@/components/auth/TeenProviderDisclaimer";
 export default function SignupPage() {
@@ -264,12 +265,13 @@ export default function SignupPage() {
       <div className="relative sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-2xl shadow-lg border border-white/20 hover:bg-white/90 transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-xl">
-            <div className="p-2 bg-gradient-to-r from-[#ff725a] to-[#434c9d] rounded-xl">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-[#434c9d] to-[#ff725a] bg-clip-text text-transparent">
-              TeenOp
-            </span>
+            <Image
+              src="/images/newlogo.png"
+              alt="TeenOp Logo"
+              width={200}
+              height={200}
+              className="h-20 w-20"
+            />
           </Link>
         </div>
         

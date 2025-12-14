@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { checkAdminAccess, getAllUsers, updateUserStatus, getUserStats, getAllServices, updateServiceStatus, deleteService, deleteUser, getServiceStats } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { 
@@ -32,7 +33,10 @@ import {
   Wallet,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  MessageCircle,
+  Send,
+  HelpCircle
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Toaster } from "@/components/ui/toaster";
@@ -86,7 +90,12 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [serviceStatusFilter, setServiceStatusFilter] = useState<string>("all");
   const [serviceCategoryFilter, setServiceCategoryFilter] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<"users" | "services" | "withdrawals">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "services" | "withdrawals" | "support">("users");
+  const [supportConversations, setSupportConversations] = useState<any[]>([]);
+  const [selectedSupportConversation, setSelectedSupportConversation] = useState<any | null>(null);
+  const [supportMessages, setSupportMessages] = useState<any[]>([]);
+  const [newSupportMessage, setNewSupportMessage] = useState("");
+  const [sendingSupportMessage, setSendingSupportMessage] = useState(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<any[]>([]);
   const [processingRequest, setProcessingRequest] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -120,13 +129,14 @@ export default function AdminDashboard() {
 
         setCurrentUser(adminUser);
         
-        // Load users, services, stats, and withdrawal requests
-        const [usersData, servicesData, statsData, serviceStatsData, withdrawalRequestsData] = await Promise.all([
+        // Load users, services, stats, withdrawal requests, and support conversations
+        const [usersData, servicesData, statsData, serviceStatsData, withdrawalRequestsData, supportData] = await Promise.all([
           getAllUsers(),
           getAllServices(),
           getUserStats(),
           getServiceStats(),
-          fetchWithdrawalRequests()
+          fetchWithdrawalRequests(),
+          fetchSupportConversations()
         ]);
 
         setUsers(usersData);
@@ -136,6 +146,7 @@ export default function AdminDashboard() {
         setStats(statsData);
         setServiceStats(serviceStatsData);
         setWithdrawalRequests(withdrawalRequestsData || []);
+        setSupportConversations(supportData || []);
       } catch (error) {
         console.error('Error initializing admin:', error);
         router.push('/admin/login');
@@ -214,6 +225,83 @@ export default function AdminDashboard() {
       return [];
     }
   }
+
+  async function fetchSupportConversations() {
+    try {
+      const res = await fetch("/api/admin/support", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          return data.conversations || [];
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error("Error fetching support conversations:", error);
+      return [];
+    }
+  }
+
+  async function fetchSupportMessages(bookingId: string) {
+    try {
+      const res = await fetch(`/api/messages?booking_id=${bookingId}`, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          return data.messages || [];
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error("Error fetching support messages:", error);
+      return [];
+    }
+  }
+
+  async function handleSendSupportMessage() {
+    if (!newSupportMessage.trim() || !selectedSupportConversation) return;
+
+    try {
+      setSendingSupportMessage(true);
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking_id: selectedSupportConversation.booking_id,
+          receiver_id: selectedSupportConversation.user.id,
+          content: newSupportMessage.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || "Failed to send message");
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setSupportMessages(prev => [...prev, data.message]);
+        setNewSupportMessage("");
+        // Refresh conversations to update unread counts
+        const updated = await fetchSupportConversations();
+        setSupportConversations(updated);
+      }
+    } catch (e: any) {
+      toast({
+        title: "Error sending message",
+        description: e.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingSupportMessage(false);
+    }
+  }
+
+  useEffect(() => {
+    if (selectedSupportConversation) {
+      fetchSupportMessages(selectedSupportConversation.booking_id).then(setSupportMessages);
+    }
+  }, [selectedSupportConversation]);
 
   async function handleProcessWithdrawal(requestId: string) {
     setProcessingRequest(requestId);
@@ -578,6 +666,17 @@ export default function AdminDashboard() {
                 <Wallet className="w-4 h-4 inline mr-2" />
                 Withdrawals ({withdrawalRequests.filter((r: any) => r.status === 'pending').length})
               </button>
+              <button
+                onClick={() => setActiveTab("support")}
+                className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${
+                  activeTab === "support"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                <HelpCircle className="w-4 h-4 inline mr-2" />
+                Support ({supportConversations.filter((c: any) => c.unread_count > 0).length})
+              </button>
             </div>
           </div>
         </div>
@@ -589,7 +688,7 @@ export default function AdminDashboard() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder={activeTab === "users" ? "Search users..." : activeTab === "services" ? "Search services..." : "Search withdrawals..."}
+                  placeholder={activeTab === "users" ? "Search users..." : activeTab === "services" ? "Search services..." : activeTab === "support" ? "Search support conversations..." : "Search withdrawals..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 border-gray-300 focus:border-slate-900 focus:ring-slate-900"
@@ -675,11 +774,152 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-              {activeTab === "users" ? `Users (${filteredUsers.length})` : activeTab === "services" ? `Services (${filteredServices.length})` : `Withdrawal Requests (${withdrawalRequests.length})`}
+              {activeTab === "users" ? `Users (${filteredUsers.length})` : activeTab === "services" ? `Services (${filteredServices.length})` : activeTab === "support" ? `Support Conversations (${supportConversations.length})` : `Withdrawal Requests (${withdrawalRequests.length})`}
             </h3>
           </div>
           
-          {activeTab === "withdrawals" ? (
+          {activeTab === "support" ? (
+            <div className="flex h-[600px]">
+              {/* Conversations List */}
+              <div className="w-1/3 border-r border-gray-200 overflow-y-auto">
+                <div className="p-4 space-y-2">
+                  {supportConversations.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <HelpCircle className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                      <p>No support conversations yet</p>
+                    </div>
+                  ) : (
+                    supportConversations.map((conv: any) => (
+                      <div
+                        key={conv.id}
+                        onClick={() => setSelectedSupportConversation(conv)}
+                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                          selectedSupportConversation?.id === conv.id
+                            ? "bg-slate-50 border-slate-300"
+                            : "bg-white border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-900">
+                              {conv.user.first_name} {conv.user.last_name}
+                            </div>
+                            <div className="text-sm text-gray-500">{conv.user.email}</div>
+                          </div>
+                          {conv.unread_count > 0 && (
+                            <Badge className="bg-blue-500 text-white">{conv.unread_count}</Badge>
+                          )}
+                        </div>
+                        {conv.service_title && (
+                          <div className="text-xs text-gray-600 mb-2">
+                            Service: {conv.service_title}
+                          </div>
+                        )}
+                        {conv.last_message && (
+                          <div className="text-sm text-gray-600 truncate">
+                            {conv.last_message.content || "Image"}
+                          </div>
+                        )}
+                        {conv.last_message && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            {new Date(conv.last_message.created_at).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Messages View */}
+              <div className="flex-1 flex flex-col">
+                {selectedSupportConversation ? (
+                  <>
+                    <div className="p-4 border-b border-gray-200 bg-gray-50">
+                      <div className="font-semibold text-gray-900">
+                        {selectedSupportConversation.user.first_name} {selectedSupportConversation.user.last_name}
+                      </div>
+                      <div className="text-sm text-gray-500">{selectedSupportConversation.user.email}</div>
+                      {selectedSupportConversation.service_title && (
+                        <div className="text-sm text-gray-600 mt-1">
+                          Service: {selectedSupportConversation.service_title}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                      {supportMessages.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <MessageCircle className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                          <p>No messages yet</p>
+                        </div>
+                      ) : (
+                        supportMessages.map((msg: any) => {
+                          const isAdmin = msg.sender_id === currentUser?.id;
+                          return (
+                            <div
+                              key={msg.id}
+                              className={`flex ${isAdmin ? "justify-end" : "justify-start"}`}
+                            >
+                              <div
+                                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                                  isAdmin
+                                    ? "bg-slate-900 text-white"
+                                    : "bg-gray-100 text-gray-900"
+                                }`}
+                              >
+                                <div className="text-sm font-medium mb-1">{msg.sender_name}</div>
+                                <div className="text-sm">{msg.content}</div>
+                                {msg.image_url && (
+                                  <img src={msg.image_url} alt="Message" className="mt-2 rounded max-w-full" />
+                                )}
+                                <div className={`text-xs mt-1 ${isAdmin ? "text-slate-300" : "text-gray-500"}`}>
+                                  {new Date(msg.created_at).toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                    <div className="p-4 border-t border-gray-200">
+                      <div className="flex gap-2">
+                        <Textarea
+                          value={newSupportMessage}
+                          onChange={(e) => setNewSupportMessage(e.target.value)}
+                          placeholder="Type your reply..."
+                          rows={3}
+                          className="flex-1"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && e.ctrlKey) {
+                              handleSendSupportMessage();
+                            }
+                          }}
+                        />
+                        <Button
+                          onClick={handleSendSupportMessage}
+                          disabled={!newSupportMessage.trim() || sendingSupportMessage}
+                          className="bg-slate-900 hover:bg-slate-800"
+                        >
+                          {sendingSupportMessage ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Send className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <MessageCircle className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                      <p>Select a conversation to view messages</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : activeTab === "withdrawals" ? (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -1084,7 +1324,7 @@ export default function AdminDashboard() {
           </div>
         )}
         </div>
-        {activeTab !== "withdrawals" && (activeTab === "users" ? filteredUsers.length === 0 : filteredServices.length === 0) && (
+        {activeTab !== "withdrawals" && activeTab !== "support" && (activeTab === "users" ? filteredUsers.length === 0 : filteredServices.length === 0) && (
           <div className="text-center py-16 bg-white">
             {activeTab === "users" ? (
               <Users className="mx-auto h-12 w-12 text-gray-300" />

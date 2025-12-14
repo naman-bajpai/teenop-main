@@ -65,7 +65,7 @@ export type Service = {
   education?: string | null;
   qualifications?: string | null;
   address?: string | null;
-  pricing_model?: "per_job" | "per_hour" | "quote";
+  pricing_model?: "per_job" | "per_hour";
   delivery_method?: string | null;
   location_type?: string | null;
   images?: ServiceImage[];
@@ -313,7 +313,6 @@ export default function TeenHustlePage() {
 
   // Add Service dialog state
   const [open, setOpen] = useState(false);
-  const [openQuoteDialog, setOpenQuoteDialog] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -325,7 +324,7 @@ export default function TeenHustlePage() {
   const [education, setEducation] = useState("");
   const [qualifications, setQualifications] = useState("");
   const [address, setAddress] = useState("");
-  const [pricingModel, setPricingModel] = useState<"per_job" | "per_hour" | "quote">("per_hour");
+  const [pricingModel, setPricingModel] = useState<"per_job" | "per_hour">("per_hour");
   const [deliveryMethod, setDeliveryMethod] = useState<"in_person" | "online">("in_person");
   const [locationType, setLocationType] = useState<"public_address" | "client_location">("public_address");
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
@@ -553,7 +552,16 @@ export default function TeenHustlePage() {
       const user = userRes.data.user;
       if (!user) throw new Error("You must be signed in to create a service.");
 
+      // Check if payments are connected (only for new services, not edits)
       const isEditing = editingService !== null;
+      if (!isEditing && !stripeAccountStatus.hasAccount) {
+        toast({
+          title: "Payment Account Required",
+          description: "You must connect your payment account before adding a service. Please set up payments first.",
+          variant: "destructive",
+        });
+        return;
+      }
       const url = "/api/services";
       const method = isEditing ? "PUT" : "POST";
       const body = isEditing 
@@ -881,9 +889,24 @@ export default function TeenHustlePage() {
                   )}
                 </Button>
               </Link>
-              <Dialog open={open} onOpenChange={setOpen}>
+              <Dialog open={open} onOpenChange={(newOpen) => {
+                  // Prevent opening dialog if payments aren't connected (only for new services)
+                  if (newOpen && !editingService && !stripeAccountStatus.loading && !stripeAccountStatus.hasAccount) {
+                    toast({
+                      title: "Payment Account Required",
+                      description: "You must connect your payment account before adding a service. Please set up payments first.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  setOpen(newOpen);
+                }}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90">
+                  <Button 
+                    className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90"
+                    disabled={!stripeAccountStatus.loading && !stripeAccountStatus.hasAccount}
+                    title={!stripeAccountStatus.loading && !stripeAccountStatus.hasAccount ? "Please connect your payment account first" : ""}
+                  >
                     <Plus className="w-4 h-4 mr-2" /> Add New Service
                   </Button>
                 </DialogTrigger>
@@ -894,6 +917,30 @@ export default function TeenHustlePage() {
                     Fill in the details below to {editingService ? 'update your service' : 'create your new service'}
                   </DialogDescription>
                 </DialogHeader>
+                
+                {!editingService && !stripeAccountStatus.loading && !stripeAccountStatus.hasAccount && (
+                  <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <Wallet className="w-5 h-5 text-yellow-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-yellow-800 mb-1">
+                          Payment Account Required
+                        </p>
+                        <p className="text-sm text-yellow-700 mb-3">
+                          You must connect your payment account before adding a service. This allows you to receive payments from clients.
+                        </p>
+                        <Button
+                          onClick={handleStripeConnectSetup}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          <Wallet className="w-4 h-4 mr-2" />
+                          Set Up Payments
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="space-y-8">
                   {/* Basic Information Section */}
@@ -991,7 +1038,6 @@ export default function TeenHustlePage() {
                           <SelectContent>
                             <SelectItem value="per_hour">Per Hour</SelectItem>
                             <SelectItem value="per_job">Per Job</SelectItem>
-                            <SelectItem value="quote">Quote Based</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1117,176 +1163,6 @@ export default function TeenHustlePage() {
                 </div>
               </DialogContent>
               </Dialog>
-              <Dialog open={openQuoteDialog} onOpenChange={setOpenQuoteDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="border-2 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white">
-                    <Plus className="w-4 h-4 mr-2" /> Add Quote Based Service
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto mx-auto p-8">
-                  <DialogHeader className="text-center pb-6">
-                    <DialogTitle className="text-2xl font-bold text-gray-800">Add Quote Based Service</DialogTitle>
-                  <DialogDescription className="text-sm text-gray-600 mt-2">
-                    Create a service where customers can request a custom quote by messaging you
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-6">
-                  {/* Basic Information Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      Basic Information
-                    </h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="quote-title" className="text-sm font-medium">Service Title *</Label>
-                        <Input 
-                          id="quote-title" 
-                          value={title} 
-                          onChange={(e) => setTitle(e.target.value)} 
-                          placeholder="e.g., Custom Tutoring Package" 
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Category *</Label>
-                        <Select value={category} onValueChange={(v : any ) => setCategory(v)}>
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Select a category" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="tutoring">Tutoring</SelectItem>
-                            <SelectItem value="pet_care">Pet Care</SelectItem>
-                            <SelectItem value="lawn_care">Lawn Care</SelectItem>
-                            <SelectItem value="cleaning">Cleaning</SelectItem>
-                            <SelectItem value="tech_support">Tech Support</SelectItem>
-                            <SelectItem value="delivery">Delivery</SelectItem>
-                            <SelectItem value="art_commissions">Art Commissions</SelectItem>
-                            <SelectItem value="beauty">Beauty</SelectItem>
-                            <SelectItem value="photography">Photography</SelectItem>
-                            <SelectItem value="graphic_design">Graphic Design</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="quote-description" className="text-sm font-medium">Description *</Label>
-                      <Textarea 
-                        id="quote-description" 
-                        value={description} 
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} 
-                        placeholder="Describe what you offer. Customers will request quotes through the quote request system." 
-                        rows={4}
-                        className="w-full resize-none"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Location & Status Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      Location & Status
-                    </h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="quote-location" className="text-sm font-medium">Location *</Label>
-                        <Input 
-                          id="quote-location" 
-                          value={location} 
-                          onChange={(e) => setLocation(e.target.value)} 
-                          placeholder="Online / Local Area / Address" 
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Status *</Label>
-                        <Select value={status} onValueChange={(v: any) => setStatus(v)}>
-                          <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="paused">Paused</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Delivery Method *</Label>
-                        <Select value={deliveryMethod} onValueChange={(v: any) => setDeliveryMethod(v)}>
-                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="in_person">In Person</SelectItem>
-                            <SelectItem value="online">Online</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Location Type *</Label>
-                        <Select value={locationType} onValueChange={(v: any) => setLocationType(v)}>
-                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="public_address">Public Address</SelectItem>
-                            <SelectItem value="client_location">Client's Location</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Background & Qualifications Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      Background & Qualifications (Optional)
-                    </h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="quote-education" className="text-sm font-medium">Education/Background</Label>
-                        <Textarea 
-                          id="quote-education" 
-                          value={education} 
-                          onChange={(e) => setEducation(e.target.value)} 
-                          placeholder="High school student, college courses, certifications..." 
-                          rows={3}
-                          className="w-full resize-none"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="quote-qualifications" className="text-sm font-medium">Qualifications/Skills</Label>
-                        <Textarea 
-                          id="quote-qualifications" 
-                          value={qualifications} 
-                          onChange={(e) => setQualifications(e.target.value)} 
-                          placeholder="Years of experience, special skills, certifications..." 
-                          rows={3}
-                          className="w-full resize-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-                  <Button variant="outline" onClick={() => { setOpenQuoteDialog(false); resetForm(); }} className="px-6">
-                    Cancel
-                  </Button>
-                  <Button onClick={async () => {
-                    setPricingModel("quote");
-                    setPrice(0);
-                    setDuration(1);
-                    // Ensure delivery method and location type are set
-                    if (!deliveryMethod) setDeliveryMethod("in_person");
-                    if (!locationType) setLocationType("public_address");
-                    await handleCreateService();
-                    setOpenQuoteDialog(false);
-                  }} variant="orange" className="px-6">
-                    Create Quote Service
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
             </div>
           </div>
         </div>

@@ -48,11 +48,30 @@ export async function GET(request: NextRequest) {
     // Type assertion for booking data
     const bookingData = booking as any;
 
+    // Check if user is admin
+    const { data: userProfile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const isAdmin = userProfile && (userProfile as any).role === "admin";
+    const isSupportConversation = bookingData.special_instructions?.includes("[SUPPORT_CONVERSATION]");
+
     // Check if user has permission to view messages for this booking
     const isCustomer = bookingData.user_id === user.id;
     const isProvider = bookingData.services?.user_id === user.id;
 
-    if (!isCustomer && !isProvider) {
+    // Allow admin to view support conversations, or allow customer/provider in regular bookings
+    if (!isAdmin && !isCustomer && !isProvider) {
+      return NextResponse.json(
+        { success: false, error: "Access denied" },
+        { status: 403 }
+      );
+    }
+
+    // For support conversations, only admin and the customer can view
+    if (isSupportConversation && !isAdmin && !isCustomer) {
       return NextResponse.json(
         { success: false, error: "Access denied" },
         { status: 403 }
@@ -171,24 +190,62 @@ export async function POST(request: NextRequest) {
     // Type assertion for booking data
     const bookingData = booking as any;
 
+    // Check if user is admin
+    const { data: userProfile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const isAdmin = userProfile && (userProfile as any).role === "admin";
+    const isSupportConversation = bookingData.special_instructions?.includes("[SUPPORT_CONVERSATION]");
+
     // Check if user has permission to send messages for this booking
     const isCustomer = bookingData.user_id === user.id;
     const isProvider = bookingData.services?.user_id === user.id;
 
-    if (!isCustomer && !isProvider) {
+    // Allow admin to send messages in support conversations, or allow customer/provider in regular bookings
+    if (!isAdmin && !isCustomer && !isProvider) {
       return NextResponse.json(
         { success: false, error: "Access denied" },
         { status: 403 }
       );
     }
 
-    // Verify receiver is the other party in the booking
-    const expectedReceiverId = isCustomer ? bookingData.services?.user_id : bookingData.user_id;
-    if (receiver_id !== expectedReceiverId) {
-      return NextResponse.json(
-        { success: false, error: "Invalid receiver" },
-        { status: 400 }
-      );
+    // For support conversations, admin can message the user, and user can message admin
+    if (isSupportConversation) {
+      if (isAdmin) {
+        // Admin sending to user - verify receiver is the customer
+        if (receiver_id !== bookingData.user_id) {
+          return NextResponse.json(
+            { success: false, error: "Invalid receiver for support conversation" },
+            { status: 400 }
+          );
+        }
+      } else if (isCustomer) {
+        // User sending to admin - get admin ID
+        const { data: admins } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("role", "admin")
+          .limit(1);
+        
+        if (!admins || admins.length === 0 || receiver_id !== admins[0].id) {
+          return NextResponse.json(
+            { success: false, error: "Invalid receiver for support conversation" },
+            { status: 400 }
+          );
+        }
+      }
+    } else {
+      // Regular booking - verify receiver is the other party
+      const expectedReceiverId = isCustomer ? bookingData.services?.user_id : bookingData.user_id;
+      if (receiver_id !== expectedReceiverId) {
+        return NextResponse.json(
+          { success: false, error: "Invalid receiver" },
+          { status: 400 }
+        );
+      }
     }
 
     // Create the message

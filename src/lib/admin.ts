@@ -22,9 +22,9 @@ export interface AdminUser {
 export async function checkAdminAccess(): Promise<AdminUser | null> {
   try {
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (!session) {
+    if (userError || !user) {
       return null;
     }
 
@@ -32,7 +32,7 @@ export async function checkAdminAccess(): Promise<AdminUser | null> {
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single();
 
     if (error || !profile) {

@@ -143,11 +143,11 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
           className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#434c9d]"
         >
           <Image
-            src="/images/teenop.png"
+            src="/images/newlogo.png"
             alt="TeenOp Logo"
-            width={120}
-            height={120}
-            className="h-12 w-12"
+            width={250}
+            height={250}
+            className="h-20 w-20"
           />
         </Link>
 

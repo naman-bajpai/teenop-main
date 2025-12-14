@@ -36,17 +36,17 @@ export function useUser() {
         setError(null);
         
         const supabase = createClient();
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
         
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setError('Session error');
+        if (userError) {
+          console.error('User error:', userError);
+          setError('Authentication error');
           router.push('/login');
           return;
         }
 
-        if (!session) {
-          setError('No session');
+        if (!authUser) {
+          setError('No authenticated user');
           router.push('/login');
           return;
         }
@@ -55,19 +55,19 @@ export function useUser() {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('id', authUser.id)
           .single();
 
         if (profileError) {
           console.error('Profile error:', profileError);
-          console.error('Session user ID:', session.user.id);
+          console.error('User ID:', authUser.id);
           setError('Profile not found');
           router.push('/login');
           return;
         }
 
         if (!profile) {
-          console.error('No profile found for user:', session.user.id);
+          console.error('No profile found for user:', authUser.id);
           setError('Profile not found. Please complete your profile setup.');
           router.push('/profile');
           return;

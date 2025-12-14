@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Clock, Star, ArrowLeft, User, MessageCircle, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X } from "lucide-react";
+import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, HelpCircle } from "lucide-react";
+import HelpDialog from "@/components/help/HelpDialog";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import WeeklyAvailabilityCalendar from "@/components/availability/WeeklyAvailabilityCalendar";
 import { useUser } from "@/hooks/useUser";
@@ -30,6 +31,9 @@ const [error, setError] = useState<string | null>(null);
   const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
   const [quoteRequestLoading, setQuoteRequestLoading] = useState(false);
   const [quoteRequestSuccess, setQuoteRequestSuccess] = useState(false);
+  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
+  const [hasBooking, setHasBooking] = useState(false);
+  const [checkingBooking, setCheckingBooking] = useState(true);
   const [quoteRequestForm, setQuoteRequestForm] = useState({
     requested_date: "",
     requested_time: "",
@@ -55,6 +59,32 @@ useEffect(() => {
     void fetchServiceDetails(serviceId);
   }
 }, [serviceId]);
+
+// Check if user has a booking for this service
+useEffect(() => {
+  const checkBooking = async () => {
+    if (!serviceId || !user) {
+      setCheckingBooking(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/bookings/check?service_id=${serviceId}`, {
+        cache: "no-store"
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHasBooking(data.hasBooking || false);
+      }
+    } catch (error) {
+      console.error("Error checking booking:", error);
+    } finally {
+      setCheckingBooking(false);
+    }
+  };
+
+  checkBooking();
+}, [serviceId, user]);
 
 // Cleanup image preview URL on unmount
 useEffect(() => {
@@ -901,17 +931,16 @@ return (
                 </DialogContent>
               </Dialog>
               
-              <Button
-                variant="outline"
-                className="w-full border-2 border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10 hover:border-[#434c9d] transition-all duration-200 py-3 text-lg font-semibold"
-                onClick={() => {
-                  // TODO: Implement messaging functionality
-                  alert("Messaging feature coming soon!");
-                }}
-              >
-                <MessageCircle className="w-5 h-5 mr-2" />
-                Message Provider
-              </Button>
+              {!checkingBooking && hasBooking && (
+                <Button
+                  variant="outline"
+                  className="w-full border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-[#434c9d] hover:text-[#434c9d] transition-all duration-200 py-3 text-lg font-semibold mt-3"
+                  onClick={() => setIsHelpDialogOpen(true)}
+                >
+                  <HelpCircle className="w-5 h-5 mr-2" />
+                  Get Help
+                </Button>
+              )}
               </div>
                 </>
               )}
@@ -946,10 +975,6 @@ return (
                   <span>Secure booking process</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <MessageCircle className="w-4 h-4 text-blue-500" />
-                  <span>Direct communication with provider</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
                   <CheckCircle className="w-4 h-4 text-green-500" />
                   <span>Provider confirmation required</span>
                 </div>
@@ -974,6 +999,12 @@ return (
       </div>
     </div>
 
+    <HelpDialog
+      isOpen={isHelpDialogOpen}
+      onClose={() => setIsHelpDialogOpen(false)}
+      serviceId={service?.id}
+      serviceTitle={service?.title}
+    />
   </DashboardLayout>
 );
 }

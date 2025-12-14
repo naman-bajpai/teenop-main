@@ -267,33 +267,30 @@ export function PaymentModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center">
-            Payment Unavailable
+            Complete Payment
           </DialogTitle>
           <DialogDescription className="text-center">
-            Payments are temporarily disabled for our initial launch.
+            Secure payment processing for your booking.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-8 space-y-4">
-          <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 text-center">
-            <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Payments Temporarily Disabled
-            </h3>
-            <p className="text-gray-700 mb-4">
-              For our initial launch, payments are temporarily disabled. Please contact the service provider directly to arrange payment.
-            </p>
-            <p className="text-sm text-gray-600">
-              Total Amount: <span className="font-semibold">${amount.toFixed(2)}</span>
-            </p>
+        {stripePromise && (
+          <Elements stripe={stripePromise} options={options}>
+            <PaymentForm
+              bookingId={bookingId}
+              amount={amount}
+              serviceTitle={serviceTitle}
+              onPaymentSuccess={onPaymentSuccess}
+              onClose={onClose}
+            />
+          </Elements>
+        )}
+        
+        {!stripePromise && (
+          <div className="text-center py-8">
+            <p className="text-red-600">Stripe is not configured. Please contact support.</p>
           </div>
-          <Button
-            onClick={onClose}
-            className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 text-white"
-          >
-            Close
-          </Button>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

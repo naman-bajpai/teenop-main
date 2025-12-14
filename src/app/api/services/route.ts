@@ -134,13 +134,20 @@ export async function POST(request: NextRequest) {
     // Check user role - only teens can create services
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, stripe_connect_account_id")
       .eq("id", user.id)
       .single();
 
     if (!profile || (profile as any).role !== "teen") {
       return NextResponse.json({ 
         error: "Only teens can create services. Parents can request services through quote requests." 
+      }, { status: 403 });
+    }
+
+    // Check if user has connected their payment account
+    if (!profile.stripe_connect_account_id) {
+      return NextResponse.json({ 
+        error: "You must connect your payment account before adding a service. Please set up payments first." 
       }, { status: 403 });
     }
 
@@ -155,17 +162,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate price - for quote-based services, price can be 0, otherwise must be positive
-    if (typeof price !== "number" || price < 0) {
+    // Validate price - must be positive
+    if (typeof price !== "number" || price <= 0) {
       return NextResponse.json({ 
-        error: "Price must be a positive number" 
-      }, { status: 400 });
-    }
-    
-    // For quote-based services, allow price to be 0, but for others require positive price
-    if (pricing_model !== "quote" && price <= 0) {
-      return NextResponse.json({ 
-        error: "Price must be greater than 0 for non-quote services" 
+        error: "Price must be greater than 0" 
       }, { status: 400 });
     }
 
@@ -192,9 +192,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate pricing model if provided
-    if (pricing_model && !["per_job", "per_hour", "quote"].includes(pricing_model)) {
+    if (pricing_model && !["per_job", "per_hour"].includes(pricing_model)) {
       return NextResponse.json({ 
-        error: "Pricing model must be either 'per_job', 'per_hour', or 'quote'" 
+        error: "Pricing model must be either 'per_job' or 'per_hour'" 
       }, { status: 400 });
     }
 
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         title: title.trim(),
         description: description.trim(),
-        price: pricing_model === "quote" ? 0 : Number(price),
+        price: Number(price),
         location: location.trim(),
         category,
         status,
@@ -293,17 +293,10 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate price - for quote-based services, price can be 0, otherwise must be positive
-    if (typeof price !== "number" || price < 0) {
+    // Validate price - must be positive
+    if (typeof price !== "number" || price <= 0) {
       return NextResponse.json({ 
-        error: "Price must be a positive number" 
-      }, { status: 400 });
-    }
-    
-    // For quote-based services, allow price to be 0, but for others require positive price
-    if (pricing_model !== "quote" && price <= 0) {
-      return NextResponse.json({ 
-        error: "Price must be greater than 0 for non-quote services" 
+        error: "Price must be greater than 0" 
       }, { status: 400 });
     }
 
@@ -330,9 +323,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // Validate pricing model if provided
-    if (pricing_model && !["per_job", "per_hour", "quote"].includes(pricing_model)) {
+    if (pricing_model && !["per_job", "per_hour"].includes(pricing_model)) {
       return NextResponse.json({ 
-        error: "Pricing model must be either 'per_job', 'per_hour', or 'quote'" 
+        error: "Pricing model must be either 'per_job' or 'per_hour'" 
       }, { status: 400 });
     }
 
@@ -342,7 +335,7 @@ export async function PUT(request: NextRequest) {
       .update({
         title: title.trim(),
         description: description.trim(),
-        price: pricing_model === "quote" ? 0 : Number(price),
+        price: Number(price),
         location: location.trim(),
         category,
         status,
