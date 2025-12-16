@@ -9,11 +9,12 @@ export async function GET(request: NextRequest) {
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
+    // If no user, return hasBooking: false (not an error for public pages)
     if (authError || !user) {
-      return NextResponse.json(
-        { success: false, hasBooking: false, error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({
+        success: true,
+        hasBooking: false
+      });
     }
 
     const { searchParams } = new URL(request.url);

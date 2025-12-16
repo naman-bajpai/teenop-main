@@ -319,8 +319,8 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (data.success) {
         toast({
-          title: "Withdrawal processed",
-          description: data.message || "Withdrawal has been processed successfully.",
+          title: "Withdrawal Approved",
+          description: data.message || `Withdrawal approved. Please manually pay $${data.withdrawalRequest?.amount?.toFixed(2) || '0.00'} to ${data.withdrawalRequest?.user_name || 'the student'} via Stripe.`,
         });
         // Refresh withdrawal requests
         const updatedRequests = await fetchWithdrawalRequests();
@@ -997,6 +997,7 @@ export default function AdminDashboard() {
                               disabled={processingRequest === request.id}
                               className="bg-green-600 hover:bg-green-700 text-white"
                               size="sm"
+                              title="Approve withdrawal. You will need to manually pay the student via Stripe."
                             >
                               {processingRequest === request.id ? (
                                 <>
@@ -1006,7 +1007,7 @@ export default function AdminDashboard() {
                               ) : (
                                 <>
                                   <CheckCircle className="w-4 h-4 mr-2" />
-                                  Process Payout
+                                  Approve & Pay
                                 </>
                               )}
                             </Button>

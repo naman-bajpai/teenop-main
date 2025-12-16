@@ -40,7 +40,7 @@ export default function ServiceCard({
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [hasBooking, setHasBooking] = useState(false);
   const [checkingBooking, setCheckingBooking] = useState(true);
-  const { user } = useUser();
+  const { user } = useUser({ redirectOnError: false }); // Don't redirect on public pages
 
   useEffect(() => {
     const checkBooking = async () => {

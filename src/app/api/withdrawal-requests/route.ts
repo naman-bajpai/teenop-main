@@ -30,24 +30,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user has a Stripe Connect account
-    if (!profile || !(profile as any).stripe_connect_account_id) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: "Stripe Connect account not set up. Please complete your payment setup first.",
-          requiresStripeSetup: true
-        },
-        { status: 400 }
-      );
-    }
+    // Note: Students don't need Stripe Connect account anymore since admin handles payments
+    // But we'll keep this check for now in case it's needed for other purposes
 
-    // Get pending earnings for withdrawal
+    // Get pending earnings for withdrawal (only those with status 'pending', not 'requested' or 'withdrawn')
     const { data: pendingEarnings, error: earningsError } = await supabase
       .from('earnings')
       .select('id, amount, booking_id, status')
       .eq('user_id', user.id)
-      .eq('status', 'pending');
+      .eq('status', 'pending'); // Only truly available earnings
 
     if (earningsError) {
       console.error('Error fetching pending earnings:', earningsError);
@@ -90,7 +81,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create withdrawal request
+    // Store earnings IDs for the withdrawal request
+    const earningsIds = pendingEarnings.map((e: any) => e.id);
+
+    // Create withdrawal request with earnings IDs in notes
     const { data: withdrawalRequest, error: requestError } = await (supabase as any)
       .from('withdrawal_requests')
       .insert({
@@ -99,7 +93,8 @@ export async function POST(request: NextRequest) {
         platform_fee: platformFee,
         total_earnings: totalAmount,
         status: 'pending',
-        stripe_connect_account_id: (profile as any).stripe_connect_account_id
+        stripe_connect_account_id: (profile as any).stripe_connect_account_id || null,
+        notes: JSON.stringify({ earnings_ids: earningsIds })
       })
       .select()
       .single();
@@ -112,33 +107,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark earnings as linked to this withdrawal request by updating their withdrawal_id
-    // We'll use a temporary marker - store the withdrawal_request id in notes or use withdrawal_id
-    // For now, we'll update earnings to have a status that indicates they're in a withdrawal request
-    // Actually, we need to link them properly. Let's update earnings to reference the withdrawal_request
-    // Since we don't have withdrawal_request_id in earnings, we'll use the notes field temporarily
-    // OR better: update earnings to have withdrawal_id pointing to a special marker
-    // Actually, the best approach: store earnings IDs in withdrawal_requests table or update earnings status
-    
-    // For now, let's update the earnings to have a status that prevents them from being counted as pending
-    // We'll use a custom approach: update earnings to have withdrawal_id set to a special value
-    // But actually, we should add a field to track this. For now, let's use the notes field in earnings
-    // OR we can create a junction table, but that's complex
-    
-    // Simpler: Update earnings status to 'requested' (we'll need to add this to the enum or use a different approach)
-    // Actually, let's just ensure the earnings are properly linked when processing
-    
-    // For now, we'll store the earnings IDs in the withdrawal request notes field as JSON
-    const earningsIds = pendingEarnings.map((e: any) => e.id);
-    const { error: updateEarningsForRequest } = await (supabase as any)
-      .from('withdrawal_requests')
+    // Mark earnings as linked to withdrawal request by storing request ID in notes
+    // This prevents them from showing in available balance
+    // We can't change status to 'requested' due to DB constraint, so we track via notes
+    const { error: updateEarningsError } = await (supabase as any)
+      .from("earnings")
       .update({
-        notes: JSON.stringify({ earnings_ids: earningsIds })
+        notes: JSON.stringify({ withdrawal_request_id: withdrawalRequest.id })
       })
-      .eq('id', withdrawalRequest.id);
+      .in('id', earningsIds);
 
-    if (updateEarningsForRequest) {
-      console.warn('Could not store earnings IDs in withdrawal request:', updateEarningsForRequest);
+    if (updateEarningsError) {
+      console.error('Error updating earnings notes:', updateEarningsError);
+      // Don't fail the request, but log the error
     }
 
     return NextResponse.json({

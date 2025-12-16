@@ -90,16 +90,15 @@ export async function POST(
       console.warn('Could not parse earnings IDs from withdrawal request notes:', e);
     }
 
-    // If we don't have earnings IDs stored, get all pending earnings for this user
-    // (fallback for old withdrawal requests)
+    // Get earnings that are in this withdrawal request (they have withdrawal_request_id in notes)
     let pendingEarnings: any[] = [];
     if (earningsIds.length > 0) {
       const { data: earnings, error: earningsError } = await supabase
         .from('earnings')
-        .select('id, amount, booking_id, status')
+        .select('id, amount, booking_id, status, notes')
         .eq('user_id', (withdrawalRequest as any).user_id)
         .in('id', earningsIds)
-        .eq('status', 'pending');
+        .eq('status', 'pending'); // Should still be pending since we can't change to 'requested'
 
       if (earningsError) {
         console.error('Error fetching earnings for withdrawal request:', earningsError);
@@ -109,24 +108,43 @@ export async function POST(
         );
       }
 
-      pendingEarnings = earnings || [];
+      // Verify these earnings are linked to this withdrawal request
+      pendingEarnings = (earnings || []).filter((earning: any) => {
+        if (!earning.notes) return false;
+        try {
+          const notesData = JSON.parse(earning.notes);
+          return notesData.withdrawal_request_id === requestId;
+        } catch (e) {
+          return false;
+        }
+      });
     } else {
-      // Fallback: get all pending earnings (for backward compatibility)
+      // Fallback: get earnings with this withdrawal_request_id in notes
       const { data: earnings, error: earningsError } = await supabase
         .from('earnings')
-        .select('id, amount, booking_id, status')
+        .select('id, amount, booking_id, status, notes')
         .eq('user_id', (withdrawalRequest as any).user_id)
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .limit(100);
 
       if (earningsError) {
-        console.error('Error fetching pending earnings:', earningsError);
+        console.error('Error fetching earnings:', earningsError);
         return NextResponse.json(
-          { success: false, error: "Failed to fetch pending earnings" },
+          { success: false, error: "Failed to fetch earnings" },
           { status: 500 }
         );
       }
 
-      pendingEarnings = earnings || [];
+      // Filter to only those linked to this withdrawal request
+      pendingEarnings = (earnings || []).filter((earning: any) => {
+        if (!earning.notes) return false;
+        try {
+          const notesData = JSON.parse(earning.notes);
+          return notesData.withdrawal_request_id === requestId;
+        } catch (e) {
+          return false;
+        }
+      });
       
       // Limit to the amount specified in the withdrawal request
       let totalAmount = 0;
@@ -149,95 +167,69 @@ export async function POST(
       );
     }
 
-    const payoutAmount = Math.round((withdrawalRequest as any).amount * 100); // Convert to cents
+    // Use service role client to update withdrawal request and earnings
+    const supabaseService = createServiceRoleClient();
 
     try {
-      // Create a transfer to the user's Stripe Connect account
-      const transfer = await stripe.transfers.create({
-        amount: payoutAmount,
-        currency: 'usd',
-        destination: userProfile.stripe_connect_account_id,
-        transfer_group: `withdrawal_${(withdrawalRequest as any).user_id}_${Date.now()}`,
-        metadata: {
-          user_id: (withdrawalRequest as any).user_id,
-          withdrawal_request_id: requestId,
-          withdrawal_type: 'earnings',
-          platform_fee: (withdrawalRequest as any).platform_fee.toString(),
-          total_earnings: (withdrawalRequest as any).total_earnings.toString()
-        }
-      });
-
-      // Use service role client to update withdrawal request and earnings
-      const supabaseService = createServiceRoleClient();
-
-      // Update withdrawal request status
+      // Update withdrawal request status to 'processed' (admin has approved)
+      // Admin will manually pay the student via Stripe, so we don't create automatic transfer
       const { error: updateRequestError } = await (supabaseService as any)
         .from('withdrawal_requests')
         .update({
           status: 'processed',
           processed_at: new Date().toISOString(),
           processed_by: user.id,
-          stripe_transfer_id: transfer.id
+          notes: (withdrawalRequest as any).notes // Keep existing notes with earnings IDs
         })
         .eq('id', requestId);
 
       if (updateRequestError) {
         console.error('Error updating withdrawal request:', updateRequestError);
-        // Note: Transfer was already created, so we should still return success
+        return NextResponse.json(
+          { success: false, error: "Failed to update withdrawal request" },
+          { status: 500 }
+        );
       }
 
-      // Create withdrawal record in withdrawals table
-      const { data: withdrawal, error: withdrawalError } = await (supabaseService as any)
-        .from('withdrawals')
-        .insert({
-          user_id: (withdrawalRequest as any).user_id,
-          amount: (withdrawalRequest as any).amount,
-          platform_fee: (withdrawalRequest as any).platform_fee,
-          total_earnings: (withdrawalRequest as any).total_earnings,
-          stripe_transfer_id: transfer.id,
-          status: 'processing',
-          stripe_connect_account_id: userProfile.stripe_connect_account_id
-        })
-        .select()
-        .single();
-
-      if (withdrawalError) {
-        console.error('Error creating withdrawal record:', withdrawalError);
-        // Note: Transfer was already created, so we should still return success
-      }
-
-      // Update earnings status to 'withdrawn'
+      // Update earnings status to 'completed' (withdrawn) and clear notes
+      // We use 'completed' instead of 'withdrawn' because DB constraint doesn't allow 'withdrawn'
       const earningIds = pendingEarnings.map((e: any) => e.id);
       const { error: updateEarningsError } = await (supabaseService as any)
         .from('earnings')
         .update({ 
-          status: 'withdrawn',
-          withdrawal_id: (withdrawal as any)?.id || null,
-          withdrawn_at: new Date().toISOString()
+          status: 'completed', // Use 'completed' instead of 'withdrawn' due to DB constraint
+          withdrawn_at: new Date().toISOString(),
+          notes: null // Clear the withdrawal_request_id from notes
         })
         .in('id', earningIds);
 
       if (updateEarningsError) {
         console.error('Error updating earnings status:', updateEarningsError);
-        // Note: Transfer was already created, so we should still return success
-        // but log the error for manual reconciliation
-      } else {
-        console.log(`Successfully marked ${earningIds.length} earnings as withdrawn. Pending earnings should now be reduced.`);
+        return NextResponse.json(
+          { success: false, error: "Failed to update earnings status" },
+          { status: 500 }
+        );
       }
+
+      console.log(`Successfully processed withdrawal request. ${earningIds.length} earnings marked as withdrawn. Admin should manually pay $${((withdrawalRequest as any).amount).toFixed(2)} to the student via Stripe.`);
 
       return NextResponse.json({
         success: true,
-        transferId: transfer.id,
-        withdrawalId: (withdrawal as any)?.id,
-        message: `Withdrawal processed successfully. $${((withdrawalRequest as any).amount).toFixed(2)} transferred to user's account.`
+        message: `Withdrawal request approved. Please manually pay $${((withdrawalRequest as any).amount).toFixed(2)} to the student via Stripe.`,
+        withdrawalRequest: {
+          id: requestId,
+          amount: (withdrawalRequest as any).amount,
+          user_id: (withdrawalRequest as any).user_id,
+          user_name: `${userProfile.first_name} ${userProfile.last_name}`,
+          user_email: userProfile.email
+        }
       });
 
-    } catch (stripeError: any) {
-      console.error('Stripe error during withdrawal processing:', stripeError);
+    } catch (error: any) {
+      console.error('Error processing withdrawal request:', error);
       
       // Update withdrawal request status to failed
       try {
-        const supabaseService = createServiceRoleClient();
         await (supabaseService as any)
           .from('withdrawal_requests')
           .update({
@@ -253,7 +245,7 @@ export async function POST(
       return NextResponse.json(
         { 
           success: false, 
-          error: `Payment processing failed: ${stripeError.message}` 
+          error: `Failed to process withdrawal request: ${error.message}` 
         },
         { status: 500 }
       );

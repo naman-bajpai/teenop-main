@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get recent earnings for the user
+    // Get recent earnings for the user (all statuses for history)
     const { data: recentEarnings, error: earningsError } = await supabase
       .from('earnings')
       .select(`
@@ -62,24 +62,37 @@ export async function GET(request: NextRequest) {
       pending_earnings: 0
     };
 
-    // Get pending withdrawal requests for this user to exclude their earnings from available pending
-    const { data: pendingWithdrawalRequests, error: withdrawalRequestsError } = await (supabase as any)
-      .from('withdrawal_requests')
-      .select('notes, total_earnings')
+    // Calculate available balance: only earnings with status "pending" that are not in a withdrawal request
+    // Earnings in withdrawal requests have their withdrawal_request_id stored in notes
+    const { data: allPendingEarnings, error: availableEarningsError } = await supabase
+      .from('earnings')
+      .select('amount, notes, withdrawal_id')
       .eq('user_id', user.id)
-      .eq('status', 'pending');
+      .eq('status', 'pending'); // Only count pending earnings
 
-    let earningsInPendingRequests = 0;
-    if (pendingWithdrawalRequests && !withdrawalRequestsError) {
-      // Sum up the total_earnings from all pending withdrawal requests
-      earningsInPendingRequests = pendingWithdrawalRequests.reduce((sum: number, req: any) => {
-        return sum + (parseFloat(req.total_earnings) || 0);
-      }, 0);
+    // Filter out earnings that are in withdrawal requests
+    // Withdrawal requests store the request ID in notes as JSON: { withdrawal_request_id: "..." }
+    let availablePendingEarnings = 0;
+    if (allPendingEarnings && !availableEarningsError) {
+      availablePendingEarnings = allPendingEarnings
+        .filter((earning: any) => {
+          // Exclude if it has a withdrawal_id (already processed)
+          if (earning.withdrawal_id) return false;
+          // Exclude if notes contains withdrawal_request_id (in pending withdrawal request)
+          if (earning.notes) {
+            try {
+              const notesData = JSON.parse(earning.notes);
+              if (notesData.withdrawal_request_id) return false;
+            } catch (e) {
+              // If notes is not JSON, ignore
+            }
+          }
+          return true;
+        })
+        .reduce((sum: number, earning: any) => {
+          return sum + (parseFloat(earning.amount.toString()) || 0);
+        }, 0);
     }
-
-    // Calculate available pending earnings (total pending minus earnings in pending withdrawal requests)
-    const totalPendingEarnings = parseFloat(stats.pending_earnings) || 0;
-    const availablePendingEarnings = Math.max(0, totalPendingEarnings - earningsInPendingRequests);
 
     return NextResponse.json({
       success: true,

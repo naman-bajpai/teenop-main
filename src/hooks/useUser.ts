@@ -23,11 +23,12 @@ interface User {
   status?: string;
 }
 
-export function useUser() {
+export function useUser(options?: { redirectOnError?: boolean }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const redirectOnError = options?.redirectOnError !== false; // Default to true for backward compatibility
 
   useEffect(() => {
     const loadUser = async () => {
@@ -39,15 +40,28 @@ export function useUser() {
         const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
         
         if (userError) {
+          // Handle "Auth session missing" error gracefully on public pages
+          if (userError.message?.includes('Auth session missing') || userError.message?.includes('session')) {
+            // This is expected on public pages - just set user to null
+            setUser(null);
+            setError(null);
+            setLoading(false);
+            return;
+          }
+          
           console.error('User error:', userError);
           setError('Authentication error');
-          router.push('/login');
+          if (redirectOnError) {
+            router.push('/login');
+          }
           return;
         }
 
         if (!authUser) {
-          setError('No authenticated user');
-          router.push('/login');
+          // No user is fine on public pages
+          setUser(null);
+          setError(null);
+          setLoading(false);
           return;
         }
 
@@ -62,14 +76,18 @@ export function useUser() {
           console.error('Profile error:', profileError);
           console.error('User ID:', authUser.id);
           setError('Profile not found');
-          router.push('/login');
+          if (redirectOnError) {
+            router.push('/login');
+          }
           return;
         }
 
         if (!profile) {
           console.error('No profile found for user:', authUser.id);
           setError('Profile not found. Please complete your profile setup.');
-          router.push('/profile');
+          if (redirectOnError) {
+            router.push('/profile');
+          }
           return;
         }
 
@@ -99,14 +117,16 @@ export function useUser() {
       } catch (error) {
         console.error('Error loading user:', error);
         setError('Failed to load user');
-        router.push('/login');
+        if (redirectOnError) {
+          router.push('/login');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     loadUser();
-  }, [router]);
+  }, [router, redirectOnError]);
 
   return { user, loading, error };
 }
