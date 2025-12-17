@@ -140,7 +140,7 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex gap-3">
-                <Link href="/services">
+                <Link href="/neighborhood">
                   <Button className="bg-[#ff725a] text-white hover:bg-[#ff725a]/90">
                     Browse Services
                   </Button>
@@ -239,7 +239,7 @@ export default function Home() {
                       </Link>
                     </li>
                     <li>
-                      <Link href="/services" className="hover:text-slate-900">
+                      <Link href="/neighborhood" className="hover:text-slate-900">
                         Explore Services
                       </Link>
                     </li>
@@ -255,7 +255,7 @@ export default function Home() {
                       </Link>
                     </li>
                     <li>
-                      <Link href="/services" className="hover:text-slate-900">
+                      <Link href="/neighborhood" className="hover:text-slate-900">
                         Hire Local
                       </Link>
                     </li>

@@ -90,15 +90,15 @@ export async function POST(
       console.warn('Could not parse earnings IDs from withdrawal request notes:', e);
     }
 
-    // Get earnings that are in this withdrawal request (they have withdrawal_request_id in notes)
+    // Get earnings that are in this withdrawal request (using earnings IDs from notes)
     let pendingEarnings: any[] = [];
     if (earningsIds.length > 0) {
       const { data: earnings, error: earningsError } = await supabase
         .from('earnings')
-        .select('id, amount, booking_id, status, notes')
+        .select('id, amount, booking_id, status')
         .eq('user_id', (withdrawalRequest as any).user_id)
         .in('id', earningsIds)
-        .eq('status', 'pending'); // Should still be pending since we can't change to 'requested'
+        .eq('status', 'pending'); // Should still be pending
 
       if (earningsError) {
         console.error('Error fetching earnings for withdrawal request:', earningsError);
@@ -108,21 +108,12 @@ export async function POST(
         );
       }
 
-      // Verify these earnings are linked to this withdrawal request
-      pendingEarnings = (earnings || []).filter((earning: any) => {
-        if (!earning.notes) return false;
-        try {
-          const notesData = JSON.parse(earning.notes);
-          return notesData.withdrawal_request_id === requestId;
-        } catch (e) {
-          return false;
-        }
-      });
+      pendingEarnings = earnings || [];
     } else {
-      // Fallback: get earnings with this withdrawal_request_id in notes
+      // Fallback: get all pending earnings for this user (for backward compatibility)
       const { data: earnings, error: earningsError } = await supabase
         .from('earnings')
-        .select('id, amount, booking_id, status, notes')
+        .select('id, amount, booking_id, status')
         .eq('user_id', (withdrawalRequest as any).user_id)
         .eq('status', 'pending')
         .limit(100);
@@ -135,16 +126,7 @@ export async function POST(
         );
       }
 
-      // Filter to only those linked to this withdrawal request
-      pendingEarnings = (earnings || []).filter((earning: any) => {
-        if (!earning.notes) return false;
-        try {
-          const notesData = JSON.parse(earning.notes);
-          return notesData.withdrawal_request_id === requestId;
-        } catch (e) {
-          return false;
-        }
-      });
+      pendingEarnings = earnings || [];
       
       // Limit to the amount specified in the withdrawal request
       let totalAmount = 0;
@@ -191,15 +173,14 @@ export async function POST(
         );
       }
 
-      // Update earnings status to 'completed' (withdrawn) and clear notes
+      // Update earnings status to 'completed' (withdrawn)
       // We use 'completed' instead of 'withdrawn' because DB constraint doesn't allow 'withdrawn'
       const earningIds = pendingEarnings.map((e: any) => e.id);
       const { error: updateEarningsError } = await (supabaseService as any)
         .from('earnings')
         .update({ 
           status: 'completed', // Use 'completed' instead of 'withdrawn' due to DB constraint
-          withdrawn_at: new Date().toISOString(),
-          notes: null // Clear the withdrawal_request_id from notes
+          withdrawn_at: new Date().toISOString()
         })
         .in('id', earningIds);
 

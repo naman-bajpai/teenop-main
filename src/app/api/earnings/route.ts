@@ -63,30 +63,46 @@ export async function GET(request: NextRequest) {
     };
 
     // Calculate available balance: only earnings with status "pending" that are not in a withdrawal request
-    // Earnings in withdrawal requests have their withdrawal_request_id stored in notes
+    // Get all pending earnings
     const { data: allPendingEarnings, error: availableEarningsError } = await supabase
       .from('earnings')
-      .select('amount, notes, withdrawal_id')
+      .select('id, amount, withdrawal_id')
       .eq('user_id', user.id)
       .eq('status', 'pending'); // Only count pending earnings
 
-    // Filter out earnings that are in withdrawal requests
-    // Withdrawal requests store the request ID in notes as JSON: { withdrawal_request_id: "..." }
+    // Get pending withdrawal requests to see which earnings are locked
+    const { data: pendingWithdrawalRequests, error: withdrawalRequestsError } = await (supabase as any)
+      .from('withdrawal_requests')
+      .select('notes')
+      .eq('user_id', user.id)
+      .eq('status', 'pending');
+
+    // Extract all earnings IDs that are in pending withdrawal requests
+    const earningsInPendingRequests = new Set<string>();
+    if (pendingWithdrawalRequests && !withdrawalRequestsError) {
+      pendingWithdrawalRequests.forEach((req: any) => {
+        if (req.notes) {
+          try {
+            const notesData = JSON.parse(req.notes);
+            if (notesData.earnings_ids && Array.isArray(notesData.earnings_ids)) {
+              notesData.earnings_ids.forEach((id: string) => earningsInPendingRequests.add(id));
+            }
+          } catch (e) {
+            // If notes is not JSON, ignore
+          }
+        }
+      });
+    }
+
+    // Filter out earnings that are in withdrawal requests or already withdrawn
     let availablePendingEarnings = 0;
     if (allPendingEarnings && !availableEarningsError) {
       availablePendingEarnings = allPendingEarnings
         .filter((earning: any) => {
-          // Exclude if it has a withdrawal_id (already processed)
+          // Exclude if it has a withdrawal_id (already processed/withdrawn)
           if (earning.withdrawal_id) return false;
-          // Exclude if notes contains withdrawal_request_id (in pending withdrawal request)
-          if (earning.notes) {
-            try {
-              const notesData = JSON.parse(earning.notes);
-              if (notesData.withdrawal_request_id) return false;
-            } catch (e) {
-              // If notes is not JSON, ignore
-            }
-          }
+          // Exclude if it's in a pending withdrawal request
+          if (earningsInPendingRequests.has(earning.id)) return false;
           return true;
         })
         .reduce((sum: number, earning: any) => {

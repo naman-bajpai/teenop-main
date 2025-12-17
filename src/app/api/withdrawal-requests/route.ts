@@ -107,20 +107,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark earnings as linked to withdrawal request by storing request ID in notes
-    // This prevents them from showing in available balance
-    // We can't change status to 'requested' due to DB constraint, so we track via notes
-    const { error: updateEarningsError } = await (supabase as any)
-      .from("earnings")
-      .update({
-        notes: JSON.stringify({ withdrawal_request_id: withdrawalRequest.id })
-      })
-      .in('id', earningsIds);
-
-    if (updateEarningsError) {
-      console.error('Error updating earnings notes:', updateEarningsError);
-      // Don't fail the request, but log the error
-    }
+    // Earnings are tracked via withdrawal_requests.notes field (earnings_ids array)
+    // No need to update earnings table - the withdrawal_requests table tracks which earnings are locked
+    // Available balance calculation will check pending withdrawal requests to exclude these earnings
 
     return NextResponse.json({
       success: true,
