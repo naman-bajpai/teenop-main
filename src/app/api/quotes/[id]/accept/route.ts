@@ -127,7 +127,7 @@ export async function POST(
 
     // Calculate total price with platform fee
     const servicePrice = quoteData.price;
-    const platformFee = 3.00; // $3 platform fee
+    const platformFee = 0.00; // $0 platform fee
     const totalPrice = servicePrice + platformFee;
 
     // Create booking with quote price

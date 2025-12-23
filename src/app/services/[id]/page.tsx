@@ -16,11 +16,13 @@ import { useUser } from "@/hooks/useUser";
 import { Service } from "@/types/service";
 import { CreateBookingRequest, BookingResponse } from "@/types/booking";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function ServiceDetailsPage() {
 const params = useParams();
 const router = useRouter();
 const { user, loading: userLoading } = useUser();
+const { toast } = useToast();
 const [service, setService] = useState<Service | null>(null);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState<string | null>(null);
@@ -267,7 +269,11 @@ const handleQuoteRequest = async (e?: React.FormEvent) => {
   if (!service) return;
 
   if (!quoteRequestForm.requested_date || !quoteRequestForm.requested_time) {
-    alert("Please select a date and time for your quote request");
+    toast({
+      title: "Missing Information",
+      description: "Please select a date and time for your quote request",
+      variant: "destructive",
+    });
     return;
   }
 
@@ -342,6 +348,7 @@ const handleQuoteRequest = async (e?: React.FormEvent) => {
           requested_date: quoteRequestForm.requested_date,
           requested_time: quoteRequestForm.requested_time,
           special_instructions: quoteRequestForm.special_instructions || undefined,
+          service_address: quoteRequestForm.service_address || undefined,
       }),
     });
 
@@ -367,7 +374,11 @@ const handleQuoteRequest = async (e?: React.FormEvent) => {
     }
   } catch (err: any) {
     console.error("Error creating quote request:", err);
-    alert(err?.message || "Failed to create quote request. Please try again.");
+    toast({
+      title: "Error",
+      description: err?.message || "Failed to create quote request. Please try again.",
+      variant: "destructive",
+    });
   } finally {
     setQuoteRequestLoading(false);
     setUploadingImage(false);
@@ -721,12 +732,13 @@ return (
                           <div className="text-center py-6">
                             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Quote Request Sent!</h3>
-                            <p className="text-gray-600">The provider will review your request and send you a quote soon.</p>
+                            <p className="text-gray-600 mb-2">The provider will message you to discuss pricing and details.</p>
+                            <p className="text-sm text-gray-500">Check your messages to continue the conversation.</p>
                           </div>
                         ) : (
                           <form onSubmit={handleQuoteRequest} className="space-y-4">
                             <div>
-                              <Label htmlFor="quote-date">Preferred Date</Label>
+                              <Label htmlFor="quote-date">Preferred Date *</Label>
                               <Input
                                 id="quote-date"
                                 type="date"
@@ -735,9 +747,10 @@ return (
                                 min={new Date().toISOString().split("T")[0]}
                                 required
                               />
+                              <p className="text-xs text-gray-500 mt-1">Date is required to request a quote</p>
                             </div>
                             <div>
-                              <Label htmlFor="quote-time">Preferred Time</Label>
+                              <Label htmlFor="quote-time">Preferred Time *</Label>
                               <Input
                                 id="quote-time"
                                 type="time"
@@ -745,6 +758,7 @@ return (
                                 onChange={(e) => setQuoteRequestForm((prev) => ({ ...prev, requested_time: e.target.value }))}
                                 required
                               />
+                              <p className="text-xs text-gray-500 mt-1">Time is required to request a quote</p>
                             </div>
                             <div>
                               <Label htmlFor="quote-instructions">Special Instructions (Optional)</Label>

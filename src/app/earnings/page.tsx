@@ -674,7 +674,7 @@ export default function EarningsPage() {
                     ${earningsStats.pendingEarnings.toFixed(2)}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Platform fee: 10% (${(earningsStats.pendingEarnings * 0.1).toFixed(2)})
+                    Platform fee: 0% (${(earningsStats.pendingEarnings * 0).toFixed(2)})
                   </p>
                 </div>
 
@@ -703,13 +703,13 @@ export default function EarningsPage() {
                           <span className="font-medium">${earningsStats.pendingEarnings.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Platform Fee (10%):</span>
-                          <span className="font-medium">-${(earningsStats.pendingEarnings * 0.1).toFixed(2)}</span>
+                          <span className="text-gray-600">Platform Fee (0%):</span>
+                          <span className="font-medium">-${(earningsStats.pendingEarnings * 0).toFixed(2)}</span>
                         </div>
                         <div className="pt-3 mt-3 border-t border-gray-200 flex justify-between font-semibold">
                           <span className="text-gray-900">You'll Receive:</span>
                           <span className="text-green-600">
-                            ${(earningsStats.pendingEarnings * 0.9).toFixed(2)}
+                            ${(earningsStats.pendingEarnings * 1).toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -810,51 +810,100 @@ export default function EarningsPage() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Withdrawal History</h2>
-              <p className="text-sm text-gray-500">View your past withdrawals</p>
+              <p className="text-sm text-gray-500">View your past withdrawals and requests</p>
             </div>
             <div className="p-3 bg-gradient-to-br from-[#434c9d]/10 to-[#96cbc3]/10 rounded-xl">
               <Building2 className="w-8 h-8 text-[#434c9d]" />
             </div>
           </div>
 
-          {withdrawals.length > 0 ? (
+          {(withdrawals.length > 0 || withdrawalRequests.length > 0) ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr>
+                  <tr className="border-b border-gray-200">
                     <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Date</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Type</th>
                     <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Amount</th>
                     <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Platform Fee</th>
                     <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Total Earnings</th>
                     <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Status</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Transfer ID</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Reference</th>
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Direct Withdrawals */}
                   {withdrawals.map((withdrawal, index) => (
                     <tr 
-                      key={withdrawal.id} 
+                      key={`withdrawal-${withdrawal.id}`} 
                       className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/50 transition-colors ${
-                        index !== withdrawals.length - 1 ? 'border-b border-gray-100' : ''
+                        index !== withdrawals.length - 1 || withdrawalRequests.length > 0 ? 'border-b border-gray-100' : ''
                       }`}
                     >
                       <td className="py-4 px-4 text-sm text-gray-900 font-medium">
-                        {new Date(withdrawal.created_at).toLocaleDateString()}
+                        {new Date(withdrawal.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </td>
+                      <td className="py-4 px-4 text-sm">
+                        <Badge className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 shadow-sm">
+                          Direct Transfer
+                        </Badge>
                       </td>
                       <td className="py-4 px-4 text-sm font-semibold text-gray-900">
                         ${withdrawal.amount.toFixed(2)}
                       </td>
                       <td className="py-4 px-4 text-sm text-gray-600">
-                        ${withdrawal.platform_fee.toFixed(2)}
+                        ${(withdrawal.platform_fee || 0).toFixed(2)}
                       </td>
                       <td className="py-4 px-4 text-sm text-gray-600">
-                        ${withdrawal.total_earnings.toFixed(2)}
+                        ${(withdrawal.total_earnings || withdrawal.amount).toFixed(2)}
                       </td>
                       <td className="py-4 px-4 text-sm">
                         {getStatusBadge(withdrawal.status)}
                       </td>
                       <td className="py-4 px-4 text-sm text-gray-500 font-mono text-xs">
-                        {withdrawal.stripe_transfer_id.substring(0, 20)}...
+                        {withdrawal.stripe_transfer_id ? `${withdrawal.stripe_transfer_id.substring(0, 20)}...` : 'N/A'}
+                      </td>
+                    </tr>
+                  ))}
+                  
+                  {/* Withdrawal Requests */}
+                  {withdrawalRequests.map((request, index) => (
+                    <tr 
+                      key={`request-${request.id}`} 
+                      className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/50 transition-colors ${
+                        index !== withdrawalRequests.length - 1 ? 'border-b border-gray-100' : ''
+                      }`}
+                    >
+                      <td className="py-4 px-4 text-sm text-gray-900 font-medium">
+                        {new Date(request.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </td>
+                      <td className="py-4 px-4 text-sm">
+                        <Badge className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 shadow-sm">
+                          Admin Request
+                        </Badge>
+                      </td>
+                      <td className="py-4 px-4 text-sm font-semibold text-gray-900">
+                        ${(request.amount || 0).toFixed(2)}
+                      </td>
+                      <td className="py-4 px-4 text-sm text-gray-600">
+                        ${(request.platform_fee || 0).toFixed(2)}
+                      </td>
+                      <td className="py-4 px-4 text-sm text-gray-600">
+                        ${(request.total_earnings || request.amount || 0).toFixed(2)}
+                      </td>
+                      <td className="py-4 px-4 text-sm">
+                        {getStatusBadge(request.status || 'pending')}
+                      </td>
+                      <td className="py-4 px-4 text-sm text-gray-500 font-mono text-xs">
+                        {request.id.substring(0, 8)}...
                       </td>
                     </tr>
                   ))}
@@ -867,6 +916,7 @@ export default function EarningsPage() {
                 <Clock className="w-8 h-8 text-gray-400" />
               </div>
               <p className="text-sm text-gray-500 font-medium">No withdrawal history yet</p>
+              <p className="text-xs text-gray-400 mt-2">Your withdrawal history will appear here once you make a withdrawal</p>
             </div>
           )}
         </div>

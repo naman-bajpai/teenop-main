@@ -276,48 +276,48 @@ export default function MyRequestsPage() {
           )}
 
           {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
-                  <Calendar className="w-7 h-7 text-white" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
+            <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
+                <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
+                  <Calendar className="w-5 h-5 md:w-7 md:h-7 text-white" />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Total Requests</p>
-                  <p className="text-3xl font-bold text-gray-900">{allBookings.length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-md">
-                  <AlertCircle className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Pending</p>
-                  <p className="text-3xl font-bold text-gray-900">{pendingBookings.length}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Total Requests</p>
+                  <p className="text-xl md:text-3xl font-bold text-gray-900">{allBookings.length}</p>
                 </div>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-md">
-                  <CheckCircle className="w-7 h-7 text-white" />
+            <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
+                <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
+                  <AlertCircle className="w-5 h-5 md:w-7 md:h-7 text-white" />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Completed</p>
-                  <p className="text-3xl font-bold text-gray-900">{paidBookings.length}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Pending</p>
+                  <p className="text-xl md:text-3xl font-bold text-gray-900">{pendingBookings.length}</p>
                 </div>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-                  <DollarSign className="w-7 h-7 text-white" />
+            <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
+                <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
+                  <CheckCircle className="w-5 h-5 md:w-7 md:h-7 text-white" />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Total Spent</p>
-                  <p className="text-3xl font-bold text-gray-900">{formatPrice(totalSpent)}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Completed</p>
+                  <p className="text-xl md:text-3xl font-bold text-gray-900">{paidBookings.length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
+                <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
+                  <DollarSign className="w-5 h-5 md:w-7 md:h-7 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Total Spent</p>
+                  <p className="text-lg md:text-3xl font-bold text-gray-900 truncate">{formatPrice(totalSpent)}</p>
                 </div>
               </div>
             </div>
@@ -325,26 +325,28 @@ export default function MyRequestsPage() {
 
           {/* Tabs */}
           <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-6 bg-gray-100 p-1 rounded-xl h-auto">
-              <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-3">
-                All ({allBookings.length})
-              </TabsTrigger>
-              <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-3">
-                Pending ({pendingBookings.length})
-              </TabsTrigger>
-              <TabsTrigger value="confirmed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-3">
-                Confirmed ({confirmedBookings.length})
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-3">
-                Completed ({completedBookings.length})
-              </TabsTrigger>
-              <TabsTrigger value="paid" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-3">
-                Paid ({paidBookings.length})
-              </TabsTrigger>
-              <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-3">
-                Cancelled ({cancelledBookings.length})
-              </TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+              <TabsList className="inline-flex w-full sm:grid sm:grid-cols-6 bg-gray-100 p-1 rounded-xl h-auto min-w-max sm:min-w-0">
+                <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
+                  All ({allBookings.length})
+                </TabsTrigger>
+                <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
+                  Pending ({pendingBookings.length})
+                </TabsTrigger>
+                <TabsTrigger value="confirmed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
+                  Confirmed ({confirmedBookings.length})
+                </TabsTrigger>
+                <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
+                  Completed ({completedBookings.length})
+                </TabsTrigger>
+                <TabsTrigger value="paid" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
+                  Paid ({paidBookings.length})
+                </TabsTrigger>
+                <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
+                  Cancelled ({cancelledBookings.length})
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* All Bookings Tab */}
             <TabsContent value="all" className="mt-6">
@@ -486,23 +488,23 @@ function BookingCard({
   toast: ReturnType<typeof useToast>['toast'];
 }) {
   return (
-    <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+    <div className="bg-white rounded-xl md:rounded-2xl border-2 border-gray-200 p-4 md:p-6 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
         <div className="flex-1 min-w-0">
           <Link 
             href={`/services/${booking.service_id}`}
-            className="text-xl font-bold text-gray-900 hover:text-[#434c9d] transition-colors block mb-2 line-clamp-2"
+            className="text-lg sm:text-xl font-bold text-gray-900 hover:text-[#434c9d] transition-colors block mb-2 line-clamp-2"
           >
             {booking.service?.title}
           </Link>
-          <Badge className={`${statusConfig.bgColor} ${statusConfig.color} ${statusConfig.borderColor} border px-3 py-1 flex items-center gap-1.5 w-fit`}>
+          <Badge className={`${statusConfig.bgColor} ${statusConfig.color} ${statusConfig.borderColor} border px-2 sm:px-3 py-1 flex items-center gap-1.5 w-fit text-xs sm:text-sm`}>
             {statusConfig.icon}
             <span className="font-semibold">{statusConfig.label}</span>
           </Badge>
         </div>
-        <div className="text-right ml-4">
-          <p className="text-2xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent">
+        <div className="text-left sm:text-right">
+          <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent">
             {formatPrice(booking.total_price)}
           </p>
         </div>
@@ -536,24 +538,24 @@ function BookingCard({
       {/* Actions */}
       <div className="space-y-2">
         {booking.status === "pending" && (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               onClick={onCancel}
               variant="outline"
               size="sm"
               disabled={updating}
-              className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+              className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
             >
-              {updating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+              {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
               {updating ? "Cancelling..." : "Cancel"}
             </Button>
             <Button
               onClick={onMessage}
               variant="outline"
               size="sm"
-              className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+              className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
             >
-              <MessageCircle className="w-4 h-4 mr-2" />
+              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
               Message
             </Button>
           </div>
@@ -584,18 +586,18 @@ function BookingCard({
             <Button
               onClick={onPay}
               size="sm"
-              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md"
+              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md text-xs sm:text-sm"
             >
-              <CreditCard className="w-4 h-4 mr-2" />
+              <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
               Pay Now - {formatPrice(booking.total_price)}
             </Button>
             <Button
               onClick={onMessage}
               variant="outline"
               size="sm"
-              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
             >
-              <MessageCircle className="w-4 h-4 mr-2" />
+              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
               Message Provider
             </Button>
           </div>
@@ -609,14 +611,14 @@ function BookingCard({
                 <span className="text-sm font-medium">Payment Completed</span>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Link href={`/services/${booking.service_id}`} className="flex-1">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 text-xs sm:text-sm"
                 >
-                  <Eye className="w-4 h-4 mr-2" />
+                  <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                   View Service
                 </Button>
               </Link>
@@ -624,9 +626,9 @@ function BookingCard({
                 onClick={onMessage}
                 variant="outline"
                 size="sm"
-                className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+                className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
               >
-                <MessageCircle className="w-4 h-4 mr-2" />
+                <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                 Message
               </Button>
             </div>

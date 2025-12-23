@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     const servicePrice = serviceData.pricing_model === "per_hour" 
       ? serviceData.price * (serviceData.duration / 60) 
       : serviceData.price;
-    const platformFee = 3.00; // $3 platform fee
+    const platformFee = 0.00; // $0 platform fee
     const totalPrice = servicePrice + platformFee;
 
     // Create the booking

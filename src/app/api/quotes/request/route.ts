@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
         requested_time,
         special_instructions: special_instructions || null,
         image_url: image_url || null,
+        service_address: service_address || null,
         status: "pending"
       } as any)
       .select(`
@@ -133,6 +134,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create a booking for messaging purposes (so provider can message the requester)
+    // This booking is used to establish a conversation thread
+    const { data: messagingBooking, error: bookingError } = await supabase
+      .from("bookings")
+      .insert({
+        service_id,
+        user_id: user.id, // Customer who requested the quote
+        requested_date,
+        requested_time,
+        status: "pending" as any,
+        duration: 60, // Default duration
+        total_price: 0, // Will be set when quote is accepted
+        service_price: 0,
+        platform_fee: 0,
+        special_instructions: `[QUOTE_REQUEST] Quote request ID: ${quoteRequest.id}. Please message the customer to discuss pricing and details.`,
+      } as any)
+      .select("id")
+      .single();
+
+    if (bookingError) {
+      console.error("Error creating messaging booking:", bookingError);
+      // Don't fail the quote request if booking creation fails, but log it
+    }
+
     // Get provider profile for notification
     const { data: providerProfile } = await supabase
       .from("profiles")
@@ -153,7 +178,8 @@ export async function POST(request: NextRequest) {
             <p><strong>Requested Date:</strong> ${requested_date}</p>
             <p><strong>Requested Time:</strong> ${requested_time}</p>
             ${special_instructions ? `<p><strong>Special Instructions:</strong> ${special_instructions}</p>` : ''}
-            <p>Please log in to submit a quote.</p>
+            <p><strong>Important:</strong> Please message the customer through the platform to discuss pricing and details before submitting a quote.</p>
+            <p>Log in to view the quote request and start messaging the customer.</p>
           `
         );
       } catch (emailError) {

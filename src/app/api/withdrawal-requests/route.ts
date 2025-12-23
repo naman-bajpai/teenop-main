@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     const totalAmount = pendingEarnings.reduce((sum: number, earning: any) => sum + earning.amount, 0);
-    const platformFee = totalAmount * 0.1; // 10% platform fee
+    const platformFee = totalAmount * 0; // 0% platform fee
     const payoutAmount = totalAmount - platformFee;
 
     if (payoutAmount < 0.50) { // Minimum $0.50 payout

@@ -192,9 +192,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate pricing model if provided
-    if (pricing_model && !["per_job", "per_hour"].includes(pricing_model)) {
+    if (pricing_model && !["per_job", "per_hour", "quote"].includes(pricing_model)) {
       return NextResponse.json({ 
-        error: "Pricing model must be either 'per_job' or 'per_hour'" 
+        error: "Pricing model must be either 'per_job', 'per_hour', or 'quote'" 
+      }, { status: 400 });
+    }
+
+    // For quote-based services, price should be 0
+    if (pricing_model === "quote" && price !== 0) {
+      return NextResponse.json({ 
+        error: "Quote-based services must have a price of 0" 
       }, { status: 400 });
     }
 

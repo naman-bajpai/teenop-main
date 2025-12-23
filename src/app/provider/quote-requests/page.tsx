@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useUser } from "@/hooks/useUser";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import { cn } from "@/lib/utils";
 export default function ProviderQuoteRequestsPage() {
   const { user, loading: userLoading } = useUser();
   const { toast } = useToast();
+  const router = useRouter();
   
   const [quoteRequests, setQuoteRequests] = useState<QuoteRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -261,13 +263,26 @@ export default function ProviderQuoteRequestsPage() {
                     </div>
                   </div>
                   {request.status === "pending" && (
-                    <Button
-                      onClick={() => handleOpenQuoteDialog(request)}
-                      className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90"
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      Submit Quote
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          // Find the booking associated with this quote request and navigate to messages
+                          router.push("/messages");
+                        }}
+                        className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Message Customer
+                      </Button>
+                      <Button
+                        onClick={() => handleOpenQuoteDialog(request)}
+                        className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Submit Quote
+                      </Button>
+                    </div>
                   )}
                 </div>
 

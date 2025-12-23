@@ -179,11 +179,11 @@ function PaymentForm({
                 </div>
                 <div className="flex justify-between">
                   <span>Service Price:</span>
-                  <span>${(amount - 3.00).toFixed(2)}</span>
+                  <span>${amount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Platform Fee:</span>
-                  <span>$3.00</span>
+                  <span>$0.00</span>
                 </div>
                 <div className="flex justify-between font-medium text-gray-900 border-t pt-1">
                   <span>Total:</span>

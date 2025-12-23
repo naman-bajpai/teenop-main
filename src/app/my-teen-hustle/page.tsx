@@ -65,7 +65,7 @@ export type Service = {
   education?: string | null;
   qualifications?: string | null;
   address?: string | null;
-  pricing_model?: "per_job" | "per_hour";
+  pricing_model?: "per_job" | "per_hour" | "quote";
   delivery_method?: string | null;
   location_type?: string | null;
   images?: ServiceImage[];
@@ -144,8 +144,14 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
           <div className="grid grid-cols-2 gap-3 mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
             <div className="flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-green-600" />
-              <span className="font-bold text-gray-900">${service.price}</span>
-              <span className="text-xs text-gray-500">/{service.pricing_model === 'per_hour' ? 'hr' : 'job'}</span>
+              {service.pricing_model === 'quote' ? (
+                <span className="font-bold text-gray-900">Quote Based</span>
+              ) : (
+                <>
+                  <span className="font-bold text-gray-900">${service.price}</span>
+                  <span className="text-xs text-gray-500">/{service.pricing_model === 'per_hour' ? 'hr' : 'job'}</span>
+                </>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-blue-600" />
@@ -314,6 +320,7 @@ export default function TeenHustlePage() {
   // Add Service dialog state
   const [open, setOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [isQuoteBased, setIsQuoteBased] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState<number>(10);
@@ -519,6 +526,7 @@ export default function TeenHustlePage() {
     setQualifications("");
     setAddress("");
     setPricingModel("per_hour");
+    setIsQuoteBased(false);
     setDeliveryMethod("in_person");
     setLocationType("public_address");
     setBannerUrl(null);
@@ -538,7 +546,8 @@ export default function TeenHustlePage() {
     setEducation(service.education || "");
     setQualifications(service.qualifications || "");
     setAddress(service.address || "");
-    setPricingModel(service.pricing_model || "per_hour");
+    setPricingModel(service.pricing_model === "quote" ? "per_hour" : (service.pricing_model || "per_hour"));
+    setIsQuoteBased(service.pricing_model === "quote");
     setDeliveryMethod((service.delivery_method as "in_person" | "online") || "in_person");
     setLocationType((service.location_type as "public_address" | "client_location") || "public_address");
     setBannerUrl(service.banner_url);
@@ -577,7 +586,7 @@ export default function TeenHustlePage() {
             education: education.trim() || null,
             qualifications: qualifications.trim() || null,
             address: address.trim() || null,
-            pricing_model: pricingModel,
+            pricing_model: isQuoteBased ? "quote" : pricingModel,
             delivery_method: deliveryMethod,
             location_type: locationType,
             banner_url: bannerUrl
@@ -593,7 +602,7 @@ export default function TeenHustlePage() {
             education: education.trim() || null,
             qualifications: qualifications.trim() || null,
             address: address.trim() || null,
-            pricing_model: pricingModel,
+            pricing_model: isQuoteBased ? "quote" : pricingModel,
             delivery_method: deliveryMethod,
             location_type: locationType,
             banner_url: bannerUrl
@@ -879,7 +888,7 @@ export default function TeenHustlePage() {
               </h1>
               <p className="text-gray-600 text-lg">Manage your services, bookings, and earnings</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <Link href="/provider/quote-requests">
                 <Button variant="outline" className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white relative">
                   <FileText className="w-4 h-4 mr-2" />
@@ -1018,29 +1027,51 @@ export default function TeenHustlePage() {
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       Pricing & Duration
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="price" className="text-sm font-medium">Price (USD) *</Label>
-                        <Input 
-                          id="price" 
-                          type="number" 
-                          min={0} 
-                          value={price} 
-                          onChange={(e) => setPrice(Number(e.target.value))} 
-                          placeholder="25"
-                          className="w-full"
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2 p-4 border-2 border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <input
+                          type="checkbox"
+                          id="quote-based"
+                          checked={isQuoteBased}
+                          onChange={(e) => {
+                            setIsQuoteBased(e.target.checked);
+                            if (e.target.checked) {
+                              setPrice(0);
+                            }
+                          }}
+                          className="w-5 h-5 text-[#434c9d] border-gray-300 rounded focus:ring-[#434c9d] cursor-pointer"
                         />
+                        <Label htmlFor="quote-based" className="text-sm font-semibold cursor-pointer flex-1 text-gray-900">
+                          Quote Based Service
+                        </Label>
+                        <span className="text-xs text-gray-500">(Customers will request quotes and you'll discuss pricing through messages)</span>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Pricing Model *</Label>
-                        <Select value={pricingModel} onValueChange={(v: any) => setPricingModel(v)}>
-                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="per_hour">Per Hour</SelectItem>
-                            <SelectItem value="per_job">Per Job</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {!isQuoteBased && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="price" className="text-sm font-medium">Price (USD) *</Label>
+                            <Input 
+                              id="price" 
+                              type="number" 
+                              min={0} 
+                              value={price} 
+                              onChange={(e) => setPrice(Number(e.target.value))} 
+                              placeholder="25"
+                              className="w-full"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Pricing Model *</Label>
+                            <Select value={pricingModel} onValueChange={(v: any) => setPricingModel(v)}>
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="per_hour">Per Hour</SelectItem>
+                                <SelectItem value="per_job">Per Job</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <Label htmlFor="duration" className="text-sm font-medium">Duration (hours) *</Label>
                         <Input 
