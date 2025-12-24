@@ -61,10 +61,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if booking is completed
-    if (bookingData.status !== "completed") {
+    // Check if booking is confirmed (ready for payment)
+    // Payment should happen when teen confirms the booking, before the service is completed
+    if (bookingData.status !== "confirmed" && bookingData.status !== "alternative_proposed") {
       return NextResponse.json(
-        { success: false, error: "Booking must be completed before payment" },
+        { success: false, error: "Booking must be confirmed by the provider before payment" },
         { status: 400 }
       );
     }

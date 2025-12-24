@@ -178,14 +178,24 @@ export async function PATCH(
 
     const { id: bookingId } = await params;
     const body = await request.json();
-    const { status } = body;
+    const { status, alternative_date, alternative_time, requested_date, requested_time } = body;
 
     // Validate status
-    if (!status || !["confirmed", "rejected", "completed", "paid", "cancelled"].includes(status)) {
+    if (!status || !["confirmed", "rejected", "completed", "paid", "cancelled", "alternative_proposed"].includes(status)) {
       return NextResponse.json(
         { success: false, error: "Invalid status" },
         { status: 400 }
       );
+    }
+
+    // If proposing alternative time, validate the fields
+    if (status === "alternative_proposed") {
+      if (!alternative_date || !alternative_time) {
+        return NextResponse.json(
+          { success: false, error: "Alternative date and time are required" },
+          { status: 400 }
+        );
+      }
     }
 
     // Get the booking to check permissions
@@ -211,16 +221,16 @@ export async function PATCH(
     const bookingData = booking as any;
 
     // Check permissions based on status change
-    if (status === "confirmed" || status === "rejected") {
-      // Only service provider can accept/reject
+    if (status === "confirmed" || status === "rejected" || status === "alternative_proposed") {
+      // Only service provider can accept/reject/propose alternative
       if (bookingData.services?.user_id !== user.id) {
         return NextResponse.json(
-          { success: false, error: "Only service provider can accept or reject bookings" },
+          { success: false, error: "Only service provider can accept, reject, or propose alternative times" },
           { status: 403 }
         );
       }
     } else if (status === "cancelled") {
-      // Either customer or provider can cancel
+      // Either customer or provider can cancel (including confirmed and paid bookings)
       const isCustomer = bookingData.user_id === user.id;
       const isProvider = bookingData.services?.user_id === user.id;
       
@@ -229,6 +239,55 @@ export async function PATCH(
           { success: false, error: "Access denied" },
           { status: 403 }
         );
+      }
+      
+      // Send cancellation email notifications
+      try {
+        const { data: customerProfile } = await supabase
+          .from("profiles")
+          .select("first_name, last_name, email")
+          .eq("id", bookingData.user_id)
+          .single();
+        
+        const { data: providerProfile } = await supabase
+          .from("profiles")
+          .select("first_name, last_name, email")
+          .eq("id", bookingData.services?.user_id)
+          .single();
+
+        const { emailService } = await import("@/lib/email");
+        const serviceTitle = bookingData.services?.title || "Service";
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        
+        // Notify the other party
+        if (isCustomer && providerProfile && (providerProfile as any).email) {
+          // Customer cancelled, notify provider
+          await emailService.sendEmail(
+            (providerProfile as any).email,
+            "Service Cancellation Notice",
+            `
+              <h2>Service Cancellation</h2>
+              <p>The customer has cancelled the booking for: <strong>${serviceTitle}</strong></p>
+              <p>If you have any questions, please contact TeenOp support.</p>
+              <p>Best,<br>The TeenOp Team</p>
+            `
+          );
+        } else if (isProvider && customerProfile && (customerProfile as any).email) {
+          // Provider cancelled, notify customer
+          await emailService.sendEmail(
+            (customerProfile as any).email,
+            "Service Cancellation Notice",
+            `
+              <h2>Service Cancellation</h2>
+              <p>The service provider has cancelled the booking for: <strong>${serviceTitle}</strong></p>
+              <p>If you have any questions or need assistance, please contact TeenOp support.</p>
+              <p>Best,<br>The TeenOp Team</p>
+            `
+          );
+        }
+      } catch (emailError) {
+        console.error("Error sending cancellation email:", emailError);
+        // Don't fail the cancellation if email fails
       }
     } else if (status === "completed") {
       // Only service provider can mark as completed
@@ -248,13 +307,31 @@ export async function PATCH(
       }
     }
 
+    // Prepare update payload
+    const updatePayload: any = {
+      status: status,
+      updated_at: new Date().toISOString()
+    };
+
+    // If proposing alternative time, include alternative_date and alternative_time
+    if (status === "alternative_proposed" && alternative_date && alternative_time) {
+      updatePayload.alternative_date = alternative_date;
+      updatePayload.alternative_time = alternative_time;
+    }
+
+    // If accepting alternative time (status = confirmed), update requested_date and requested_time
+    if (status === "confirmed" && requested_date && requested_time) {
+      updatePayload.requested_date = requested_date;
+      updatePayload.requested_time = requested_time;
+      // Clear alternative fields since we're using them now
+      updatePayload.alternative_date = null;
+      updatePayload.alternative_time = null;
+    }
+
     // Update the booking status
     const { data: updatedBooking, error: updateError } = await (supabase as any)
       .from("bookings")
-      .update({
-        status: status,
-        updated_at: new Date().toISOString()
-      })
+      .update(updatePayload)
       .eq("id", bookingId)
       .select(`
         *,
@@ -286,31 +363,100 @@ export async function PATCH(
     // Send notifications based on status change
     try {
       if (status === "confirmed") {
-        // Send confirmation notifications to service provider
-        await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.INTERNAL_API_SECRET || 'internal-secret'}`
-          },
-          body: JSON.stringify({
-            type: 'service_provider_confirmation',
-            bookingId: updatedBookingData.id
-          })
-        });
+        // When teen confirms, send email to parent asking them to pay
+        // Get customer profile for email
+        const { data: customerProfile } = await supabase
+          .from("profiles")
+          .select("first_name, last_name, email")
+          .eq("id", bookingData.user_id)
+          .single();
+
+        if (customerProfile && (customerProfile as any).email) {
+          const { emailService } = await import("@/lib/email");
+          const serviceTitle = updatedBookingData.services?.title || "Service";
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+          
+          await emailService.sendEmail(
+            (customerProfile as any).email,
+            "Good News! Your TeenOp Service Is Ready to Be Confirmed",
+            `
+              <h2>Good News!</h2>
+              <p>A teen has accepted your service request, and you're almost all set.</p>
+              <p>To officially schedule the service, simply complete payment within TeenOp.</p>
+              <p><a href="${appUrl}/my-requests" style="background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Click here to confirm and pay with Stripe</a></p>
+              <p>Thank you for supporting a local teen and for being part of the TeenOp community!</p>
+              <p>Best,<br>The TeenOp Team</p>
+            `
+          );
+        }
       } else if (status === "rejected") {
         // Send rejection notification to buyer
-        await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.INTERNAL_API_SECRET || 'internal-secret'}`
-          },
-          body: JSON.stringify({
-            type: 'buyer_rejection',
-            bookingId: updatedBookingData.id
-          })
-        });
+        const { data: customerProfile } = await supabase
+          .from("profiles")
+          .select("first_name, last_name, email")
+          .eq("id", bookingData.user_id)
+          .single();
+
+        if (customerProfile && (customerProfile as any).email) {
+          const { emailService } = await import("@/lib/email");
+          const serviceTitle = updatedBookingData.services?.title || "Service";
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+          
+          await emailService.sendEmail(
+            (customerProfile as any).email,
+            "Service Request Update",
+            `
+              <h2>Service Request Update</h2>
+              <p>We wanted to let you know that the teen is unable to move forward with your service request at this time.</p>
+              <p>If you'd like to request this service again for a different date or time, you can return to the original listing and submit a new request that works for you.</p>
+              <p><a href="${appUrl}/services/${updatedBookingData.services?.id}" style="background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Click here to view the listing and request again</a></p>
+              <p>Thank you for your understanding and for being part of the TeenOp community. We hope you're able to find the help you need on TeenOp with one of our many talented teens.</p>
+              <p>Warmly,<br>The TeenOp Team</p>
+            `
+          );
+        }
+      } else if (status === "alternative_proposed") {
+        // Send alternative time proposal notification to buyer
+        const { data: customerProfile } = await supabase
+          .from("profiles")
+          .select("first_name, last_name, email")
+          .eq("id", bookingData.user_id)
+          .single();
+
+        if (customerProfile && (customerProfile as any).email) {
+          const { emailService } = await import("@/lib/email");
+          const serviceTitle = updatedBookingData.services?.title || "Service";
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+          const formatDate = (dateString: string) => {
+            return new Date(dateString).toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            });
+          };
+          const formatTime = (timeString: string) => {
+            const [hours, minutes] = timeString.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour % 12 || 12;
+            return `${displayHour}:${minutes} ${ampm}`;
+          };
+          
+          await emailService.sendEmail(
+            (customerProfile as any).email,
+            "Your Action Needed: New TeenOp Service Time Proposed",
+            `
+              <h2>Your Action Needed</h2>
+              <p>The original date and time didn't work with the teen's schedule, so they're proposing a new date and time for your service request.</p>
+              <p><strong>Original Time:</strong> ${formatDate(bookingData.requested_date)}, ${formatTime(bookingData.requested_time)}</p>
+              <p><strong>Proposed Time:</strong> ${formatDate(alternative_date)}, ${formatTime(alternative_time)}</p>
+              <p>Please review the updated details and choose to accept and complete payment, or decline the alternative timing.</p>
+              <p><a href="${appUrl}/my-requests" style="background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Click here to review and respond</a></p>
+              <p>Thanks for using TeenOp,<br>The TeenOp Team</p>
+            `
+          );
+        }
       }
     } catch (notificationError) {
       console.error("Error sending notification:", notificationError);

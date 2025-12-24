@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
         banner_url,
         created_at,
         rating,
-        total_bookings
+        total_bookings,
+        availability
       `);
 
     // If requesting all services, don't filter by user_id
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url } = body;
+    const { title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url, availability } = body;
 
     // Validate required fields
     if (!title || !description || price === undefined || !location || !category || !status) {
@@ -223,7 +224,8 @@ export async function POST(request: NextRequest) {
         pricing_model: pricing_model || "per_hour",
         delivery_method: delivery_method || "in_person",
         location_type: location_type || "public_address",
-        banner_url: banner_url || null
+        banner_url: banner_url || null,
+        availability: availability || null
       })
       .select(`
         id,
@@ -242,6 +244,7 @@ export async function POST(request: NextRequest) {
         delivery_method,
         location_type,
         banner_url,
+        availability,
         created_at
       `)
       .single();
@@ -291,7 +294,7 @@ export async function PUT(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { id, title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url } = body;
+    const { id, title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url, availability } = body;
 
     // Validate required fields
     if (!id || !title || !description || price === undefined || !location || !category || !status) {
@@ -354,6 +357,7 @@ export async function PUT(request: NextRequest) {
         delivery_method: delivery_method || "in_person",
         location_type: location_type || "public_address",
         banner_url: banner_url || null,
+        availability: availability || null
       })
       .eq("id", id)
       .eq("user_id", user.id) // Ensure user can only update their own services

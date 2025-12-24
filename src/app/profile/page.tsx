@@ -52,6 +52,8 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = React.useState(false);
   const [isEmailSettingsOpen, setIsEmailSettingsOpen] = React.useState(false);
   const [isPrivacySettingsOpen, setIsPrivacySettingsOpen] = React.useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Derived UI fields
   const name = profile ? `${profile.first_name} ${profile.last_name}`.trim() : "";
@@ -204,6 +206,61 @@ export default function ProfilePage() {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size must be less than 5MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/profile/upload-avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to upload avatar');
+      }
+
+      // Update profile with new avatar URL
+      if (profile) {
+        setProfile({ ...profile, avatar_url: result.avatar_url });
+      }
+
+      // Also update navbar user if available
+      if (navbarUser) {
+        // The navbar will refresh on next render
+      }
+    } catch (err: any) {
+      console.error('Error uploading avatar:', err);
+      setError(err.message || 'Failed to upload avatar. Please try again.');
+    } finally {
+      setUploadingAvatar(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleCancel = () => {
     if (!profile) return;
     setDraft({
@@ -287,17 +344,39 @@ export default function ProfilePage() {
             <div className="bg-white rounded-xl p-6 border border-gray-200">
               <div className="text-center">
                 <div className="relative inline-block mb-4">
-                  <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                    {(profile.first_name || name).charAt(0).toUpperCase()}
-                  </div>
+                  {profile.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={name || "Profile"}
+                      className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                      {(profile.first_name || name).charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   {isEditing && (
-                    <Button
-                      size="sm"
-                      className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full p-0"
-                      // TODO: wire to an avatar upload flow
-                    >
-                      <Camera className="w-4 h-4" />
-                    </Button>
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+                      <Button
+                        size="sm"
+                        className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full p-0"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingAvatar}
+                      >
+                        {uploadingAvatar ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : (
+                          <Camera className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </>
                   )}
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">

@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
         duration: 60, // Default duration
         total_price: 0, // Will be set when quote is accepted
         service_price: 0,
-        platform_fee: 0,
+        platform_fee: 0.00, // $0 platform fee
         special_instructions: `[QUOTE_REQUEST] Quote request ID: ${quoteRequest.id}. Please message the customer to discuss pricing and details.`,
       } as any)
       .select("id")

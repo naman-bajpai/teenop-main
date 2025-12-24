@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import AuthenticatedNavbar from "@/components/AuthenticatedNavbar";
+import Footer from "@/components/Footer";
 
 interface User {
   id: string;
@@ -28,11 +29,12 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <AuthenticatedNavbar user={user} />
       <main className="flex-1">
         {children}
       </main>
+      <Footer />
     </div>
   );
 }

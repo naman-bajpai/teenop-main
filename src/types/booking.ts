@@ -5,6 +5,9 @@ export interface Booking {
   status: BookingStatus;
   requested_date: string;
   requested_time: string;
+  alternative_date?: string | null;
+  alternative_time?: string | null;
+  service_address?: string | null;
   duration: number;
   total_price: number;
   service_price: number;
@@ -40,13 +43,15 @@ export type BookingStatus =
   | "completed"
   | "paid"
   | "cancelled"
-  | "rejected";
+  | "rejected"
+  | "alternative_proposed";
 
 export interface CreateBookingRequest {
   service_id: string;
   requested_date: string;
   requested_time: string;
   special_instructions?: string;
+  service_address?: string;
 }
 
 export interface BookingResponse {

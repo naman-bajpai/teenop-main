@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body: CreateBookingRequest = await request.json();
-    const { service_id, requested_date, requested_time, special_instructions } = body;
+    const { service_id, requested_date, requested_time, special_instructions, service_address } = body;
 
     // Validate required fields
     if (!service_id || !requested_date || !requested_time) {
@@ -124,6 +124,7 @@ export async function POST(request: NextRequest) {
         service_price: servicePrice,
         platform_fee: platformFee,
         special_instructions: special_instructions || null,
+        service_address: service_address || null,
       } as any)
       .select(`
         *,

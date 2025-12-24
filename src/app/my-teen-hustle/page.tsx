@@ -41,6 +41,7 @@ import {
   CheckCircle,
   Wallet,
   FileText,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -68,6 +69,7 @@ export type Service = {
   pricing_model?: "per_job" | "per_hour" | "quote";
   delivery_method?: string | null;
   location_type?: string | null;
+  availability?: string | null;
   images?: ServiceImage[];
 };
 
@@ -77,6 +79,9 @@ export type Booking = {
   status: string;
   requested_date: string;
   requested_time: string;
+  alternative_date?: string | null;
+  alternative_time?: string | null;
+  service_address?: string | null;
   duration: number;
   total_price: number;
   special_instructions: string;
@@ -148,8 +153,8 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
                 <span className="font-bold text-gray-900">Quote Based</span>
               ) : (
                 <>
-                  <span className="font-bold text-gray-900">${service.price}</span>
-                  <span className="text-xs text-gray-500">/{service.pricing_model === 'per_hour' ? 'hr' : 'job'}</span>
+              <span className="font-bold text-gray-900">${service.price}</span>
+              <span className="text-xs text-gray-500">/{service.pricing_model === 'per_hour' ? 'hr' : 'job'}</span>
                 </>
               )}
             </div>
@@ -189,8 +194,14 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
 
 function BookingCard({ booking, onStatusUpdate }: { 
   booking: Booking; 
-  onStatusUpdate: (bookingId: string, status: string) => Promise<void>;
+  onStatusUpdate: (bookingId: string, status: string, alternativeDate?: string, alternativeTime?: string) => Promise<void>;
 }) {
+  const [showAlternativeDialog, setShowAlternativeDialog] = useState(false);
+  const [alternativeDate, setAlternativeDate] = useState("");
+  const [alternativeTime, setAlternativeTime] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
   const formatTime = (timeString: string) => {
     try {
       const [hours, minutes] = timeString.split(':');
@@ -207,8 +218,55 @@ function BookingCard({ booking, onStatusUpdate }: {
     await onStatusUpdate(booking.id, "confirmed");
   };
 
-  const handleDecline = async () => {
+  const handleDecline = () => {
+    setShowAlternativeDialog(true);
+  };
+
+  const handleProposeAlternative = async () => {
+    if (!alternativeDate || !alternativeTime) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide both an alternative date and time.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onStatusUpdate(booking.id, "alternative_proposed", alternativeDate, alternativeTime);
+      setShowAlternativeDialog(false);
+      setAlternativeDate("");
+      setAlternativeTime("");
+      toast({
+        title: "Alternative Time Proposed",
+        description: "The customer has been notified of your proposed alternative time.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to propose alternative time. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRejectWithoutAlternative = async () => {
+    setIsSubmitting(true);
+    try {
     await onStatusUpdate(booking.id, "rejected");
+      setShowAlternativeDialog(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject booking. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleViewDetails = () => {
@@ -261,10 +319,21 @@ function BookingCard({ booking, onStatusUpdate }: {
           <MapPin className="w-5 h-5 text-red-600" />
           <div>
             <p className="font-semibold text-gray-900 truncate">{booking.service.location}</p>
-            <p className="text-xs text-gray-600">Location</p>
+            <p className="text-xs text-gray-600">Service Location</p>
           </div>
         </div>
       </div>
+      {booking.service_address && (
+        <div className="mb-4 p-3 bg-purple-50 border-l-4 border-purple-400 rounded-r-lg">
+          <div className="flex items-start gap-2">
+            <MapPin className="w-4 h-4 text-purple-600 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-purple-900 mb-1">Client Address:</p>
+              <p className="text-sm text-purple-800">{booking.service_address}</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex gap-2">
         {booking.status === "pending" && (
           <>
@@ -276,15 +345,77 @@ function BookingCard({ booking, onStatusUpdate }: {
             </Button>
           </>
         )}
+        
+        {/* Alternative Time Proposal Dialog */}
+        <Dialog open={showAlternativeDialog} onOpenChange={setShowAlternativeDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Propose Alternative Time</DialogTitle>
+              <DialogDescription>
+                The requested time doesn't work for you. Propose an alternative date and time, or reject the request.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <Label htmlFor="alt-date">Alternative Date</Label>
+                <Input
+                  id="alt-date"
+                  type="date"
+                  value={alternativeDate}
+                  onChange={(e) => setAlternativeDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="alt-time">Alternative Time</Label>
+                <Input
+                  id="alt-time"
+                  type="time"
+                  value={alternativeTime}
+                  onChange={(e) => setAlternativeTime(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={handleProposeAlternative}
+                  disabled={isSubmitting || !alternativeDate || !alternativeTime}
+                  className="flex-1 bg-[#434c9d] hover:bg-[#434c9d]/90"
+                >
+                  {isSubmitting ? "Proposing..." : "Propose Alternative Time"}
+                </Button>
+                <Button
+                  onClick={handleRejectWithoutAlternative}
+                  disabled={isSubmitting}
+                  variant="outline"
+                  className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  {isSubmitting ? "Rejecting..." : "Reject Without Alternative"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
         {booking.status === "confirmed" && (
           <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white">
             <MessageCircle className="w-4 h-4 mr-1" />View Details
           </Button>
         )}
         {(booking.status === "completed" || booking.status === "paid") && (
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => window.location.href = "/earnings"} 
+              className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+            >
+              <DollarSign className="w-4 h-4 mr-1" />Withdraw Earning
+            </Button>
           <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-green-500 text-green-600 hover:bg-green-50">
             <CheckCircle className="w-4 h-4 mr-1" />View Details
           </Button>
+          </div>
         )}
         {booking.status === "rejected" && (
           <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-gray-300 text-gray-600 hover:bg-gray-50">
@@ -303,7 +434,6 @@ export default function TeenHustlePage() {
   const router = useRouter();
 
   const [services, setServices] = useState<Service[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [earningsStats, setEarningsStats] = useState({
     totalEarned: 0,
@@ -337,6 +467,7 @@ export default function TeenHustlePage() {
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [serviceImages, setServiceImages] = useState<ServiceImage[]>([]);
   const [pendingQuoteRequestsCount, setPendingQuoteRequestsCount] = useState(0);
+  const [availability, setAvailability] = useState<string>("");
 
 
   // Handle URL parameters for Stripe Connect callbacks
@@ -380,25 +511,13 @@ export default function TeenHustlePage() {
         const bookingsData = await bookingsRes.json();
         
         if (bookingsData.success) {
-          // Filter out paid bookings from incoming requests
-          const incoming = (bookingsData.incoming || []).filter((booking: Booking) => booking.status !== "paid");
-          
-          // For My Teen Hustle page, we only show incoming bookings (where user is provider)
-          // The myRequests should NOT be shown here - they belong in the My Requests page
-          setBookings(incoming);
-          
-          // Set completed requests to only include paid bookings from incoming
-          const completed = (bookingsData.incoming || []).filter((booking: Booking) => booking.status === "paid");
-          setCompletedRequests(completed);
-          
-          // Set the individual arrays - only incoming bookings for this page
-          setIncomingBookings(incoming);
-          setMyRequests([]); // Don't show user's own requests here
+          // This will be handled by the separate useEffect for bookings
         } else {
-          setBookings([]);
-          setCompletedRequests([]);
-          setIncomingBookings([]);
-          setMyRequests([]);
+          // Reset all booking states if fetch failed
+          setPendingBookings([]);
+          setScheduledBookings([]);
+          setCompletedBookings([]);
+          setCancelledBookings([]);
         }
 
         // Fetch earnings stats
@@ -435,7 +554,10 @@ export default function TeenHustlePage() {
         }
       } catch (e: any) {
         toast({ title: "Load failed", description: e.message, variant: "destructive" });
-        setBookings([]);
+        setPendingBookings([]);
+        setScheduledBookings([]);
+        setCompletedBookings([]);
+        setCancelledBookings([]);
       } finally {
         setLoading(false);
       }
@@ -447,9 +569,22 @@ export default function TeenHustlePage() {
   const pausedServices = services.filter((s) => s.status === "paused");
   
   // Separate bookings by type
-  const [incomingBookings, setIncomingBookings] = useState<Booking[]>([]);
-  const [myRequests, setMyRequests] = useState<Booking[]>([]);
-  const [completedRequests, setCompletedRequests] = useState<Booking[]>([]);
+  const [pendingBookings, setPendingBookings] = useState<Booking[]>([]);
+  const [scheduledBookings, setScheduledBookings] = useState<Booking[]>([]);
+  const [completedBookings, setCompletedBookings] = useState<Booking[]>([]);
+  const [cancelledBookings, setCancelledBookings] = useState<Booking[]>([]);
+  const [quoteRequests, setQuoteRequests] = useState<any[]>([]);
+  
+  // Helper function to check if booking is expired
+  const isBookingExpired = (booking: Booking): boolean => {
+    try {
+      const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
+      const now = new Date();
+      return bookingDateTime < now;
+    } catch {
+      return false;
+    }
+  };
   
   // Update booking arrays when bookings change
   useEffect(() => {
@@ -459,16 +594,38 @@ export default function TeenHustlePage() {
         if (bookingsRes.ok) {
           const bookingsData = await bookingsRes.json();
           if (bookingsData.success) {
-            // Filter out paid bookings from incoming requests
-            const incoming = (bookingsData.incoming || []).filter((booking: Booking) => booking.status !== "paid");
-            
             // For My Teen Hustle page, only show incoming bookings (where user is provider)
-            setIncomingBookings(incoming);
-            setMyRequests([]); // Don't show user's own requests here
+            const allIncoming = bookingsData.incoming || [];
             
-            // Update completed requests to include paid bookings
-            const completed = (bookingsData.incoming || []).filter((booking: Booking) => booking.status === "paid");
-            setCompletedRequests(completed);
+            // Filter out expired bookings (only for pending/confirmed/alternative_proposed)
+            const activeIncoming = allIncoming.filter((booking: Booking) => {
+              if (booking.status === "pending" || booking.status === "confirmed" || booking.status === "alternative_proposed") {
+                return !isBookingExpired(booking);
+              }
+              return true; // Keep paid, completed, cancelled, rejected regardless of date
+            });
+            
+            // Pending: pending, confirmed, alternative_proposed (not expired)
+            const pending = activeIncoming.filter((booking: Booking) => 
+              booking.status === "pending" || 
+              booking.status === "confirmed" || 
+              booking.status === "alternative_proposed"
+            );
+            setPendingBookings(pending);
+            
+            // Scheduled: paid bookings
+            const scheduled = allIncoming.filter((booking: Booking) => booking.status === "paid");
+            setScheduledBookings(scheduled);
+            
+            // Completed: completed bookings
+            const completed = allIncoming.filter((booking: Booking) => booking.status === "completed");
+            setCompletedBookings(completed);
+            
+            // Cancelled: cancelled or rejected
+            const cancelled = allIncoming.filter((booking: Booking) => 
+              booking.status === "cancelled" || booking.status === "rejected"
+            );
+            setCancelledBookings(cancelled);
           }
         }
       } catch (e) {
@@ -531,6 +688,7 @@ export default function TeenHustlePage() {
     setLocationType("public_address");
     setBannerUrl(null);
     setServiceImages([]);
+    setAvailability("");
     setEditingService(null);
   };
 
@@ -552,6 +710,7 @@ export default function TeenHustlePage() {
     setLocationType((service.location_type as "public_address" | "client_location") || "public_address");
     setBannerUrl(service.banner_url);
     setServiceImages(service.images || []);
+    setAvailability(service.availability || "");
     setOpen(true);
   };
 
@@ -605,7 +764,8 @@ export default function TeenHustlePage() {
             pricing_model: isQuoteBased ? "quote" : pricingModel,
             delivery_method: deliveryMethod,
             location_type: locationType,
-            banner_url: bannerUrl
+            banner_url: bannerUrl,
+            availability: availability.trim() || null
           };
 
       // Persist service via API (server validates & RLS protects)
@@ -706,12 +866,18 @@ export default function TeenHustlePage() {
     }
   }
 
-  async function handleBookingStatusUpdate(bookingId: string, newStatus: string) {
+  async function handleBookingStatusUpdate(bookingId: string, newStatus: string, alternativeDate?: string, alternativeTime?: string) {
     try {
+      const body: any = { status: newStatus };
+      if (alternativeDate && alternativeTime) {
+        body.alternative_date = alternativeDate;
+        body.alternative_time = alternativeTime;
+      }
+
       const res = await fetch(`/api/bookings/${bookingId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -721,14 +887,32 @@ export default function TeenHustlePage() {
 
       const data = await res.json();
       if (data.success) {
-        // Update the booking in the state
-        setIncomingBookings((prev) => 
-          prev.map((booking) => 
-            booking.id === bookingId 
-              ? { ...booking, status: newStatus }
-              : booking
-          )
-        );
+        // Refetch bookings to update all tabs
+        const bookingsRes = await fetch("/api/bookings", { cache: "no-store" });
+        if (bookingsRes.ok) {
+          const bookingsData = await bookingsRes.json();
+          if (bookingsData.success) {
+            const allIncoming = bookingsData.incoming || [];
+            
+            const pending = allIncoming.filter((booking: Booking) => 
+              booking.status === "pending" || 
+              booking.status === "confirmed" || 
+              booking.status === "alternative_proposed"
+            );
+            setPendingBookings(pending);
+            
+            const scheduled = allIncoming.filter((booking: Booking) => booking.status === "paid");
+            setScheduledBookings(scheduled);
+            
+            const completed = allIncoming.filter((booking: Booking) => booking.status === "completed");
+            setCompletedBookings(completed);
+            
+            const cancelled = allIncoming.filter((booking: Booking) => 
+              booking.status === "cancelled" || booking.status === "rejected"
+            );
+            setCancelledBookings(cancelled);
+          }
+        }
         
         toast({ 
           title: "Booking updated", 
@@ -1047,29 +1231,29 @@ export default function TeenHustlePage() {
                         <span className="text-xs text-gray-500">(Customers will request quotes and you'll discuss pricing through messages)</span>
                       </div>
                       {!isQuoteBased && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="price" className="text-sm font-medium">Price (USD) *</Label>
-                            <Input 
-                              id="price" 
-                              type="number" 
-                              min={0} 
-                              value={price} 
-                              onChange={(e) => setPrice(Number(e.target.value))} 
-                              placeholder="25"
-                              className="w-full"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">Pricing Model *</Label>
-                            <Select value={pricingModel} onValueChange={(v: any) => setPricingModel(v)}>
-                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="per_hour">Per Hour</SelectItem>
-                                <SelectItem value="per_job">Per Job</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="price" className="text-sm font-medium">Price (USD) *</Label>
+                        <Input 
+                          id="price" 
+                          type="number" 
+                          min={0} 
+                          value={price} 
+                          onChange={(e) => setPrice(Number(e.target.value))} 
+                          placeholder="25"
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Pricing Model *</Label>
+                        <Select value={pricingModel} onValueChange={(v: any) => setPricingModel(v)}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="per_hour">Per Hour</SelectItem>
+                            <SelectItem value="per_job">Per Job</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                         </div>
                       )}
                       <div className="space-y-2">
@@ -1149,6 +1333,28 @@ export default function TeenHustlePage() {
                           <SelectItem value="paused">Paused</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                  </div>
+
+                  {/* Service Availability Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+                      Service Availability
+                    </h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="availability" className="text-sm font-medium">Service Availability (Optional)</Label>
+                      <Textarea 
+                        id="availability" 
+                        value={availability || ""} 
+                        onChange={(e) => setAvailability(e.target.value)} 
+                        placeholder="e.g., Weekdays 3-6 PM, Weekends 10 AM-2 PM" 
+                        rows={3}
+                        className="w-full resize-none"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Select the times you're typically available to provide this service. Customers will see your availability, send a booking request, and you can confirm it or suggest an alternative time if needed.
+                      </p>
                     </div>
                   </div>
 
@@ -1370,27 +1576,32 @@ export default function TeenHustlePage() {
           </div>
         )}
 
-        {/* Tabs */}
-        <Tabs defaultValue="services" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-xl">
-            <TabsTrigger value="services" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold">
-              My Services ({services.length})
-            </TabsTrigger>
-            <TabsTrigger value="incoming" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold">
-              Incoming ({incomingBookings.length})
-            </TabsTrigger>
-            <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold">
-              Completed ({completedRequests.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="services" className="mt-6">
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">My Services</h2>
-                <div className="flex gap-2">
+        {/* My Services Section */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">My Services</h2>
+              <p className="text-sm text-gray-600 mt-1">Manage your service offerings</p>
+            </div>
+            <div className="flex gap-2 items-center">
                   <Badge variant="secondary">Active: {activeServices.length}</Badge>
                   <Badge variant="outline">Paused: {pausedServices.length}</Badge>
+              <Button
+                onClick={() => {
+                  if (!stripeAccountStatus.hasAccount) {
+                    toast({
+                      title: "Payment setup required",
+                      description: "Please set up your payment account before creating your first service.",
+                      variant: "destructive"
+                    });
+                  } else {
+                    setOpen(true);
+                  }
+                }}
+                className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90"
+              >
+                <Plus className="w-4 h-4 mr-2" />Add Service
+              </Button>
                 </div>
               </div>
 
@@ -1417,48 +1628,161 @@ export default function TeenHustlePage() {
                     } else {
                       setOpen(true);
                     }
-                  }}><Plus className="w-4 h-4 mr-2" />Add Your First Service</Button>
+              }}><Plus className="w-4 h-4 mr-2" />Add Service</Button>
                 </div>
               )}
             </div>
-          </TabsContent>
 
-          <TabsContent value="incoming" className="mt-6">
+        {/* Tabs */}
+        <Tabs defaultValue="pending" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-xl">
+            <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm">
+              Pending Requests ({pendingBookings.length + quoteRequests.length})
+            </TabsTrigger>
+            <TabsTrigger value="scheduled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm">
+              Scheduled Services ({scheduledBookings.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm">
+              Completed Services ({completedBookings.length})
+            </TabsTrigger>
+            <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm">
+              Cancelled Services ({cancelledBookings.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pending" className="mt-6">
             <div className="mb-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Incoming Bookings</h2>
-                <p className="text-sm text-gray-600">Requests for your services</p>
+                <h2 className="text-xl font-semibold text-gray-900">Pending Requests</h2>
+                <p className="text-sm text-gray-600">Requests awaiting your response</p>
               </div>
-              {incomingBookings.length > 0 ? (
-                <div className="space-y-4">{incomingBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
+              {(pendingBookings.length > 0 || quoteRequests.length > 0) ? (
+                <div className="space-y-4">
+                  {/* Regular Bookings */}
+                  {pendingBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}
+                  
+                  {/* Quote Requests */}
+                  {quoteRequests.map((qr: any) => (
+                    <div key={qr.id} className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#434c9d] hover:shadow-xl transition-all">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge className="bg-purple-100 text-purple-700">Quote Request</Badge>
+                            <h3 className="text-xl font-bold text-gray-900">{qr.services?.title || 'Service'}</h3>
+                          </div>
+                          <p className="text-sm text-gray-600 flex items-center gap-2">
+                            <Users className="w-4 h-4" />
+                            {qr.profiles ? `${qr.profiles.first_name} ${qr.profiles.last_name}` : 'Customer'} requested a quote
+                          </p>
+                        </div>
+                        <Badge className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1">
+                          Pending Quote
+                        </Badge>
+                      </div>
+                      {qr.requested_date && qr.requested_time && (
+                        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="w-4 h-4 text-blue-600" />
+                            <span className="font-medium">{new Date(qr.requested_date).toLocaleDateString()}</span>
+                            <Clock className="w-4 h-4 text-purple-600 ml-2" />
+                            <span className="font-medium">{qr.requested_time}</span>
+                          </div>
+                        </div>
+                      )}
+                      {qr.special_instructions && (
+                        <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                          <p className="text-sm text-gray-700">{qr.special_instructions}</p>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-[#434c9d] hover:bg-[#434c9d]/90 text-white"
+                          onClick={() => router.push(`/provider/quote-requests?request=${qr.id}`)}
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          View & Respond
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+                          onClick={() => router.push(`/messages`)}
+                        >
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Message
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Calendar className="w-8 h-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No incoming bookings yet</h3>
-                  <p className="text-gray-600">When customers book your services, they'll appear here</p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No pending requests</h3>
+                  <p className="text-gray-600">When customers request your services, they'll appear here</p>
                 </div>
               )}
             </div>
           </TabsContent>
 
-
-          <TabsContent value="completed" className="mt-6">
+          <TabsContent value="scheduled" className="mt-6">
             <div className="mb-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Completed Requests</h2>
-                <p className="text-sm text-gray-600">Successfully completed and paid bookings</p>
+                <h2 className="text-xl font-semibold text-gray-900">Scheduled Services</h2>
+                <p className="text-sm text-gray-600">Confirmed and paid bookings</p>
               </div>
-              {completedRequests.length > 0 ? (
-                <div className="space-y-4">{completedRequests.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
+              {scheduledBookings.length > 0 ? (
+                <div className="space-y-4">{scheduledBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
               ) : (
                 <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="w-8 h-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No completed requests yet</h3>
-                  <p className="text-gray-600">Completed and paid bookings will appear here</p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No scheduled services yet</h3>
+                  <p className="text-gray-600">Confirmed and paid bookings will appear here</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="completed" className="mt-6">
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Completed Services</h2>
+                <p className="text-sm text-gray-600">Services you've completed</p>
+              </div>
+              {completedBookings.length > 0 ? (
+                <div className="space-y-4">{completedBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
+              ) : (
+                <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No completed services yet</h3>
+                  <p className="text-gray-600">Completed services will appear here</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="cancelled" className="mt-6">
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Cancelled Services</h2>
+                <p className="text-sm text-gray-600">Cancelled or rejected bookings</p>
+              </div>
+              {cancelledBookings.length > 0 ? (
+                <div className="space-y-4">{cancelledBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
+              ) : (
+                <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <XCircle className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No cancelled services</h3>
+                  <p className="text-gray-600">Cancelled or rejected bookings will appear here</p>
                 </div>
               )}
             </div>

@@ -738,24 +738,6 @@ export default function EarningsPage() {
                     </div>
                   </DialogContent>
                   </Dialog>
-                  <Button
-                    onClick={handleRequestWithdrawal}
-                    disabled={requestingWithdrawal || !accountStatus?.hasAccount}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={!accountStatus?.hasAccount ? "Please set up your payment account first" : ""}
-                  >
-                    {requestingWithdrawal ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="w-4 h-4 mr-2" />
-                        Request Withdrawal
-                      </>
-                    )}
-                  </Button>
                 </div>
 
                 {(!accountStatus?.hasAccount || !accountStatus?.accountStatus?.payoutsEnabled) && (
@@ -776,30 +758,6 @@ export default function EarningsPage() {
                   </div>
                   <p className="text-sm text-gray-500 font-medium mb-4">No pending earnings available</p>
                 </div>
-                {accountStatus?.hasAccount && (
-                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 shadow-sm">
-                    <p className="text-xs text-blue-900 font-medium mb-3">
-                      You can still request a withdrawal if you have earnings that haven't been processed yet.
-                    </p>
-                    <Button
-                      onClick={handleRequestWithdrawal}
-                      disabled={requestingWithdrawal}
-                      className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-md hover:shadow-lg transition-all"
-                    >
-                      {requestingWithdrawal ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-4 h-4 mr-2" />
-                          Request Withdrawal
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
               </div>
             )}
           </div>

@@ -19,7 +19,8 @@ import {
   ArrowRight,
   DollarSign,
   User,
-  Sparkles
+  Sparkles,
+  FileText
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -88,6 +89,13 @@ function getStatusConfig(status: string): StatusConfig {
       borderColor: "border-red-200",
       icon: <XCircle className="w-4 h-4" />,
       label: "Rejected"
+    },
+    alternative_proposed: {
+      color: "text-orange-700",
+      bgColor: "bg-orange-50",
+      borderColor: "border-orange-200",
+      icon: <Clock className="w-4 h-4" />,
+      label: "Alternative Proposed"
     }
   };
 
@@ -99,6 +107,7 @@ export default function MyRequestsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [quoteRequests, setQuoteRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -110,6 +119,17 @@ export default function MyRequestsPage() {
       fetchBookings();
     }
   }, [user]);
+
+  // Helper function to check if booking is expired
+  const isBookingExpired = (booking: Booking): boolean => {
+    try {
+      const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
+      const now = new Date();
+      return bookingDateTime < now;
+    } catch {
+      return false;
+    }
+  };
 
   const fetchBookings = async () => {
     try {
@@ -123,13 +143,87 @@ export default function MyRequestsPage() {
         throw new Error(result.error || "Failed to fetch bookings");
       }
       
-      const requestedBookings = result.myRequests || [];
+      let requestedBookings = result.myRequests || [];
+      
+      // Filter out expired bookings (only for pending/confirmed/alternative_proposed)
+      requestedBookings = requestedBookings.filter((booking: Booking) => {
+        if (booking.status === "pending" || booking.status === "confirmed" || booking.status === "alternative_proposed") {
+          return !isBookingExpired(booking);
+        }
+        return true; // Keep paid, completed, cancelled, rejected regardless of date
+      });
+      
       setBookings(requestedBookings);
+
+      // Fetch quote requests for this customer
+      try {
+        const quoteRes = await fetch("/api/quotes/request?role=customer", { cache: "no-store" });
+        if (quoteRes.ok) {
+          const quoteData = await quoteRes.json();
+          if (quoteData.success) {
+            setQuoteRequests(quoteData.quote_requests || []);
+          }
+        }
+      } catch (quoteError) {
+        console.error("Error fetching quote requests:", quoteError);
+      }
     } catch (err: any) {
       console.error("Error fetching bookings:", err);
       setError(err.message || "Failed to load bookings");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAcceptAlternative = async (bookingId: string, alternativeDate: string, alternativeTime: string) => {
+    try {
+      setUpdating(bookingId);
+      
+      // Update booking with alternative date/time and set status to confirmed
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          status: "confirmed",
+          requested_date: alternativeDate,
+          requested_time: alternativeTime
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to accept alternative time");
+      }
+
+      // Fetch the updated booking
+      const bookingResponse = await fetch(`/api/bookings/${bookingId}`);
+      if (bookingResponse.ok) {
+        const bookingResult = await bookingResponse.json();
+        if (bookingResult.success && bookingResult.booking) {
+          setSelectedBooking({ ...bookingResult.booking, status: "confirmed" as any });
+          setPaymentModalOpen(true);
+        }
+      }
+
+      // Refresh bookings list
+      await fetchBookings();
+
+      toast({
+        title: "Alternative Time Accepted",
+        description: "Please complete payment to confirm the booking.",
+      });
+    } catch (err: any) {
+      console.error("Error accepting alternative time:", err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to accept alternative time. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
     }
   };
 
@@ -218,8 +312,15 @@ export default function MyRequestsPage() {
 
   // Filter bookings by status
   const allBookings = bookings;
-  const pendingBookings = bookings.filter(booking => booking.status === "pending");
+  const pendingBookings = bookings.filter(booking => 
+    booking.status === "pending" || booking.status === "alternative_proposed"
+  );
   const confirmedBookings = bookings.filter(booking => booking.status === "confirmed");
+  
+  // Filter quote requests by status
+  const pendingQuoteRequests = quoteRequests.filter((qr: any) => 
+    qr.status === "pending" || qr.status === "quoted"
+  );
   const completedBookings = bookings.filter(booking => booking.status === "completed");
   const paidBookings = bookings.filter(booking => booking.status === "paid");
   const cancelledBookings = bookings.filter(booking => booking.status === "cancelled");
@@ -276,7 +377,7 @@ export default function MyRequestsPage() {
           )}
 
           {/* Stats Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-8">
             <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
               <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
                 <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
@@ -310,29 +411,15 @@ export default function MyRequestsPage() {
                 </div>
               </div>
             </div>
-            <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
-                <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
-                  <DollarSign className="w-5 h-5 md:w-7 md:h-7 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Total Spent</p>
-                  <p className="text-lg md:text-3xl font-bold text-gray-900 truncate">{formatPrice(totalSpent)}</p>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="all" className="w-full">
+          <Tabs defaultValue="pending" className="w-full">
             <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-              <TabsList className="inline-flex w-full sm:grid sm:grid-cols-6 bg-gray-100 p-1 rounded-xl h-auto min-w-max sm:min-w-0">
-                <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  All ({allBookings.length})
-                </TabsTrigger>
-                <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Pending ({pendingBookings.length})
-                </TabsTrigger>
+              <TabsList className="inline-flex w-full sm:grid sm:grid-cols-5 bg-gray-100 p-1 rounded-xl h-auto min-w-max sm:min-w-0">
+            <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
+              Pending ({pendingBookings.length + pendingQuoteRequests.length})
+            </TabsTrigger>
                 <TabsTrigger value="confirmed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
                   Confirmed ({confirmedBookings.length})
                 </TabsTrigger>
@@ -348,64 +435,18 @@ export default function MyRequestsPage() {
               </TabsList>
             </div>
 
-            {/* All Bookings Tab */}
-            <TabsContent value="all" className="mt-6">
-              {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {Array(6).fill(0).map((_, i) => (
-                    <div key={i} className="bg-white rounded-2xl p-6 border-2 border-gray-200 animate-pulse">
-                      <div className="h-6 bg-gray-200 rounded mb-4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : allBookings.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {allBookings.map((booking) => {
-                    const statusConfig = getStatusConfig(booking.status);
-                    return (
-                      <BookingCard
-                        key={booking.id}
-                        booking={booking}
-                        statusConfig={statusConfig}
-                        updating={updating === booking.id}
-                        onCancel={() => updateBookingStatus(booking.id, "cancelled")}
-                        onPay={() => {
-                          setSelectedBooking(booking);
-                          setPaymentModalOpen(true);
-                        }}
-                        onMessage={() => handleMessageUser(booking)}
-                        formatPrice={formatPrice}
-                        formatDate={formatDate}
-                        formatTime={formatTime}
-                        toast={toast}
-                      />
-                    );
-                  })}
-                </div>
-              ) : (
-                <EmptyState
-                  icon={<Calendar className="w-16 h-16" />}
-                  title="No requests yet"
-                  description="You haven't requested any services yet. Start exploring services to make your first booking!"
-                  actionLabel="Browse Services"
-                  actionHref="/dashboard"
-                />
-              )}
-            </TabsContent>
-
             {/* Status-specific tabs */}
             {[
-              { value: "pending", bookings: pendingBookings, icon: <AlertCircle className="w-16 h-16" />, title: "No pending requests", description: "All your requests have been processed." },
-              { value: "confirmed", bookings: confirmedBookings, icon: <CheckCircle className="w-16 h-16" />, title: "No confirmed requests", description: "Confirmed bookings will appear here." },
-              { value: "completed", bookings: completedBookings, icon: <CheckCircle className="w-16 h-16" />, title: "No completed requests", description: "Completed services will appear here." },
-              { value: "paid", bookings: paidBookings, icon: <CheckCircle className="w-16 h-16" />, title: "No paid requests", description: "Paid services will appear here." },
-              { value: "cancelled", bookings: cancelledBookings, icon: <XCircle className="w-16 h-16" />, title: "No cancelled requests", description: "Cancelled requests will appear here." }
-            ].map(({ value, bookings: tabBookings, icon, title, description }) => (
+              { value: "pending", bookings: pendingBookings, quoteRequests: pendingQuoteRequests, icon: <AlertCircle className="w-16 h-16" />, title: "No pending requests", description: "All your requests have been processed." },
+              { value: "confirmed", bookings: confirmedBookings, quoteRequests: [], icon: <CheckCircle className="w-16 h-16" />, title: "No confirmed requests", description: "Confirmed bookings will appear here." },
+              { value: "completed", bookings: completedBookings, quoteRequests: [], icon: <CheckCircle className="w-16 h-16" />, title: "No completed requests", description: "Completed services will appear here." },
+              { value: "paid", bookings: paidBookings, quoteRequests: [], icon: <CheckCircle className="w-16 h-16" />, title: "No paid requests", description: "Paid services will appear here." },
+              { value: "cancelled", bookings: cancelledBookings, quoteRequests: [], icon: <XCircle className="w-16 h-16" />, title: "No cancelled requests", description: "Cancelled requests will appear here." }
+            ].map(({ value, bookings: tabBookings, quoteRequests: tabQuoteRequests, icon, title, description }) => (
               <TabsContent key={value} value={value} className="mt-6">
-                {tabBookings.length > 0 ? (
+                {(tabBookings.length > 0 || tabQuoteRequests.length > 0) ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Regular Bookings */}
                     {tabBookings.map((booking) => {
                       const statusConfig = getStatusConfig(booking.status);
                       return (
@@ -419,6 +460,7 @@ export default function MyRequestsPage() {
                             setSelectedBooking(booking);
                             setPaymentModalOpen(true);
                           }}
+                          onAcceptAlternative={(bookingId, altDate, altTime) => handleAcceptAlternative(bookingId, altDate, altTime)}
                           onMessage={() => handleMessageUser(booking)}
                           formatPrice={formatPrice}
                           formatDate={formatDate}
@@ -427,6 +469,62 @@ export default function MyRequestsPage() {
                         />
                       );
                     })}
+                    {/* Quote Requests (only in pending tab) */}
+                    {value === "pending" && tabQuoteRequests.map((qr: any) => (
+                      <div key={qr.id} className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-purple-300 hover:shadow-xl transition-all">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge className="bg-purple-100 text-purple-700">Quote Request</Badge>
+                              <h3 className="text-xl font-bold text-gray-900">{qr.services?.title || 'Service'}</h3>
+                            </div>
+                            <p className="text-sm text-gray-600">Quote request for your service</p>
+                          </div>
+                          <Badge className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1">
+                            {qr.status === "quoted" ? "Quoted" : "Pending"}
+                          </Badge>
+                        </div>
+                        {qr.requested_date && qr.requested_time && (
+                          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Calendar className="w-4 h-4 text-blue-600" />
+                              <span className="font-medium">{formatDate(qr.requested_date)}</span>
+                              <Clock className="w-4 h-4 text-purple-600 ml-2" />
+                              <span className="font-medium">{formatTime(qr.requested_time)}</span>
+                            </div>
+                          </div>
+                        )}
+                        {qr.quotes && qr.quotes.length > 0 && (
+                          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <p className="text-sm font-semibold text-green-900 mb-1">Provider's Quote:</p>
+                            <p className="text-lg font-bold text-green-700">${qr.quotes[0].price.toFixed(2)}</p>
+                            {qr.quotes[0].estimated_duration && (
+                              <p className="text-xs text-green-600">Est. {qr.quotes[0].estimated_duration} minutes</p>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+                            onClick={() => router.push(`/my-quote-requests`)}
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            View Details
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+                            onClick={() => router.push(`/messages`)}
+                          >
+                            <MessageCircle className="w-4 h-4 mr-2" />
+                            Message
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <EmptyState
@@ -470,6 +568,7 @@ function BookingCard({
   updating,
   onCancel,
   onPay,
+  onAcceptAlternative,
   onMessage,
   formatPrice,
   formatDate,
@@ -481,6 +580,7 @@ function BookingCard({
   updating: boolean;
   onCancel: () => void;
   onPay: () => void;
+  onAcceptAlternative?: (bookingId: string, alternativeDate: string, alternativeTime: string) => void;
   onMessage: () => void;
   formatPrice: (price: number) => string;
   formatDate: (date: string) => string;
@@ -526,6 +626,22 @@ function BookingCard({
         </div>
       </div>
 
+      {/* Alternative Time Proposal Display */}
+      {booking.status === "alternative_proposed" && booking.alternative_date && booking.alternative_time && (
+        <div className="mb-4 p-4 bg-orange-50 border-l-4 border-orange-400 rounded-r-lg">
+          <div className="flex items-start gap-2">
+            <Clock className="w-5 h-5 text-orange-600 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-orange-900 mb-2">Alternative Time Proposed</p>
+              <div className="space-y-1 text-sm text-orange-800">
+                <p><strong>Original:</strong> {formatDate(booking.requested_date)} at {formatTime(booking.requested_time)}</p>
+                <p><strong>Proposed:</strong> {formatDate(booking.alternative_date)} at {formatTime(booking.alternative_time)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Special Instructions */}
       {booking.special_instructions && (
         <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
@@ -537,6 +653,68 @@ function BookingCard({
 
       {/* Actions */}
       <div className="space-y-2">
+        {booking.status === "alternative_proposed" && (
+          <div className="space-y-2">
+            <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-center">
+              <div className="flex items-center justify-center text-orange-700 gap-2">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm font-medium">Provider Proposed Alternative Time</span>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                onClick={() => {
+                  if (onAcceptAlternative && booking.alternative_date && booking.alternative_time) {
+                    onAcceptAlternative(booking.id, booking.alternative_date, booking.alternative_time);
+                  }
+                }}
+                size="sm"
+                disabled={updating || !onAcceptAlternative || !booking.alternative_date || !booking.alternative_time}
+                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md text-xs sm:text-sm"
+              >
+                {updating ? (
+                  <>
+                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" />
+                    Accepting...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                    Accept & Pay
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={onCancel}
+                variant="outline"
+                size="sm"
+                disabled={updating}
+                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
+              >
+                {updating ? (
+                  <>
+                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" />
+                    Declining...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                    Decline
+                  </>
+                )}
+              </Button>
+            </div>
+            <Button
+              onClick={onMessage}
+              variant="outline"
+              size="sm"
+              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
+            >
+              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+              Message Provider
+            </Button>
+          </div>
+        )}
         {booking.status === "pending" && (
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
@@ -566,16 +744,36 @@ function BookingCard({
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
               <div className="flex items-center justify-center text-blue-700 gap-2">
                 <CheckCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">Confirmed by Provider</span>
+                <span className="text-sm font-medium">Confirmed by Provider - Payment Required</span>
               </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                onClick={onPay}
+                size="sm"
+                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md text-xs sm:text-sm"
+              >
+                <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                Confirm and Pay
+              </Button>
+              <Button
+                onClick={onCancel}
+                variant="outline"
+                size="sm"
+                disabled={updating}
+                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
+              >
+                {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
+                {updating ? "Cancelling..." : "Cancel"}
+              </Button>
             </div>
             <Button
               onClick={onMessage}
               variant="outline"
               size="sm"
-              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
             >
-              <MessageCircle className="w-4 h-4 mr-2" />
+              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
               Message Provider
             </Button>
           </div>
@@ -612,16 +810,16 @@ function BookingCard({
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Link href={`/services/${booking.service_id}`} className="flex-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 text-xs sm:text-sm"
-                >
-                  <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                  View Service
-                </Button>
-              </Link>
+              <Button
+                onClick={onCancel}
+                variant="outline"
+                size="sm"
+                disabled={updating}
+                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
+              >
+                {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
+                {updating ? "Cancelling..." : "Cancel Service"}
+              </Button>
               <Button
                 onClick={onMessage}
                 variant="outline"

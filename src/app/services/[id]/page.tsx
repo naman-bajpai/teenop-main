@@ -52,6 +52,7 @@ const [bookingForm, setBookingForm] = useState<CreateBookingRequest>({
   requested_date: "",
   requested_time: "",
   special_instructions: "",
+  service_address: "",
 });
 
 const serviceId = params?.id as string | undefined;
@@ -218,6 +219,7 @@ const handleBookingSubmit = async (e: React.FormEvent) => {
       requested_date: "",
       requested_time: "",
       special_instructions: "",
+      service_address: "",
     });
   } catch (err: any) {
     console.error("Error creating booking:", err);
@@ -920,6 +922,22 @@ return (
                         onChange={(e) => setBookingForm((prev) => ({ ...prev, requested_time: e.target.value }))}
                         required
                       />
+                    </div>
+                    <div>
+                      <Label htmlFor="service-address">Service Address (Optional)</Label>
+                      <Input
+                        id="service-address"
+                        type="text"
+                        placeholder="If the service will take place at the client's address, please enter the address here"
+                        value={bookingForm.service_address || ""}
+                        onChange={(e) =>
+                          setBookingForm((prev) => ({ ...prev, service_address: e.target.value }))
+                        }
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        If the service will take place at the client's address, please enter the address here.
+                      </p>
                     </div>
                     <div>
                       <Label htmlFor="instructions">Special Instructions (Optional)</Label>
