@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
             .select(`
               *,
               services (
-                user_id
+                user_id,
+                title
               )
             `)
             .eq("id", bookingId)
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
             })
             .eq("id", bookingId);
 
-          // Create earnings record for the service provider with status "pending" (available balance)
+          // Create earnings record for the service provider with status "locked" (not available until booking is completed)
           if (providerId && bookingData.service_price) {
             // Check if earnings already exists for this booking
             const { data: existingEarnings } = await (supabase as any)
@@ -85,16 +86,64 @@ export async function POST(request: NextRequest) {
                   user_id: providerId,
                   booking_id: bookingId,
                   amount: bookingData.service_price,
-                  status: 'pending', // Available balance - not yet withdrawn
+                  status: 'locked', // Locked until booking is marked as completed
                   earned_at: new Date().toISOString()
                 });
 
               if (earningsError) {
                 console.error(`Error creating earnings for booking ${bookingId}:`, earningsError);
               } else {
-                console.log(`Created pending earnings for provider ${providerId} from booking ${bookingId}`);
+                console.log(`Created locked earnings for provider ${providerId} from booking ${bookingId}`);
               }
             }
+          }
+
+          // Send email to teen provider when parent pays
+          try {
+            const { data: providerProfile } = await supabase
+              .from("profiles")
+              .select("first_name, last_name, email")
+              .eq("id", providerId)
+              .single();
+
+            if (providerProfile && (providerProfile as any).email) {
+              const { emailService } = await import("@/lib/email");
+              const serviceTitle = bookingData.services?.title || "Service";
+              const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+              const formatDate = (dateString: string) => {
+                return new Date(dateString).toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                });
+              };
+              const formatTime = (timeString: string) => {
+                const [hours, minutes] = timeString.split(':');
+                const hour = parseInt(hours);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const displayHour = hour % 12 || 12;
+                return `${displayHour}:${minutes} ${ampm}`;
+              };
+              
+              await emailService.sendEmail(
+                (providerProfile as any).email,
+                "You're Booked! Your TeenOp Service Is Scheduled",
+                `
+                  <p>Hello,</p>
+                  <p>Great news! A community member has scheduled your service, and payment has been completed. Your service is now officially confirmed.</p>
+                  <p>You can find the details on your <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">My Teen Hustle page</a> under Scheduled Services or <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">click here</a>.</p>
+                  <p>You'll receive an email and text reminder 1 day before and 3 hours before the service.</p>
+                  <p>After the service is completed, your payment will be processed and sent to you within 1–3 days.</p>
+                  <p>If you need to reach out to your client, you can message them anytime through <a href="${appUrl}/messages" style="color: #434c9d; text-decoration: underline;">TeenOp Messages</a>.</p>
+                  <p>Nice work, and good luck with your upcoming service!</p>
+                  <p>Best,<br>The TeenOp Team</p>
+                `
+              );
+            }
+          } catch (emailError) {
+            console.error("Error sending email to provider via webhook:", emailError);
+            // Don't fail the webhook if email fails
           }
 
           console.log(`Payment succeeded for booking ${bookingId}`);

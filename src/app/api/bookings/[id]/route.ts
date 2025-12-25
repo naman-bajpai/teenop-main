@@ -180,6 +180,15 @@ export async function PATCH(
     const body = await request.json();
     const { status, alternative_date, alternative_time, requested_date, requested_time } = body;
 
+    // Debug log
+    console.log("Booking update request:", {
+      bookingId,
+      status,
+      alternative_date,
+      alternative_time,
+      body
+    });
+
     // Validate status
     if (!status || !["confirmed", "rejected", "completed", "paid", "cancelled", "alternative_proposed"].includes(status)) {
       return NextResponse.json(
@@ -221,11 +230,62 @@ export async function PATCH(
     const bookingData = booking as any;
 
     // Check permissions based on status change
-    if (status === "confirmed" || status === "rejected" || status === "alternative_proposed") {
-      // Only service provider can accept/reject/propose alternative
+    if (status === "alternative_proposed") {
+      // Only service provider can propose alternative times
+      console.log("Permission check for alternative_proposed:", {
+        status,
+        bookingServiceUserId: bookingData.services?.user_id,
+        currentUserId: user.id,
+        isProvider: bookingData.services?.user_id === user.id
+      });
+      
       if (bookingData.services?.user_id !== user.id) {
         return NextResponse.json(
-          { success: false, error: "Only service provider can accept, reject, or propose alternative times" },
+          { success: false, error: "Only service provider can propose alternative times" },
+          { status: 403 }
+        );
+      }
+    } else if (status === "confirmed") {
+      // Service provider can confirm initially, customer can confirm when accepting alternative time
+      const isProvider = bookingData.services?.user_id === user.id;
+      const isCustomer = bookingData.user_id === user.id;
+      const isAcceptingAlternative = bookingData.status === "alternative_proposed" && requested_date && requested_time;
+      
+      console.log("Permission check for confirmed:", {
+        status,
+        bookingServiceUserId: bookingData.services?.user_id,
+        bookingUserId: bookingData.user_id,
+        currentUserId: user.id,
+        isProvider,
+        isCustomer,
+        isAcceptingAlternative,
+        currentStatus: bookingData.status,
+        requested_date,
+        requested_time,
+        hasRequestedDate: !!requested_date,
+        hasRequestedTime: !!requested_time
+      });
+      
+      // Allow if: (1) provider confirming initially, OR (2) customer accepting alternative time
+      if (isProvider) {
+        // Provider can always confirm
+        console.log("Permission granted: Provider confirming booking");
+      } else if (isCustomer && isAcceptingAlternative) {
+        // Customer can confirm when accepting alternative time
+        console.log("Permission granted: Customer accepting alternative time");
+      } else {
+        // Deny access
+        console.log("Permission denied: Not provider and not customer accepting alternative");
+        return NextResponse.json(
+          { success: false, error: "Only service provider can confirm bookings, or customer can accept alternative times" },
+          { status: 403 }
+        );
+      }
+    } else if (status === "rejected") {
+      // Only service provider can reject
+      if (bookingData.services?.user_id !== user.id) {
+        return NextResponse.json(
+          { success: false, error: "Only service provider can reject bookings" },
           { status: 403 }
         );
       }
@@ -290,11 +350,19 @@ export async function PATCH(
         // Don't fail the cancellation if email fails
       }
     } else if (status === "completed") {
-      // Only service provider can mark as completed
+      // Only service provider can mark as completed, and only when status is "paid"
       if (bookingData.services?.user_id !== user.id) {
         return NextResponse.json(
           { success: false, error: "Only service provider can mark booking as completed" },
           { status: 403 }
+        );
+      }
+      
+      // Ensure booking is paid before allowing completion
+      if (bookingData.status !== "paid") {
+        return NextResponse.json(
+          { success: false, error: "Booking must be paid before it can be marked as completed" },
+          { status: 400 }
         );
       }
     } else if (status === "paid") {
@@ -317,7 +385,16 @@ export async function PATCH(
     if (status === "alternative_proposed" && alternative_date && alternative_time) {
       updatePayload.alternative_date = alternative_date;
       updatePayload.alternative_time = alternative_time;
+      console.log("Updating booking to alternative_proposed:", {
+        bookingId,
+        alternative_date,
+        alternative_time,
+        updatePayload
+      });
     }
+    
+    // Debug: Log the complete update payload
+    console.log("Complete update payload before database update:", JSON.stringify(updatePayload, null, 2));
 
     // If accepting alternative time (status = confirmed), update requested_date and requested_time
     if (status === "confirmed" && requested_date && requested_time) {
@@ -329,6 +406,11 @@ export async function PATCH(
     }
 
     // Update the booking status
+    console.log("Executing database update query:");
+    console.log("Table: bookings");
+    console.log("Where: id =", bookingId);
+    console.log("Update payload:", updatePayload);
+    
     const { data: updatedBooking, error: updateError } = await (supabase as any)
       .from("bookings")
       .update(updatePayload)
@@ -348,6 +430,16 @@ export async function PATCH(
         )
       `)
       .single();
+    
+    // Debug: Log the raw database response
+    console.log("Database update response:", {
+      hasData: !!updatedBooking,
+      hasError: !!updateError,
+      error: updateError,
+      updatedStatus: updatedBooking?.status,
+      updatedAlternativeDate: updatedBooking?.alternative_date,
+      updatedAlternativeTime: updatedBooking?.alternative_time
+    });
 
     if (updateError) {
       console.error("Error updating booking:", updateError);
@@ -359,6 +451,33 @@ export async function PATCH(
 
     // Type assertion for updated booking data
     const updatedBookingData = updatedBooking as any;
+    
+    // Debug: Log the updated booking status
+    console.log("Booking updated successfully:", {
+      bookingId,
+      newStatus: updatedBookingData.status,
+      alternative_date: updatedBookingData.alternative_date,
+      alternative_time: updatedBookingData.alternative_time
+    });
+
+    // If booking is marked as completed, update earnings status from "locked" to "pending" to make them available for withdrawal
+    if (status === "completed") {
+      const { error: earningsUpdateError } = await (supabase as any)
+        .from("earnings")
+        .update({ 
+          status: 'pending', // Make earnings available for withdrawal
+          updated_at: new Date().toISOString()
+        })
+        .eq("booking_id", bookingId)
+        .eq("status", "locked"); // Only update locked earnings
+
+      if (earningsUpdateError) {
+        console.error("Error updating earnings status:", earningsUpdateError);
+        // Don't fail the request, just log the error
+      } else {
+        console.log(`Updated earnings for booking ${bookingId} from locked to pending`);
+      }
+    }
 
     // Send notifications based on status change
     try {
@@ -380,8 +499,8 @@ export async function PATCH(
             (customerProfile as any).email,
             "Good News! Your TeenOp Service Is Ready to Be Confirmed",
             `
-              <h2>Good News!</h2>
-              <p>A teen has accepted your service request, and you're almost all set.</p>
+              <p>Hello,</p>
+              <p>Good news! A teen has accepted your service request, and you're almost all set.</p>
               <p>To officially schedule the service, simply complete payment within TeenOp.</p>
               <p><a href="${appUrl}/my-requests" style="background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Click here to confirm and pay with Stripe</a></p>
               <p>Thank you for supporting a local teen and for being part of the TeenOp community!</p>
@@ -406,7 +525,7 @@ export async function PATCH(
             (customerProfile as any).email,
             "Service Request Update",
             `
-              <h2>Service Request Update</h2>
+              <p>Hello,</p>
               <p>We wanted to let you know that the teen is unable to move forward with your service request at this time.</p>
               <p>If you'd like to request this service again for a different date or time, you can return to the original listing and submit a new request that works for you.</p>
               <p><a href="${appUrl}/services/${updatedBookingData.services?.id}" style="background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Click here to view the listing and request again</a></p>
@@ -447,10 +566,8 @@ export async function PATCH(
             (customerProfile as any).email,
             "Your Action Needed: New TeenOp Service Time Proposed",
             `
-              <h2>Your Action Needed</h2>
+              <p>Hello,</p>
               <p>The original date and time didn't work with the teen's schedule, so they're proposing a new date and time for your service request.</p>
-              <p><strong>Original Time:</strong> ${formatDate(bookingData.requested_date)}, ${formatTime(bookingData.requested_time)}</p>
-              <p><strong>Proposed Time:</strong> ${formatDate(alternative_date)}, ${formatTime(alternative_time)}</p>
               <p>Please review the updated details and choose to accept and complete payment, or decline the alternative timing.</p>
               <p><a href="${appUrl}/my-requests" style="background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Click here to review and respond</a></p>
               <p>Thanks for using TeenOp,<br>The TeenOp Team</p>
@@ -471,6 +588,8 @@ export async function PATCH(
         status: updatedBookingData.status,
         requested_date: updatedBookingData.requested_date,
         requested_time: updatedBookingData.requested_time,
+        alternative_date: updatedBookingData.alternative_date ?? null,
+        alternative_time: updatedBookingData.alternative_time ?? null,
         duration: updatedBookingData.duration,
         total_price: updatedBookingData.total_price,
         special_instructions: updatedBookingData.special_instructions,

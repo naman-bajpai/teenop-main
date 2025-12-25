@@ -176,7 +176,12 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="border-gray-300 hover:border-[#434c9d] hover:text-[#434c9d]">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="border-gray-300 hover:border-[#434c9d] hover:text-[#434c9d]"
+              onClick={() => window.location.href = `/services/${service.id}`}
+            >
               <Eye className="w-4 h-4 mr-1" />View
             </Button>
             <Button variant="outline" size="sm" onClick={() => onEdit(service)} className="border-gray-300 hover:border-blue-500 hover:text-blue-600">
@@ -402,7 +407,12 @@ function BookingCard({ booking, onStatusUpdate }: {
             <MessageCircle className="w-4 h-4 mr-1" />View Details
           </Button>
         )}
-        {(booking.status === "completed" || booking.status === "paid") && (
+        {booking.status === "paid" && (
+          <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white">
+            <MessageCircle className="w-4 h-4 mr-1" />View Details
+          </Button>
+        )}
+        {booking.status === "completed" && (
           <div className="flex gap-2">
             <Button 
               variant="outline" 
@@ -874,6 +884,8 @@ export default function TeenHustlePage() {
         body.alternative_time = alternativeTime;
       }
 
+      console.log("Sending booking update request:", { bookingId, newStatus, alternativeDate, alternativeTime, body });
+
       const res = await fetch(`/api/bookings/${bookingId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -886,6 +898,8 @@ export default function TeenHustlePage() {
       }
 
       const data = await res.json();
+      console.log("Booking update response:", data);
+      
       if (data.success) {
         // Refetch bookings to update all tabs
         const bookingsRes = await fetch("/api/bookings", { cache: "no-store" });
@@ -893,6 +907,10 @@ export default function TeenHustlePage() {
           const bookingsData = await bookingsRes.json();
           if (bookingsData.success) {
             const allIncoming = bookingsData.incoming || [];
+            
+            console.log("Refetched bookings - alternative_proposed:", 
+              allIncoming.filter((b: Booking) => b.status === "alternative_proposed")
+            );
             
             const pending = allIncoming.filter((booking: Booking) => 
               booking.status === "pending" || 

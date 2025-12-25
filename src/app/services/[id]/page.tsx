@@ -12,6 +12,7 @@ import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle,
 import HelpDialog from "@/components/help/HelpDialog";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import WeeklyAvailabilityCalendar from "@/components/availability/WeeklyAvailabilityCalendar";
+import ReviewsList from "@/components/reviews/ReviewsList";
 import { useUser } from "@/hooks/useUser";
 import { Service } from "@/types/service";
 import { CreateBookingRequest, BookingResponse } from "@/types/booking";
@@ -509,7 +510,7 @@ return (
             <CheckCircle className="w-5 h-5 text-green-600" />
             <div>
               <h3 className="font-semibold text-green-800">Booking Request Sent!</h3>
-              <p className="text-green-700 text-sm">The provider will review your request and get back to you soon.</p>
+              <p className="text-green-700 text-sm">The provider will review your request and get back to you soon. You can view the status of your request under My Requests and will receive an email confirmation or an alternative proposed time.</p>
             </div>
           </div>
         )}
@@ -734,8 +735,7 @@ return (
                           <div className="text-center py-6">
                             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Quote Request Sent!</h3>
-                            <p className="text-gray-600 mb-2">The provider will message you to discuss pricing and details.</p>
-                            <p className="text-sm text-gray-500">Check your messages to continue the conversation.</p>
+                            <p className="text-gray-600 mb-2">The provider will review your request and get back to you soon. You can view the status of your request under My Requests and will receive an email confirmation or an alternative proposed time.</p>
                           </div>
                         ) : (
                           <form onSubmit={handleQuoteRequest} className="space-y-4">
@@ -1030,6 +1030,13 @@ return (
         </div>
       </div>
     </div>
+
+      {/* Reviews Section */}
+      {service && (
+        <div className="mt-8 bg-white rounded-2xl p-6 border-2 border-gray-200">
+          <ReviewsList serviceId={service.id} />
+        </div>
+      )}
 
     <HelpDialog
       isOpen={isHelpDialogOpen}

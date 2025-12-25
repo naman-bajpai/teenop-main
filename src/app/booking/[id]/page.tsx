@@ -199,8 +199,14 @@ export default function BookingDetailsPage() {
         setBooking(data.booking);
         toast({
           title: "Success",
-          description: `Booking ${newStatus} successfully`,
+          description: `Booking marked as ${newStatus} successfully. ${newStatus === "completed" ? "Earnings are now available for withdrawal." : ""}`,
         });
+        // If marked as completed, refresh the page to show updated status
+        if (newStatus === "completed") {
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        }
       }
     } catch (error: any) {
       toast({
@@ -385,7 +391,7 @@ export default function BookingDetailsPage() {
               </div>
             )}
 
-            {booking.status === "confirmed" && isProvider && (
+            {booking.status === "paid" && isProvider && (
               <div className="bg-white rounded-xl p-6 border border-gray-200">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Actions</h2>
                 <div className="flex gap-3">
@@ -397,6 +403,17 @@ export default function BookingDetailsPage() {
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Mark as Completed
                   </Button>
+                </div>
+              </div>
+            )}
+            
+            {booking.status === "confirmed" && isProvider && (
+              <div className="bg-white rounded-xl p-6 border border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Waiting for Payment</h2>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    This booking is confirmed. Please wait for the customer to complete payment before marking it as completed.
+                  </p>
                 </div>
               </div>
             )}

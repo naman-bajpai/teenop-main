@@ -286,6 +286,37 @@ export async function POST(request: NextRequest) {
       .eq("id", messageData.sender_id)
       .single();
 
+    // Send email notification to receiver
+    try {
+      const { data: receiverProfile } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, email")
+        .eq("id", receiver_id)
+        .single();
+
+      if (receiverProfile && receiverProfile.email && senderProfile) {
+        const { EmailService } = await import("@/lib/email");
+        const emailService = new EmailService();
+        
+        await emailService.sendEmail(
+          receiverProfile.email,
+          "You Have a New Message on TeenOp!",
+          `
+            <h2>You Have a New Message on TeenOp!</h2>
+            <p>Hi ${receiverProfile.first_name || 'there'},</p>
+            <p>You've received a new message from ${senderProfile.first_name || 'a user'} on TeenOp.</p>
+            <p>Log in to read and respond.</p>
+            <p><a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com'}/messages" style="background-color: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Click here to view your message</a></p>
+            <p>Thanks for being part of the TeenOp community.</p>
+            <p>Best,<br>The TeenOp Team</p>
+          `
+        );
+      }
+    } catch (emailError) {
+      console.error("Error sending message notification email:", emailError);
+      // Don't fail the message creation if email fails
+    }
+
     return NextResponse.json({
       success: true,
       message: {

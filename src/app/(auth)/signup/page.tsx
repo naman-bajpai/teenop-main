@@ -280,7 +280,7 @@ export default function SignupPage() {
             Join TeenOp!  
           </h1>
           <p className="text-lg text-gray-600">
-            Teens offering services to their community
+            Join today as a teen or a community member!
           </p>
         </div>
       </div>
@@ -402,7 +402,7 @@ export default function SignupPage() {
                 className="w-full h-11 px-4 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200"
                 disabled={isSubmitting}
               >
-                <option value="teen">Teen (13-22 years old)</option>
+                <option value="teen">Teen (Service Provider)</option>
                 <option value="parent">Community Member</option>
               </select>
             </div>

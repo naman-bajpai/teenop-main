@@ -362,6 +362,8 @@ export async function GET(request: NextRequest) {
           status: booking.status,
           requested_date: booking.requested_date,
           requested_time: booking.requested_time,
+          alternative_date: booking.alternative_date ?? null,
+          alternative_time: booking.alternative_time ?? null,
           duration: booking.duration,
           total_price: booking.total_price,
           special_instructions: booking.special_instructions ?? "",
@@ -380,12 +382,24 @@ export async function GET(request: NextRequest) {
         });
       } else if (booking.user_id === user.id) {
         // This is a request made by the user (user is the customer)
+        // Debug: Log alternative_proposed bookings
+        if (booking.status === "alternative_proposed") {
+          console.log("Found alternative_proposed booking:", {
+            id: booking.id,
+            alternative_date: booking.alternative_date,
+            alternative_time: booking.alternative_time,
+            status: booking.status
+          });
+        }
+        
         myRequests.push({
           id: booking.id,
           service_id: booking.service_id,
           status: booking.status,
           requested_date: booking.requested_date,
           requested_time: booking.requested_time,
+          alternative_date: booking.alternative_date ?? null,
+          alternative_time: booking.alternative_time ?? null,
           duration: booking.duration,
           total_price: booking.total_price,
           special_instructions: booking.special_instructions ?? "",
@@ -396,6 +410,8 @@ export async function GET(request: NextRequest) {
             title: booking.services?.title,
             provider_id: booking.services?.user_id,
             pricing_model: booking.services?.pricing_model,
+            location: booking.services?.location,
+            category: booking.services?.category,
           },
         });
       }

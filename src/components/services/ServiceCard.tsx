@@ -249,7 +249,8 @@ export default function ServiceCard({
               Offered by{" "}
               <span className="font-semibold text-gray-700">
                 {service.provider_name}
-              </span>
+              </span>{" "}
+              <span className="text-gray-400">(Service Provider)</span>
             </p>
           </div>
         )}

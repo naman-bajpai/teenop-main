@@ -20,7 +20,8 @@ import {
   DollarSign,
   User,
   Sparkles,
-  FileText
+  FileText,
+  Star
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -29,6 +30,8 @@ import { useUser } from "@/hooks/useUser";
 import { Booking } from "@/types/booking";
 import { PaymentModal } from "@/components/payments/PaymentModal";
 import { useToast } from "@/components/ui/use-toast";
+import ReviewForm from "@/components/reviews/ReviewForm";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Status configuration helper function
 type StatusConfig = {
@@ -113,6 +116,9 @@ export default function MyRequestsPage() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState<Booking | null>(null);
+  const [completedBookingsForReview, setCompletedBookingsForReview] = useState<Booking[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -123,6 +129,13 @@ export default function MyRequestsPage() {
   // Helper function to check if booking is expired
   const isBookingExpired = (booking: Booking): boolean => {
     try {
+      // For alternative_proposed bookings, check the alternative date/time instead
+      if (booking.status === "alternative_proposed" && booking.alternative_date && booking.alternative_time) {
+        const alternativeDateTime = new Date(`${booking.alternative_date}T${booking.alternative_time}`);
+        const now = new Date();
+        return alternativeDateTime < now;
+      }
+      // For other bookings, check the requested date/time
       const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
       const now = new Date();
       return bookingDateTime < now;
@@ -145,6 +158,12 @@ export default function MyRequestsPage() {
       
       let requestedBookings = result.myRequests || [];
       
+      // Debug: Log alternative_proposed bookings
+      const altProposed = requestedBookings.filter((b: Booking) => b.status === "alternative_proposed");
+      if (altProposed.length > 0) {
+        console.log("Alternative proposed bookings found:", altProposed);
+      }
+      
       // Filter out expired bookings (only for pending/confirmed/alternative_proposed)
       requestedBookings = requestedBookings.filter((booking: Booking) => {
         if (booking.status === "pending" || booking.status === "confirmed" || booking.status === "alternative_proposed") {
@@ -154,6 +173,33 @@ export default function MyRequestsPage() {
       });
       
       setBookings(requestedBookings);
+
+      // Fetch completed/paid bookings that need reviews
+      const completedForReview = requestedBookings.filter((booking: Booking) => 
+        (booking.status === "completed" || booking.status === "paid")
+      );
+      
+      // Check which ones already have reviews
+      const bookingsWithReviewStatus = await Promise.all(
+        completedForReview.map(async (booking: Booking) => {
+          try {
+            const reviewRes = await fetch(`/api/reviews?booking_id=${booking.id}`);
+            if (reviewRes.ok) {
+              const reviewData = await reviewRes.json();
+              return {
+                ...booking,
+                hasReview: reviewData.reviews && reviewData.reviews.length > 0
+              };
+            }
+            return { ...booking, hasReview: false };
+          } catch {
+            return { ...booking, hasReview: false };
+          }
+        })
+      );
+      
+      // Only show bookings that don't have reviews yet
+      setCompletedBookingsForReview(bookingsWithReviewStatus.filter((b: any) => !b.hasReview));
 
       // Fetch quote requests for this customer
       try {
@@ -356,6 +402,15 @@ export default function MyRequestsPage() {
                   My Requests
                 </h1>
                 <p className="text-gray-600 mt-1">Track and manage your service bookings</p>
+                {user?.role === "teen" && (
+                  <p className="text-sm text-gray-500 mt-2 italic">
+                    If you requested/purchased a service from another teen it will show up here. If looking for service requests for your own services visit the My Teen Hustle Page or{" "}
+                    <Link href="/my-teen-hustle" className="text-[#434c9d] hover:underline font-medium">
+                      click here
+                    </Link>
+                    .
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -413,27 +468,73 @@ export default function MyRequestsPage() {
             </div>
           </div>
 
+          {/* Tip, Rate, and Review Section */}
+          {completedBookingsForReview.length > 0 && (
+            <div className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-200 shadow-lg">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Tip, Rate, and Review Your Latest Teen Provider
+                  </h2>
+                  <p className="text-gray-600">
+                    Help other parents by sharing your experience and supporting the teen who provided your service.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {completedBookingsForReview.slice(0, 3).map((booking: any) => (
+                  <div
+                    key={booking.id}
+                    className="bg-white rounded-lg p-4 border border-purple-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-1">
+                          {booking.service?.title || "Service"}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Completed on {formatDate(booking.requested_date)}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setSelectedBookingForReview(booking);
+                          setReviewModalOpen(true);
+                        }}
+                        className="bg-[#434c9d] hover:bg-[#434c9d]/90 text-white"
+                        size="sm"
+                      >
+                        <Star className="w-4 h-4 mr-2" />
+                        Review & Tip
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Tabs */}
           <Tabs defaultValue="pending" className="w-full">
             <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
               <TabsList className="inline-flex w-full sm:grid sm:grid-cols-5 bg-gray-100 p-1 rounded-xl h-auto min-w-max sm:min-w-0">
             <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
               Pending ({pendingBookings.length + pendingQuoteRequests.length})
-            </TabsTrigger>
+              </TabsTrigger>
                 <TabsTrigger value="confirmed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Confirmed ({confirmedBookings.length})
-                </TabsTrigger>
+                Confirmed ({confirmedBookings.length})
+              </TabsTrigger>
                 <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Completed ({completedBookings.length})
-                </TabsTrigger>
+                Completed ({completedBookings.length})
+              </TabsTrigger>
                 <TabsTrigger value="paid" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Paid ({paidBookings.length})
-                </TabsTrigger>
+                Paid ({paidBookings.length})
+              </TabsTrigger>
                 <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Cancelled ({cancelledBookings.length})
-                </TabsTrigger>
-              </TabsList>
-            </div>
+                Cancelled ({cancelledBookings.length})
+              </TabsTrigger>
+            </TabsList>
+                </div>
 
             {/* Status-specific tabs */}
             {[
@@ -557,6 +658,33 @@ export default function MyRequestsPage() {
           }}
         />
       )}
+
+      {/* Review Modal */}
+      <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Tip, Rate, and Review</DialogTitle>
+            <DialogDescription>
+              Share your experience and show your appreciation
+            </DialogDescription>
+          </DialogHeader>
+          {selectedBookingForReview && (
+            <ReviewForm
+              bookingId={selectedBookingForReview.id}
+              serviceTitle={selectedBookingForReview.service?.title || "Service"}
+              onSuccess={() => {
+                setReviewModalOpen(false);
+                setSelectedBookingForReview(null);
+                fetchBookings(); // Refresh to update review status
+              }}
+              onCancel={() => {
+                setReviewModalOpen(false);
+                setSelectedBookingForReview(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
@@ -810,16 +938,16 @@ function BookingCard({
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button
+                <Button
                 onClick={onCancel}
-                variant="outline"
-                size="sm"
+                  variant="outline"
+                  size="sm"
                 disabled={updating}
                 className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
-              >
+                >
                 {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
                 {updating ? "Cancelling..." : "Cancel Service"}
-              </Button>
+                </Button>
               <Button
                 onClick={onMessage}
                 variant="outline"
