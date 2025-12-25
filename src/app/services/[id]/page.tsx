@@ -14,6 +14,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import WeeklyAvailabilityCalendar from "@/components/availability/WeeklyAvailabilityCalendar";
 import ReviewsList from "@/components/reviews/ReviewsList";
 import { useUser } from "@/hooks/useUser";
+import Link from "next/link";
 import { Service } from "@/types/service";
 import { CreateBookingRequest, BookingResponse } from "@/types/booking";
 import { createClient } from "@/lib/supabase/client";
@@ -176,8 +177,13 @@ const fetchServiceDetails = async (id: string) => {
      setProviderAvatarUrl(provider_avatar_url);
      setBookingForm((prev) => ({ ...prev, service_id: id }));
      
-     // Debug: Log schedule URL for troubleshooting
-     console.log('Provider schedule URL:', provider_schedule_url);
+     // Debug: Log provider info for troubleshooting
+     console.log('Provider info:', {
+       user_id: serviceData.user_id,
+       provider_name,
+       provider_avatar_url,
+       provider_schedule_url
+     });
   } catch (err: any) {
     console.error("Error fetching service:", err);
     setError(err?.message || "Failed to load service details");
@@ -563,14 +569,31 @@ return (
               </div>
 
               {/* Image Gallery */}
-              {service.images && service.images.length > 1 && (
+              {((service.images && service.images.length > 1) || (service.user_id && providerAvatarUrl)) && (
                 <div className="p-6 border-t border-gray-200 bg-gray-50">
                   <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <ImageIcon className="w-5 h-5 text-gray-600" />
-                    More Images
+                    {service.images && service.images.length > 1 ? "More Images" : "Provider"}
                   </h3>
                   <div className="grid grid-cols-4 gap-3">
-                    {service.images.slice(1).map((image) => (
+                    {/* Provider Profile Picture */}
+                    {service.user_id && providerAvatarUrl && (
+                      <Link 
+                        href={`/profile/${service.user_id}`}
+                        className="relative aspect-square rounded-xl overflow-hidden border-2 border-[#434c9d] hover:border-[#434c9d]/80 transition-all cursor-pointer group shadow-sm hover:shadow-md"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <p className="text-xs font-semibold text-white bg-[#434c9d]/90 px-2 py-1 rounded">View Profile</p>
+                        </div>
+                        <img
+                          src={providerAvatarUrl}
+                          alt={service.provider_name || "Provider"}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                      </Link>
+                    )}
+                    {/* Service Images */}
+                    {service.images && service.images.length > 1 && service.images.slice(1).map((image) => (
                       <div key={image.id} className="relative aspect-square rounded-xl overflow-hidden border-2 border-gray-200 hover:border-[#434c9d] transition-all cursor-pointer group shadow-sm hover:shadow-md">
                         <img
                           src={image.url}
@@ -588,24 +611,29 @@ return (
               )}
 
               <div className="p-8">
-                {/* Provider Info Section - Prominent Display */}
-                {service.provider_name && (
-                  <div className="mb-6 pb-6 border-b border-gray-200">
+                {/* Provider Profile Card - Prominent and Clickable */}
+                {service.user_id && (
+                  <Link 
+                    href={`/profile/${service.user_id}`}
+                    className="block mb-6 pb-6 border-b border-gray-200 hover:bg-gray-50 rounded-xl p-4 -m-4 transition-all cursor-pointer group"
+                  >
                     <div className="flex items-center gap-4">
                       {providerAvatarUrl ? (
                         <img
                           src={providerAvatarUrl}
-                          alt={service.provider_name}
-                          className="w-16 h-16 rounded-full object-cover border-3 border-white shadow-lg ring-2 ring-blue-100"
+                          alt={service.provider_name || "Service Provider"}
+                          className="w-16 h-16 rounded-full object-cover border-3 border-white shadow-lg ring-2 ring-blue-100 group-hover:ring-[#434c9d] transition-all"
                         />
                       ) : (
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-3 border-white shadow-lg ring-2 ring-blue-100">
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-3 border-white shadow-lg ring-2 ring-blue-100 group-hover:ring-[#434c9d] transition-all">
                           <User className="w-8 h-8 text-blue-600" />
                         </div>
                       )}
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-500 mb-1">Service Provided By</p>
-                        <h2 className="text-xl font-bold text-gray-900 mb-1">{service.provider_name}</h2>
+                        <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Service Provider</p>
+                        <h2 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-[#434c9d] transition-colors">
+                          {service.provider_name || "View Provider Profile"}
+                        </h2>
                         <div className="flex items-center gap-3">
                           {service.rating != null && (
                             <div className="flex items-center gap-1 text-sm">
@@ -618,9 +646,15 @@ return (
                             {toTitle(service.category)}
                           </Badge>
                         </div>
+                        <p className="text-xs text-gray-500 mt-2 group-hover:text-[#434c9d] transition-colors">
+                          Click to view profile →
+                        </p>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ArrowLeft className="w-5 h-5 text-[#434c9d] rotate-[-90deg]" />
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 )}
 
                 <div className="flex items-start justify-between mb-4">
@@ -1089,19 +1123,46 @@ return (
                 <div className="mt-6 pt-6 border-t border-gray-100">
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Service Provided By</h3>
                   <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                    {providerAvatarUrl ? (
-                      <img
-                        src={providerAvatarUrl}
-                        alt={service.provider_name}
-                        className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-md"
-                      />
+                    {service.user_id ? (
+                      <Link href={`/profile/${service.user_id}`} className="cursor-pointer">
+                        {providerAvatarUrl ? (
+                          <img
+                            src={providerAvatarUrl}
+                            alt={service.provider_name}
+                            className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-md hover:ring-2 hover:ring-[#434c9d] transition-all"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-2 border-white shadow-md hover:ring-2 hover:ring-[#434c9d] transition-all">
+                            <User className="w-7 h-7 text-blue-600" />
+                          </div>
+                        )}
+                      </Link>
                     ) : (
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                        <User className="w-7 h-7 text-blue-600" />
-                      </div>
+                      <>
+                        {providerAvatarUrl ? (
+                          <img
+                            src={providerAvatarUrl}
+                            alt={service.provider_name}
+                            className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-md"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                            <User className="w-7 h-7 text-blue-600" />
+                          </div>
+                        )}
+                      </>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{service.provider_name}</p>
+                      {service.user_id ? (
+                        <Link 
+                          href={`/profile/${service.user_id}`}
+                          className="font-semibold text-gray-900 truncate hover:text-[#434c9d] transition-colors cursor-pointer block"
+                        >
+                          {service.provider_name}
+                        </Link>
+                      ) : (
+                        <p className="font-semibold text-gray-900 truncate">{service.provider_name}</p>
+                      )}
                       <p className="text-sm text-gray-600">Teen Service Provider</p>
                       {service.rating != null && (
                         <div className="flex items-center gap-1 mt-1">

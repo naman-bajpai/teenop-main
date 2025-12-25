@@ -249,14 +249,22 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                       : "hover:bg-[#96cbc3]/10"
                 )}
               >
-                <div className={clsx(
-                  "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                  overHero ? "bg-white/20" : "bg-[#23a699]"
-                )}>
-                  <span className="text-white font-semibold text-sm">
-                    {(user.first_name?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase()}
-                  </span>
-                </div>
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.name || "User"}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-white/20"
+                  />
+                ) : (
+                  <div className={clsx(
+                    "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                    overHero ? "bg-white/20" : "bg-[#23a699]"
+                  )}>
+                    <span className="text-white font-semibold text-sm">
+                      {(user.first_name?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase()}
+                    </span>
+                  </div>
+                )}
                 <div className="text-left hidden xl:block">
                   <p className={clsx(
                     "text-sm font-medium transition-colors",
@@ -327,14 +335,22 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
         {/* Mobile Menu Button */}
         <div className="flex items-center gap-2 lg:hidden">
           {user && (
-            <div className={clsx(
-              "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-              overHero ? "bg-white/20" : "bg-[#23a699]"
-            )}>
-              <span className="text-white font-semibold text-sm">
-                {(user.first_name?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase()}
-              </span>
-            </div>
+            user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.name || "User"}
+                className="w-8 h-8 rounded-full object-cover border-2 border-white/20"
+              />
+            ) : (
+              <div className={clsx(
+                "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                overHero ? "bg-white/20" : "bg-[#23a699]"
+              )}>
+                <span className="text-white font-semibold text-sm">
+                  {(user.first_name?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase()}
+                </span>
+              </div>
+            )
           )}
           <Button
             variant="ghost"

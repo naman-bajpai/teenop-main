@@ -413,7 +413,7 @@ export default function BookingDetailsPage() {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Waiting for Payment</h2>
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    This booking is confirmed. Please wait for the customer to complete payment before marking it as completed.
+                    Booking will be confirmed when your customer has completed payment. It will then appear on your My Teen Hustle page under Scheduled Services.
                   </p>
                 </div>
               </div>
