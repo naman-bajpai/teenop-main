@@ -76,9 +76,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (bookingData.status !== "completed" && bookingData.status !== "paid") {
+    // Only allow reviews/tips when the teen has marked the service as completed
+    if (bookingData.status !== "completed") {
       return NextResponse.json(
-        { success: false, error: "Booking must be completed before reviewing" },
+        { success: false, error: "Booking must be marked as completed by the service provider before you can review and tip" },
         { status: 400 }
       );
     }

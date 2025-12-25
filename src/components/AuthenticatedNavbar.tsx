@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, X, MessageCircle, User, Home, Briefcase, Calendar, Wallet, FileText, ChevronDown, MoreVertical } from "lucide-react";
+import { LogOut, Menu, X, MessageCircle, User, Home, Briefcase, Calendar, Wallet, ChevronDown, MoreVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import clsx from "clsx";
@@ -102,11 +102,6 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
       name: "My Requests",
       href: "/my-requests",
       icon: Calendar,
-    },
-    {
-      name: "Quote Requests",
-      href: user?.role === "teen" ? "/provider/quote-requests" : "/my-quote-requests",
-      icon: FileText,
     },
     ...(user?.role === "teen" ? [
       {

@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          alternative_date: string | null
+          alternative_time: string | null
           created_at: string
           duration: number
           id: string
@@ -25,6 +27,7 @@ export type Database = {
           quote_id: string | null
           requested_date: string
           requested_time: string
+          service_address: string | null
           service_id: string
           service_price: number
           special_instructions: string | null
@@ -34,6 +37,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          alternative_date?: string | null
+          alternative_time?: string | null
           created_at?: string
           duration: number
           id?: string
@@ -43,6 +48,7 @@ export type Database = {
           quote_id?: string | null
           requested_date: string
           requested_time: string
+          service_address?: string | null
           service_id: string
           service_price: number
           special_instructions?: string | null
@@ -52,6 +58,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          alternative_date?: string | null
+          alternative_time?: string | null
           created_at?: string
           duration?: number
           id?: string
@@ -61,6 +69,7 @@ export type Database = {
           quote_id?: string | null
           requested_date?: string
           requested_time?: string
+          service_address?: string | null
           service_id?: string
           service_price?: number
           special_instructions?: string | null
@@ -389,6 +398,7 @@ export type Database = {
           id: string
           requested_date: string | null
           requested_time: string | null
+          service_address: string | null
           service_id: string
           special_instructions: string | null
           status: string
@@ -400,6 +410,7 @@ export type Database = {
           id?: string
           requested_date?: string | null
           requested_time?: string | null
+          service_address?: string | null
           service_id: string
           special_instructions?: string | null
           status?: string
@@ -411,6 +422,7 @@ export type Database = {
           id?: string
           requested_date?: string | null
           requested_time?: string | null
+          service_address?: string | null
           service_id?: string
           special_instructions?: string | null
           status?: string
@@ -494,6 +506,81 @@ export type Database = {
           },
         ]
       }
+      reviews: {
+        Row: {
+          booking_id: string
+          created_at: string | null
+          id: string
+          rating: number
+          review_text: string | null
+          reviewee_id: string
+          reviewer_id: string
+          service_id: string
+          tip_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string | null
+          id?: string
+          rating: number
+          review_text?: string | null
+          reviewee_id: string
+          reviewer_id: string
+          service_id: string
+          tip_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string | null
+          id?: string
+          rating?: number
+          review_text?: string | null
+          reviewee_id?: string
+          reviewer_id?: string
+          service_id?: string
+          tip_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewee_id_fkey"
+            columns: ["reviewee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "v_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_images: {
         Row: {
           created_at: string
@@ -563,6 +650,8 @@ export type Database = {
       services: {
         Row: {
           address: string | null
+          availability: Json | null
+          average_rating: number | null
           banner_url: string | null
           category: string
           created_at: string
@@ -580,10 +669,13 @@ export type Database = {
           status: string
           title: string
           total_bookings: number
+          total_reviews: number | null
           user_id: string
         }
         Insert: {
           address?: string | null
+          availability?: Json | null
+          average_rating?: number | null
           banner_url?: string | null
           category: string
           created_at?: string
@@ -601,10 +693,13 @@ export type Database = {
           status?: string
           title: string
           total_bookings?: number
+          total_reviews?: number | null
           user_id: string
         }
         Update: {
           address?: string | null
+          availability?: Json | null
+          average_rating?: number | null
           banner_url?: string | null
           category?: string
           created_at?: string
@@ -622,6 +717,7 @@ export type Database = {
           status?: string
           title?: string
           total_bookings?: number
+          total_reviews?: number | null
           user_id?: string
         }
         Relationships: [
@@ -1028,6 +1124,7 @@ export type Database = {
         | "cancelled"
         | "rejected"
         | "paid"
+        | "alternative_proposed"
       pricing_model: "per_job" | "per_hour" | "quote"
       service_category:
         | "pet_care"
@@ -1174,6 +1271,7 @@ export const Constants = {
         "cancelled",
         "rejected",
         "paid",
+        "alternative_proposed",
       ],
       pricing_model: ["per_job", "per_hour", "quote"],
       service_category: [

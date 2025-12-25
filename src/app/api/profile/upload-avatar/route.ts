@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,14 +43,17 @@ export async function POST(request: NextRequest) {
 
     // Generate unique filename
     const fileExt = file.name.split('.').pop();
-    const fileName = `avatars/${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    // Use service role client for storage upload to bypass RLS
+    const supabaseService = createServiceRoleClient();
+
+    // Upload to Supabase Storage using service role client
+    const { data: uploadData, error: uploadError } = await supabaseService.storage
       .from('avatars')
       .upload(fileName, buffer, {
         contentType: file.type,
@@ -60,13 +63,13 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       console.error('Error uploading avatar:', uploadError);
       return NextResponse.json(
-        { success: false, error: "Failed to upload avatar" },
+        { success: false, error: uploadError.message || "Failed to upload avatar" },
         { status: 500 }
       );
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
+    // Get public URL using service role client
+    const { data: urlData } = supabaseService.storage
       .from('avatars')
       .getPublicUrl(fileName);
 

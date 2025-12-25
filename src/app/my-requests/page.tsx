@@ -174,9 +174,9 @@ export default function MyRequestsPage() {
       
       setBookings(requestedBookings);
 
-      // Fetch completed/paid bookings that need reviews
+      // Fetch completed bookings that need reviews (only when teen has marked as completed)
       const completedForReview = requestedBookings.filter((booking: Booking) => 
-        (booking.status === "completed" || booking.status === "paid")
+        booking.status === "completed"
       );
       
       // Check which ones already have reviews
@@ -477,7 +477,7 @@ export default function MyRequestsPage() {
                     Tip, Rate, and Review Your Latest Teen Provider
                   </h2>
                   <p className="text-gray-600">
-                    Help other parents by sharing your experience and supporting the teen who provided your service.
+                    The service has been marked as completed. Help other parents by sharing your experience and supporting the teen who provided your service.
                   </p>
                 </div>
               </div>

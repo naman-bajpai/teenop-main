@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, HelpCircle } from "lucide-react";
+import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, HelpCircle, DollarSign } from "lucide-react";
 import HelpDialog from "@/components/help/HelpDialog";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import WeeklyAvailabilityCalendar from "@/components/availability/WeeklyAvailabilityCalendar";
@@ -31,6 +31,7 @@ const [error, setError] = useState<string | null>(null);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [providerScheduleUrl, setProviderScheduleUrl] = useState<string | null>(null);
+  const [providerAvatarUrl, setProviderAvatarUrl] = useState<string | null>(null);
   const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
   const [quoteRequestLoading, setQuoteRequestLoading] = useState(false);
   const [quoteRequestSuccess, setQuoteRequestSuccess] = useState(false);
@@ -127,13 +128,14 @@ const fetchServiceDetails = async (id: string) => {
      let provider_name: string | null = null;
      let provider_rating: number | null = null;
      let provider_schedule_url: string | null = null;
+     let provider_avatar_url: string | null = null;
      let provider_user_id: string | null = null;
 
      if (serviceData.user_id) {
        provider_user_id = serviceData.user_id;
        const { data: prof, error: profErr } = await supabase
          .from("profiles")
-         .select("first_name, last_name, rating, schedule_url")
+         .select("first_name, last_name, rating, schedule_url, avatar_url")
          .eq("id", serviceData.user_id)
          .maybeSingle();
 
@@ -142,6 +144,7 @@ const fetchServiceDetails = async (id: string) => {
          provider_name = [profileData.first_name, profileData.last_name].filter(Boolean).join(" ").trim() || null;
          provider_rating = profileData.rating ?? null;
          provider_schedule_url = profileData.schedule_url ?? null;
+         provider_avatar_url = profileData.avatar_url ?? null;
        }
      }
 
@@ -170,6 +173,7 @@ const fetchServiceDetails = async (id: string) => {
 
      setService(normalizedServiceData);
      setProviderScheduleUrl(provider_schedule_url);
+     setProviderAvatarUrl(provider_avatar_url);
      setBookingForm((prev) => ({ ...prev, service_id: id }));
      
      // Debug: Log schedule URL for troubleshooting
@@ -518,9 +522,9 @@ return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              {/* Main Banner Image - Square */}
-              <div className={`relative w-full aspect-square overflow-hidden ${
+            <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden hover:shadow-xl transition-shadow">
+              {/* Main Banner Image - Modern Aspect Ratio */}
+              <div className={`relative w-full aspect-[16/9] overflow-hidden ${
                 (service.images && service.images.length > 0) || service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient} flex items-center justify-center`
               }`}>
                 {(() => {
@@ -547,10 +551,10 @@ return (
                 <div className="absolute top-4 right-4">
                   <Badge
                     variant={service.status === "active" ? "default" : "secondary"}
-                    className={`text-sm px-3 py-1 ${
+                    className={`text-sm px-3 py-1 font-semibold shadow-md ${
                       service.status === "active"
-                        ? "bg-green-100 text-green-700 border-green-200"
-                        : "bg-gray-100 text-gray-600 border-gray-200"
+                        ? "bg-green-500 text-white border-green-600"
+                        : "bg-gray-400 text-white border-gray-500"
                     }`}
                   >
                     {service.status === "active" ? "Available" : "Paused"}
@@ -560,15 +564,18 @@ return (
 
               {/* Image Gallery */}
               {service.images && service.images.length > 1 && (
-                <div className="p-4 border-t border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">More Images</h3>
-                  <div className="grid grid-cols-4 gap-2">
+                <div className="p-6 border-t border-gray-200 bg-gray-50">
+                  <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-gray-600" />
+                    More Images
+                  </h3>
+                  <div className="grid grid-cols-4 gap-3">
                     {service.images.slice(1).map((image) => (
-                      <div key={image.id} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer group">
+                      <div key={image.id} className="relative aspect-square rounded-xl overflow-hidden border-2 border-gray-200 hover:border-[#434c9d] transition-all cursor-pointer group shadow-sm hover:shadow-md">
                         <img
                           src={image.url}
                           alt={`${service.title} - Image ${image.id}`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                           onClick={() => {
                             // Scroll to top and could implement lightbox here
                             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -581,61 +588,127 @@ return (
               )}
 
               <div className="p-8">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{service.title}</h1>
-                    <div className="flex items-center gap-3">
-                      <Badge className={`text-sm px-3 py-1 border ${categoryColor}`}>
-                        {toTitle(service.category)}
-                      </Badge>
-                      {service.rating != null && (
-                        <div className="flex items-center gap-1 text-sm text-gray-600 bg-yellow-50 px-3 py-1 rounded-full">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="font-medium">{Number(service.rating).toFixed(1)}</span>
-                          <span className="text-gray-500">({service.total_bookings} bookings)</span>
+                {/* Provider Info Section - Prominent Display */}
+                {service.provider_name && (
+                  <div className="mb-6 pb-6 border-b border-gray-200">
+                    <div className="flex items-center gap-4">
+                      {providerAvatarUrl ? (
+                        <img
+                          src={providerAvatarUrl}
+                          alt={service.provider_name}
+                          className="w-16 h-16 rounded-full object-cover border-3 border-white shadow-lg ring-2 ring-blue-100"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-3 border-white shadow-lg ring-2 ring-blue-100">
+                          <User className="w-8 h-8 text-blue-600" />
                         </div>
                       )}
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-500 mb-1">Service Provided By</p>
+                        <h2 className="text-xl font-bold text-gray-900 mb-1">{service.provider_name}</h2>
+                        <div className="flex items-center gap-3">
+                          {service.rating != null && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                              <span className="font-semibold text-gray-900">{Number(service.rating).toFixed(1)}</span>
+                              <span className="text-gray-500">({service.total_bookings} {service.total_bookings === 1 ? 'booking' : 'bookings'})</span>
+                            </div>
+                          )}
+                          <Badge className={`text-xs px-2 py-1 border ${categoryColor}`}>
+                            {toTitle(service.category)}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
+                  </div>
+                )}
+
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{service.title}</h1>
+                    {!service.provider_name && (
+                      <div className="flex items-center gap-3">
+                        <Badge className={`text-sm px-3 py-1 border ${categoryColor}`}>
+                          {toTitle(service.category)}
+                        </Badge>
+                        {service.rating != null && (
+                          <div className="flex items-center gap-1 text-sm text-gray-600 bg-yellow-50 px-3 py-1 rounded-full">
+                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                            <span className="font-medium">{Number(service.rating).toFixed(1)}</span>
+                            <span className="text-gray-500">({service.total_bookings} bookings)</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <p className="text-gray-700 text-lg leading-relaxed mb-6">{service.description}</p>
 
                 {(service.qualifications || service.education) && (
-                  <div className="border-t border-gray-100 pt-6 mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Provider Qualifications</h3>
-                    <div className="space-y-3">
+                  <div className="border-t border-gray-200 pt-6 mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-blue-600" />
+                      Provider Qualifications
+                    </h3>
+                    <div className="space-y-4">
                       {service.qualifications && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700 mb-1">Experience & Skills</p>
-                          <p className="text-gray-600">{service.qualifications}</p>
+                        <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                          <p className="text-sm font-semibold text-blue-900 mb-2">Experience & Skills</p>
+                          <p className="text-gray-700 leading-relaxed">{service.qualifications}</p>
                         </div>
                       )}
                       {service.education && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700 mb-1">Education</p>
-                          <p className="text-gray-600">{service.education}</p>
+                        <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                          <p className="text-sm font-semibold text-indigo-900 mb-2">Education</p>
+                          <p className="text-gray-700 leading-relaxed">{service.education}</p>
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                <div className="border-t border-gray-100 pt-6 mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Location and Duration</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="flex items-center gap-3">
-                      <MapPin className="w-5 h-5 text-gray-400" />
+                <div className="border-t border-gray-200 pt-6 mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Service Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <MapPin className="w-5 h-5 text-blue-600" />
+                      </div>
                       <div>
-                        <p className="text-sm text-gray-500">Location</p>
-                        <p className="font-medium text-gray-900">{service.location}</p>
+                        <p className="text-xs text-gray-500 mb-1">Location</p>
+                        <p className="font-semibold text-gray-900">{service.location}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Clock className="w-5 h-5 text-gray-400" />
+                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-purple-600" />
+                      </div>
                       <div>
-                        <p className="text-sm text-gray-500">Duration</p>
-                        <p className="font-medium text-gray-900">{service.duration} minutes</p>
+                        <p className="text-xs text-gray-500 mb-1">Duration</p>
+                        <p className="font-semibold text-gray-900">{service.duration} minutes</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <DollarSign className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Pricing</p>
+                        <p className="font-semibold text-gray-900">
+                          {formatPrice(service.price as number)} / {service.pricing_model === "per_hour" ? "hour" : "service"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <CheckCircle className="w-5 h-5 text-orange-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Delivery</p>
+                        <p className="font-semibold text-gray-900">
+                          {service.delivery_method === "in_person" ? "In Person" : "Online"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -683,7 +756,7 @@ return (
 
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-8">
+            <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6 sticky top-8 hover:shadow-xl transition-shadow">
               {service.pricing_model === "quote" ? (
                 <>
                   <div className="text-center mb-6">
@@ -1014,13 +1087,28 @@ return (
 
               {service.provider_name && (
                 <div className="mt-6 pt-6 border-t border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
-                      <User className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{service.provider_name}</p>
-                      <p className="text-sm text-gray-500">Service Provider</p>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Service Provided By</h3>
+                  <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                    {providerAvatarUrl ? (
+                      <img
+                        src={providerAvatarUrl}
+                        alt={service.provider_name}
+                        className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-md"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                        <User className="w-7 h-7 text-blue-600" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 truncate">{service.provider_name}</p>
+                      <p className="text-sm text-gray-600">Teen Service Provider</p>
+                      {service.rating != null && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs font-medium text-gray-700">{Number(service.rating).toFixed(1)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1033,7 +1121,11 @@ return (
 
       {/* Reviews Section */}
       {service && (
-        <div className="mt-8 bg-white rounded-2xl p-6 border-2 border-gray-200">
+        <div className="mt-8 bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-lg">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+            Reviews & Ratings
+          </h2>
           <ReviewsList serviceId={service.id} />
         </div>
       )}
@@ -1047,3 +1139,4 @@ return (
   </DashboardLayout>
 );
 }
+
