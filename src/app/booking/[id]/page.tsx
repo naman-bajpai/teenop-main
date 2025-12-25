@@ -24,6 +24,7 @@ import {
   AlertCircle,
   CreditCard,
 } from "lucide-react";
+import Link from "next/link";
 
 interface BookingDetails {
   id: string;
@@ -499,7 +500,12 @@ export default function BookingDetailsPage() {
                     )}
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">{otherPersonName}</h3>
+                    <Link 
+                      href={`/profile/${otherPerson?.id}`}
+                      className="font-medium text-gray-900 hover:text-[#434c9d] transition-colors cursor-pointer"
+                    >
+                      {otherPersonName}
+                    </Link>
                     <p className="text-sm text-gray-600">
                       {isProvider ? "Customer" : "Service Provider"}
                     </p>

@@ -95,6 +95,7 @@ export type Booking = {
     category: string;
   };
   customer_name?: string;
+  customer_id?: string;
 };
 
 
@@ -286,7 +287,23 @@ function BookingCard({ booking, onStatusUpdate }: {
           <h3 className="text-xl font-bold text-gray-900 mb-2">{booking.service.title}</h3>
           <p className="text-sm text-gray-600 flex items-center gap-2">
             <Users className="w-4 h-4" />
-            {booking.customer_name ? `Requested by ${booking.customer_name}` : 'Customer request'}
+            {booking.customer_name ? (
+              booking.customer_id ? (
+                <>
+                  Requested by{' '}
+                  <Link 
+                    href={`/profile/${booking.customer_id}`}
+                    className="text-[#434c9d] hover:underline font-medium"
+                  >
+                    {booking.customer_name}
+                  </Link>
+                </>
+              ) : (
+                `Requested by ${booking.customer_name}`
+              )
+            ) : (
+              'Customer request'
+            )}
           </p>
         </div>
         <Badge className={`${getStatusColor(booking.status)} text-xs font-semibold px-3 py-1`}>

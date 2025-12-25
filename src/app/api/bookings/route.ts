@@ -379,6 +379,7 @@ export async function GET(request: NextRequest) {
           customer_name: booking.profiles ? 
             [booking.profiles.first_name, booking.profiles.last_name].filter(Boolean).join(" ").trim() || "Customer" : 
             "Customer",
+          customer_id: booking.user_id, // Add customer ID for profile linking
         });
       } else if (booking.user_id === user.id) {
         // This is a request made by the user (user is the customer)
