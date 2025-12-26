@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { stripe } from '@/lib/stripe';
 
 // Process a withdrawal request (admin only)
 export async function POST(
@@ -46,8 +45,7 @@ export async function POST(
           id,
           first_name,
           last_name,
-          email,
-          stripe_connect_account_id
+          email
         )
       `)
       .eq('id', requestId)
@@ -69,12 +67,14 @@ export async function POST(
     }
 
     const userProfile = (withdrawalRequest as any).profiles;
-    if (!userProfile || !userProfile.stripe_connect_account_id) {
+    if (!userProfile) {
       return NextResponse.json(
-        { success: false, error: "User does not have a Stripe Connect account" },
+        { success: false, error: "User profile not found" },
         { status: 400 }
       );
     }
+    
+    // Note: Admin will manually pay the student, so Stripe Connect account is not required
 
     // Get the earnings IDs that were included in this withdrawal request
     // They should be stored in the notes field as JSON

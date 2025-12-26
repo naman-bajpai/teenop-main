@@ -462,20 +462,59 @@ export async function PATCH(
 
     // If booking is marked as completed, update earnings status from "locked" to "pending" to make them available for withdrawal
     if (status === "completed") {
-      const { error: earningsUpdateError } = await (supabase as any)
+      // First, check if earnings exist for this booking
+      const { data: existingEarnings, error: checkError } = await (supabase as any)
         .from("earnings")
-        .update({ 
-          status: 'pending', // Make earnings available for withdrawal
-          updated_at: new Date().toISOString()
-        })
+        .select("id, status, amount")
         .eq("booking_id", bookingId)
-        .eq("status", "locked"); // Only update locked earnings
+        .maybeSingle();
 
-      if (earningsUpdateError) {
-        console.error("Error updating earnings status:", earningsUpdateError);
-        // Don't fail the request, just log the error
+      if (checkError) {
+        console.error("Error checking earnings:", checkError);
+      } else if (existingEarnings) {
+        // Earnings exist, update them to pending if they're locked
+        if (existingEarnings.status === "locked") {
+          const { error: earningsUpdateError } = await (supabase as any)
+            .from("earnings")
+            .update({ 
+              status: 'pending', // Make earnings available for withdrawal
+              updated_at: new Date().toISOString()
+            })
+            .eq("booking_id", bookingId)
+            .eq("status", "locked"); // Only update locked earnings
+
+          if (earningsUpdateError) {
+            console.error("Error updating earnings status:", earningsUpdateError);
+            // Don't fail the request, just log the error
+          } else {
+            console.log(`Updated earnings for booking ${bookingId} from locked to pending`);
+          }
+        } else {
+          console.log(`Earnings for booking ${bookingId} are already in status: ${existingEarnings.status}`);
+        }
       } else {
-        console.log(`Updated earnings for booking ${bookingId} from locked to pending`);
+        // Earnings don't exist, create them with pending status
+        const providerId = updatedBookingData.services?.user_id;
+        if (providerId && updatedBookingData.total_price) {
+          const { error: earningsCreateError } = await (supabase as any)
+            .from("earnings")
+            .insert({
+              user_id: providerId,
+              booking_id: bookingId,
+              amount: updatedBookingData.total_price,
+              status: 'pending', // Create as pending since booking is already completed
+              earned_at: new Date().toISOString()
+            });
+
+          if (earningsCreateError) {
+            console.error("Error creating earnings:", earningsCreateError);
+            // Don't fail the request, just log the error
+          } else {
+            console.log(`Created pending earnings for booking ${bookingId}`);
+          }
+        } else {
+          console.warn(`Cannot create earnings for booking ${bookingId}: missing providerId or total_price`);
+        }
       }
     }
 

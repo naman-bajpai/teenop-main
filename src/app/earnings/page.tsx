@@ -683,17 +683,16 @@ export default function EarningsPage() {
                     <DialogTrigger asChild>
                       <Button
                         className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md hover:shadow-lg transition-all"
-                        disabled={!accountStatus?.hasAccount || !accountStatus?.accountStatus?.payoutsEnabled}
                       >
                         <Wallet className="w-4 h-4 mr-2" />
-                        Withdraw Money
+                        Request Withdrawal
                       </Button>
                     </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Confirm Withdrawal</DialogTitle>
+                      <DialogTitle>Request Withdrawal</DialogTitle>
                       <DialogDescription>
-                        Withdraw your pending earnings to your connected bank account
+                        Submit a withdrawal request. An admin will review and process it.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
@@ -715,23 +714,23 @@ export default function EarningsPage() {
                       </div>
                       <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 shadow-sm">
                         <p className="text-xs text-blue-900 font-medium">
-                          Funds will be transferred to your connected bank account within 2-5 business days.
+                          Your withdrawal request will be reviewed by an admin. You'll be notified once it's processed.
                         </p>
                       </div>
                       <Button
-                        onClick={handleWithdrawMoney}
-                        disabled={withdrawing}
+                        onClick={handleRequestWithdrawal}
+                        disabled={requestingWithdrawal}
                         className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md hover:shadow-lg transition-all"
                       >
-                        {withdrawing ? (
+                        {requestingWithdrawal ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Processing...
+                            Submitting Request...
                           </>
                         ) : (
                           <>
                             <Wallet className="w-4 h-4 mr-2" />
-                            Confirm Withdrawal
+                            Submit Withdrawal Request
                           </>
                         )}
                       </Button>
@@ -739,16 +738,6 @@ export default function EarningsPage() {
                   </DialogContent>
                   </Dialog>
                 </div>
-
-                {(!accountStatus?.hasAccount || !accountStatus?.accountStatus?.payoutsEnabled) && (
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 shadow-sm">
-                    <p className="text-xs text-gray-700 font-medium">
-                      {!accountStatus?.hasAccount
-                        ? "Set up your payment account to withdraw money"
-                        : "Complete your account setup to enable withdrawals"}
-                    </p>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="space-y-5">

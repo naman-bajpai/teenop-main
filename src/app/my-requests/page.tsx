@@ -909,14 +909,12 @@ function BookingCard({
 
         {booking.status === "completed" && (
           <div className="space-y-2">
-            <Button
-              onClick={onPay}
-              size="sm"
-              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md text-xs sm:text-sm"
-            >
-              <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-              Pay Now - {formatPrice(booking.total_price)}
-            </Button>
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+              <div className="flex items-center justify-center text-green-700 gap-2">
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">Service Completed</span>
+              </div>
+            </div>
             <Button
               onClick={onMessage}
               variant="outline"

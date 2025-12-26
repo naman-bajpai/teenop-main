@@ -437,7 +437,7 @@ function BookingCard({ booking, onStatusUpdate }: {
               onClick={() => window.location.href = "/earnings"} 
               className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
             >
-              <DollarSign className="w-4 h-4 mr-1" />Withdraw Earning
+              <DollarSign className="w-4 h-4 mr-1" />Request Withdrawal
             </Button>
           <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-green-500 text-green-600 hover:bg-green-50">
             <CheckCircle className="w-4 h-4 mr-1" />View Details
@@ -963,23 +963,23 @@ export default function TeenHustlePage() {
     }
   }
 
-  async function handleWithdrawMoney() {
+  async function handleRequestWithdrawal() {
     try {
-      const res = await fetch("/api/earnings/withdraw", {
+      const res = await fetch("/api/withdrawal-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || "Failed to process withdrawal");
+        throw new Error(err.error || "Failed to submit withdrawal request");
       }
 
       const data = await res.json();
       if (data.success) {
         toast({ 
-          title: "Withdrawal successful", 
-          description: data.message || `$${data.amount} has been transferred to your account.` 
+          title: "Withdrawal request submitted", 
+          description: data.message || "An admin will review and process your request shortly." 
         });
         
         // Refresh earnings stats
@@ -993,7 +993,7 @@ export default function TeenHustlePage() {
       }
     } catch (e: any) {
       toast({ 
-        title: "Could not withdraw money", 
+        title: "Could not submit withdrawal request", 
         description: e.message, 
         variant: "destructive" 
       });
@@ -1439,74 +1439,6 @@ export default function TeenHustlePage() {
           </div>
         </div>
 
-        {/* Earnings Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Link href="/earnings" className="group">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border-2 border-green-200 hover:border-green-400 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 cursor-pointer">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center shadow-md">
-                  <TrendingUp className="w-7 h-7 text-white" />
-                </div>
-                <div className="text-green-600 group-hover:translate-x-1 transition-transform">
-                  →
-                </div>
-              </div>
-              <p className="text-sm font-medium text-gray-600 mb-1">This Week</p>
-              <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                ${earningsStats.thisWeekEarned.toFixed(2)}
-              </p>
-            </div>
-          </Link>
-          <Link href="/earnings" className="group">
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl border-2 border-blue-200 hover:border-blue-400 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 cursor-pointer">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-md">
-                  <Calendar className="w-7 h-7 text-white" />
-                </div>
-                <div className="text-blue-600 group-hover:translate-x-1 transition-transform">
-                  →
-                </div>
-              </div>
-              <p className="text-sm font-medium text-gray-600 mb-1">This Month</p>
-              <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                ${earningsStats.thisMonthEarned.toFixed(2)}
-              </p>
-            </div>
-          </Link>
-          <Link href="/earnings" className="group">
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border-2 border-purple-200 hover:border-purple-400 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 cursor-pointer">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
-                  <DollarSign className="w-7 h-7 text-white" />
-                </div>
-                <div className="text-purple-600 group-hover:translate-x-1 transition-transform">
-                  →
-                </div>
-              </div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Total Earned</p>
-              <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                ${earningsStats.totalEarned.toFixed(2)}
-              </p>
-            </div>
-          </Link>
-          <Link href="/earnings" className="group">
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-2xl border-2 border-amber-200 hover:border-amber-400 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 cursor-pointer">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
-                  <Clock className="w-7 h-7 text-white" />
-                </div>
-                <div className="text-amber-600 group-hover:translate-x-1 transition-transform">
-                  →
-                </div>
-              </div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Pending</p>
-              <p className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                ${earningsStats.pendingEarnings.toFixed(2)}
-              </p>
-            </div>
-          </Link>
-        </div>
-
         {/* Payment Setup Section */}
         {!stripeAccountStatus.loading && (
           <div className="mb-8">
@@ -1560,7 +1492,7 @@ export default function TeenHustlePage() {
                       <Wallet className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold mb-2">Ready to Withdraw</h3>
+                      <h3 className="text-2xl font-bold mb-2">Ready to Request Withdrawal</h3>
                       <p className="text-green-100 text-lg">You have <span className="font-bold text-2xl">${earningsStats.pendingEarnings.toFixed(2)}</span> available for withdrawal</p>
                     </div>
                   </div>
@@ -1575,11 +1507,11 @@ export default function TeenHustlePage() {
                       </Button>
                     </Link>
                     <Button 
-                      onClick={handleWithdrawMoney}
+                      onClick={handleRequestWithdrawal}
                       className="bg-white text-green-600 hover:bg-green-50 px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
                     >
                       <Wallet className="w-5 h-5 mr-2" />
-                      Withdraw Money
+                      Request Withdrawal
                     </Button>
                   </div>
                 </div>
