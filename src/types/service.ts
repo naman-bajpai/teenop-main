@@ -23,6 +23,7 @@ export interface Service {
   delivery_method?: string | null;
   location_type?: string | null;
   banner_url?: string | null;
+  availability?: Record<string, Array<{ start: string; end: string }>> | null;
   created_at: string;
   rating?: number | null;
   total_bookings: number;

@@ -74,10 +74,7 @@ export default function EarningsPage() {
   const [accountStatus, setAccountStatus] = useState<StripeAccountStatus | null>(null);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [withdrawing, setWithdrawing] = useState(false);
-  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [refreshingAccount, setRefreshingAccount] = useState(false);
-  const [requestingWithdrawal, setRequestingWithdrawal] = useState(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<any[]>([]);
 
   // Check URL parameters for Stripe callback results
@@ -364,74 +361,6 @@ export default function EarningsPage() {
     }
   }
 
-  async function handleWithdrawMoney() {
-    setWithdrawing(true);
-    try {
-      const res = await fetch("/api/earnings/withdraw", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || "Failed to process withdrawal");
-      }
-
-      const data = await res.json();
-      if (data.success) {
-        toast({
-          title: "Withdrawal successful",
-          description: data.message || `$${data.amount.toFixed(2)} has been transferred to your account.`,
-        });
-        setWithdrawDialogOpen(false);
-        // Refresh data
-        fetchEarningsData();
-        fetchWithdrawals();
-      }
-    } catch (e: any) {
-      toast({
-        title: "Could not withdraw money",
-        description: e.message,
-        variant: "destructive",
-      });
-    } finally {
-      setWithdrawing(false);
-    }
-  }
-
-  async function handleRequestWithdrawal() {
-    setRequestingWithdrawal(true);
-    try {
-      const res = await fetch("/api/withdrawal-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || "Failed to submit withdrawal request");
-      }
-
-      const data = await res.json();
-      if (data.success) {
-        toast({
-          title: "Withdrawal request submitted",
-          description: data.message || "An admin will process your request shortly.",
-        });
-        // Refresh data
-        fetchEarningsData();
-        fetchWithdrawalRequests();
-      }
-    } catch (e: any) {
-      toast({
-        title: "Could not submit withdrawal request",
-        description: e.message,
-        variant: "destructive",
-      });
-    } finally {
-      setRequestingWithdrawal(false);
-    }
-  }
 
   async function fetchWithdrawalRequests() {
     try {
@@ -536,7 +465,7 @@ export default function EarningsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="mb-6">
           {/* Payment Account Section */}
           <div className="bg-white rounded-2xl p-8 shadow-lg">
             <div className="flex items-center justify-between mb-8">
@@ -652,104 +581,6 @@ export default function EarningsPage() {
             ) : null}
           </div>
 
-          {/* Withdrawal Section */}
-          <div className="bg-white rounded-2xl p-8 shadow-lg">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Withdrawals</h2>
-                <p className="text-sm text-gray-500">Withdraw your earnings from current balance</p>
-              </div>
-              <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl">
-                <Wallet className="w-8 h-8 text-green-600" />
-              </div>
-            </div>
-
-            {earningsStats.pendingEarnings > 0 ? (
-              <div className="space-y-5">
-                <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-blue-50 p-6 rounded-xl shadow-sm">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">
-                    Available for Withdrawal
-                  </p>
-                  <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
-                    ${earningsStats.pendingEarnings.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Platform fee: 0% (${(earningsStats.pendingEarnings * 0).toFixed(2)})
-                  </p>
-                </div>
-
-                <div className="flex gap-3">
-                  <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md hover:shadow-lg transition-all"
-                      >
-                        <Wallet className="w-4 h-4 mr-2" />
-                        Request Withdrawal
-                      </Button>
-                    </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Request Withdrawal</DialogTitle>
-                      <DialogDescription>
-                        Submit a withdrawal request. An admin will review and process it.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Total Earnings:</span>
-                          <span className="font-medium">${earningsStats.pendingEarnings.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Platform Fee (0%):</span>
-                          <span className="font-medium">-${(earningsStats.pendingEarnings * 0).toFixed(2)}</span>
-                        </div>
-                        <div className="pt-3 mt-3 border-t border-gray-200 flex justify-between font-semibold">
-                          <span className="text-gray-900">You'll Receive:</span>
-                          <span className="text-green-600">
-                            ${(earningsStats.pendingEarnings * 1).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 shadow-sm">
-                        <p className="text-xs text-blue-900 font-medium">
-                          Your withdrawal request will be reviewed by an admin. You'll be notified once it's processed.
-                        </p>
-                      </div>
-                      <Button
-                        onClick={handleRequestWithdrawal}
-                        disabled={requestingWithdrawal}
-                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md hover:shadow-lg transition-all"
-                      >
-                        {requestingWithdrawal ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Submitting Request...
-                          </>
-                        ) : (
-                          <>
-                            <Wallet className="w-4 h-4 mr-2" />
-                            Submit Withdrawal Request
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-5">
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Wallet className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-sm text-gray-500 font-medium mb-4">No pending earnings available</p>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Withdrawal History */}

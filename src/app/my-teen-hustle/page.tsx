@@ -25,6 +25,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import MultiImageUpload, { ServiceImage } from "@/components/ui/multi-image-upload";
 import { RatingDisplay, RatingForm } from "@/components/ui/rating";
+import ServiceAvailabilityCalendar from "@/components/availability/ServiceAvailabilityCalendar";
 import {
   Plus,
   Edit,
@@ -69,7 +70,7 @@ export type Service = {
   pricing_model?: "per_job" | "per_hour" | "quote";
   delivery_method?: string | null;
   location_type?: string | null;
-  availability?: string | null;
+  availability?: Record<string, Array<{ start: string; end: string }>> | null;
   images?: ServiceImage[];
 };
 
@@ -494,7 +495,7 @@ export default function TeenHustlePage() {
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [serviceImages, setServiceImages] = useState<ServiceImage[]>([]);
   const [pendingQuoteRequestsCount, setPendingQuoteRequestsCount] = useState(0);
-  const [availability, setAvailability] = useState<string>("");
+  const [serviceAvailability, setServiceAvailability] = useState<Record<string, Array<{ start: string; end: string }>>>({});
 
 
   // Handle URL parameters for Stripe Connect callbacks
@@ -715,7 +716,7 @@ export default function TeenHustlePage() {
     setLocationType("public_address");
     setBannerUrl(null);
     setServiceImages([]);
-    setAvailability("");
+    setServiceAvailability({});
     setEditingService(null);
   };
 
@@ -737,7 +738,12 @@ export default function TeenHustlePage() {
     setLocationType((service.location_type as "public_address" | "client_location") || "public_address");
     setBannerUrl(service.banner_url);
     setServiceImages(service.images || []);
-    setAvailability(service.availability || "");
+    // Parse availability from JSON if it exists
+    if (service.availability && typeof service.availability === 'object') {
+      setServiceAvailability(service.availability as Record<string, Array<{ start: string; end: string }>>);
+    } else {
+      setServiceAvailability({});
+    }
     setOpen(true);
   };
 
@@ -775,7 +781,8 @@ export default function TeenHustlePage() {
             pricing_model: isQuoteBased ? "quote" : pricingModel,
             delivery_method: deliveryMethod,
             location_type: locationType,
-            banner_url: bannerUrl
+            banner_url: bannerUrl,
+            availability: Object.keys(serviceAvailability).length > 0 ? serviceAvailability : null
           }
         : { 
             title, 
@@ -792,7 +799,7 @@ export default function TeenHustlePage() {
             delivery_method: deliveryMethod,
             location_type: locationType,
             banner_url: bannerUrl,
-            availability: availability.trim() || null
+            availability: Object.keys(serviceAvailability).length > 0 ? serviceAvailability : null
           };
 
       // Persist service via API (server validates & RLS protects)
@@ -1378,18 +1385,18 @@ export default function TeenHustlePage() {
                       Service Availability
                     </h3>
                     <div className="space-y-2">
-                      <Label htmlFor="availability" className="text-sm font-medium">Service Availability (Optional)</Label>
-                      <Textarea 
-                        id="availability" 
-                        value={availability || ""} 
-                        onChange={(e) => setAvailability(e.target.value)} 
-                        placeholder="e.g., Weekdays 3-6 PM, Weekends 10 AM-2 PM" 
-                        rows={3}
-                        className="w-full resize-none"
-                      />
-                      <p className="text-xs text-gray-500">
+                      <Label className="text-sm font-medium">Service Availability</Label>
+                      <p className="text-xs text-gray-500 mb-4">
                         Select the times you're typically available to provide this service. Customers will see your availability, send a booking request, and you can confirm it or suggest an alternative time if needed.
                       </p>
+                      <ServiceAvailabilityCalendar
+                        serviceId={editingService?.id}
+                        initialAvailability={serviceAvailability}
+                        readOnly={false}
+                        onSave={(avail) => {
+                          setServiceAvailability(avail);
+                        }}
+                      />
                     </div>
                   </div>
 

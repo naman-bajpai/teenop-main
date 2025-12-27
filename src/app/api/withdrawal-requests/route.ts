@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Earnings are tracked via withdrawal_requests.notes field (earnings_ids array)
-    // No need to update earnings table - the withdrawal_requests table tracks which earnings are locked
-    // Available balance calculation will check pending withdrawal requests to exclude these earnings
+    // The earnings API will exclude these earnings from pending balance calculations
+    // When admin approves the withdrawal, earnings will be updated to 'completed' status
 
     return NextResponse.json({
       success: true,

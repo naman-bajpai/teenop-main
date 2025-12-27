@@ -378,6 +378,7 @@ export async function PUT(request: NextRequest) {
         delivery_method,
         location_type,
         banner_url,
+        availability,
         created_at,
         rating,
         total_bookings

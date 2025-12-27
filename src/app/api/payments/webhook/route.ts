@@ -70,33 +70,8 @@ export async function POST(request: NextRequest) {
             })
             .eq("id", bookingId);
 
-          // Create earnings record for the service provider with status "locked" (not available until booking is completed)
-          if (providerId && bookingData.service_price) {
-            // Check if earnings already exists for this booking
-            const { data: existingEarnings } = await (supabase as any)
-              .from("earnings")
-              .select("id")
-              .eq("booking_id", bookingId)
-              .single();
-
-            if (!existingEarnings) {
-              const { error: earningsError } = await (supabase as any)
-                .from("earnings")
-                .insert({
-                  user_id: providerId,
-                  booking_id: bookingId,
-                  amount: bookingData.service_price,
-                  status: 'locked', // Locked until booking is marked as completed
-                  earned_at: new Date().toISOString()
-                });
-
-              if (earningsError) {
-                console.error(`Error creating earnings for booking ${bookingId}:`, earningsError);
-              } else {
-                console.log(`Created locked earnings for provider ${providerId} from booking ${bookingId}`);
-              }
-            }
-          }
+          // Earnings will be created when booking status is updated to "completed"
+          // No earnings are created at "paid" status
 
           // Send email to teen provider when parent pays
           try {

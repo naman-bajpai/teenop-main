@@ -19,7 +19,6 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import EmailNotificationSettings from "@/components/settings/EmailNotificationSettings";
 import PrivacySettings from "@/components/settings/PrivacySettings";
-import WeeklyAvailabilityCalendar from "@/components/availability/WeeklyAvailabilityCalendar";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { RatingDisplay } from "@/components/ui/rating";
@@ -658,15 +657,6 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     
-                    <div className="mt-6 pt-6 border-t border-gray-200">
-                      <WeeklyAvailabilityCalendar 
-                        userId={profile.id}
-                        readOnly={false}
-                        onSave={() => {
-                          // Optionally refresh data after save
-                        }}
-                      />
-                    </div>
                   </>
                 )}
 

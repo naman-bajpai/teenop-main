@@ -417,12 +417,15 @@ export async function PATCH(
       .eq("id", bookingId)
       .select(`
         *,
+        service_price,
+        total_price,
         services (
           id,
           title,
           pricing_model,
           location,
-          category
+          category,
+          user_id
         ),
         profiles:profiles!bookings_user_id_fkey (
           first_name,
@@ -460,8 +463,10 @@ export async function PATCH(
       alternative_time: updatedBookingData.alternative_time
     });
 
-    // If booking is marked as completed, update earnings status from "locked" to "pending" to make them available for withdrawal
+    // If booking is marked as completed, create/update earnings with status "pending" and automatically create withdrawal request
     if (status === "completed") {
+      console.log(`[EARNINGS] Processing completed booking ${bookingId}`);
+      
       // First, check if earnings exist for this booking
       const { data: existingEarnings, error: checkError } = await (supabase as any)
         .from("earnings")
@@ -469,51 +474,125 @@ export async function PATCH(
         .eq("booking_id", bookingId)
         .maybeSingle();
 
+      let earningsId: string | null = null;
+      let earningsAmount: number = 0;
+
       if (checkError) {
-        console.error("Error checking earnings:", checkError);
+        console.error("[EARNINGS] Error checking earnings:", checkError);
       } else if (existingEarnings) {
-        // Earnings exist, update them to pending if they're locked
-        if (existingEarnings.status === "locked") {
+        console.log(`[EARNINGS] Existing earnings found for booking ${bookingId}:`, existingEarnings);
+        earningsId = existingEarnings.id;
+        earningsAmount = existingEarnings.amount;
+        
+        // Earnings exist, update them to pending regardless of current status (unless already pending or completed)
+        if (existingEarnings.status !== "pending" && existingEarnings.status !== "completed") {
           const { error: earningsUpdateError } = await (supabase as any)
             .from("earnings")
             .update({ 
               status: 'pending', // Make earnings available for withdrawal
               updated_at: new Date().toISOString()
             })
-            .eq("booking_id", bookingId)
-            .eq("status", "locked"); // Only update locked earnings
+            .eq("booking_id", bookingId);
 
           if (earningsUpdateError) {
-            console.error("Error updating earnings status:", earningsUpdateError);
+            console.error("[EARNINGS] Error updating earnings status:", earningsUpdateError);
             // Don't fail the request, just log the error
           } else {
-            console.log(`Updated earnings for booking ${bookingId} from locked to pending`);
+            console.log(`[EARNINGS] Updated earnings for booking ${bookingId} to pending status`);
           }
         } else {
-          console.log(`Earnings for booking ${bookingId} are already in status: ${existingEarnings.status}`);
+          console.log(`[EARNINGS] Earnings for booking ${bookingId} are already in status: ${existingEarnings.status}`);
         }
       } else {
         // Earnings don't exist, create them with pending status
         const providerId = updatedBookingData.services?.user_id;
-        if (providerId && updatedBookingData.total_price) {
-          const { error: earningsCreateError } = await (supabase as any)
+        // Use service_price (what provider earns) if available, otherwise use total_price
+        earningsAmount = updatedBookingData.service_price || updatedBookingData.total_price;
+        
+        console.log(`[EARNINGS] Creating new earnings for booking ${bookingId}:`, {
+          providerId,
+          earningsAmount,
+          service_price: updatedBookingData.service_price,
+          total_price: updatedBookingData.total_price
+        });
+        
+        if (providerId && earningsAmount) {
+          const { data: newEarnings, error: earningsCreateError } = await (supabase as any)
             .from("earnings")
             .insert({
               user_id: providerId,
               booking_id: bookingId,
-              amount: updatedBookingData.total_price,
+              amount: earningsAmount,
               status: 'pending', // Create as pending since booking is already completed
               earned_at: new Date().toISOString()
-            });
+            })
+            .select()
+            .single();
 
           if (earningsCreateError) {
-            console.error("Error creating earnings:", earningsCreateError);
+            console.error("[EARNINGS] Error creating earnings:", earningsCreateError);
             // Don't fail the request, just log the error
           } else {
-            console.log(`Created pending earnings for booking ${bookingId}`);
+            console.log(`[EARNINGS] Created pending earnings for booking ${bookingId}:`, newEarnings);
+            earningsId = newEarnings.id;
           }
         } else {
-          console.warn(`Cannot create earnings for booking ${bookingId}: missing providerId or total_price`);
+          console.warn(`[EARNINGS] Cannot create earnings for booking ${bookingId}: missing providerId (${providerId}) or earnings amount (${earningsAmount})`);
+        }
+      }
+
+      // Automatically create withdrawal request for this earning
+      if (earningsId && earningsAmount > 0) {
+        const providerId = updatedBookingData.services?.user_id;
+        
+        // Get user's profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('stripe_connect_account_id, first_name, last_name, email')
+          .eq('id', providerId)
+          .single();
+
+        if (!profileError && profile) {
+          // Check if there's already a pending withdrawal request for this user
+          const { data: existingRequest } = await (supabase as any)
+            .from('withdrawal_requests')
+            .select('id, status')
+            .eq('user_id', providerId)
+            .eq('status', 'pending')
+            .maybeSingle();
+
+          if (!existingRequest) {
+            // No existing pending request, create a new one for this earning
+            const platformFee = earningsAmount * 0; // 0% platform fee
+            const payoutAmount = earningsAmount - platformFee;
+
+            const { data: withdrawalRequest, error: requestError } = await (supabase as any)
+              .from('withdrawal_requests')
+              .insert({
+                user_id: providerId,
+                amount: payoutAmount,
+                platform_fee: platformFee,
+                total_earnings: earningsAmount,
+                status: 'pending',
+                stripe_connect_account_id: (profile as any).stripe_connect_account_id || null,
+                notes: JSON.stringify({ earnings_ids: [earningsId] })
+              })
+              .select()
+              .single();
+
+            if (requestError) {
+              console.error('[WITHDRAWAL REQUEST] Error creating automatic withdrawal request:', requestError);
+              // Don't fail the booking update, just log the error
+            } else {
+              console.log(`[WITHDRAWAL REQUEST] Automatically created withdrawal request for booking ${bookingId}:`, withdrawalRequest);
+            }
+          } else {
+            // There's already a pending request, we could add this earning to it, but for simplicity
+            // we'll just log that a request already exists
+            console.log(`[WITHDRAWAL REQUEST] User ${providerId} already has a pending withdrawal request, skipping automatic creation`);
+          }
+        } else {
+          console.warn(`[WITHDRAWAL REQUEST] Could not fetch profile for provider ${providerId} to create withdrawal request`);
         }
       }
     }

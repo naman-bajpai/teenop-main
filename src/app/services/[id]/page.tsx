@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, HelpCircle, DollarSign } from "lucide-react";
 import HelpDialog from "@/components/help/HelpDialog";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import WeeklyAvailabilityCalendar from "@/components/availability/WeeklyAvailabilityCalendar";
+import ServiceAvailabilityCalendar from "@/components/availability/ServiceAvailabilityCalendar";
 import ReviewsList from "@/components/reviews/ReviewsList";
 import { useUser } from "@/hooks/useUser";
 import Link from "next/link";
@@ -114,7 +114,7 @@ const fetchServiceDetails = async (id: string) => {
        .select(`
          id, user_id, title, description, price, location, category, status,
          duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url,
-         created_at, rating, total_bookings
+         availability, created_at, rating, total_bookings
        `)
        .eq("id", id)
        .single();
@@ -170,6 +170,9 @@ const fetchServiceDetails = async (id: string) => {
        provider_name,
        images: images || [],
        user_id: serviceData.user_id, // Already included in serviceData
+       availability: serviceData.availability && typeof serviceData.availability === 'object' 
+         ? (serviceData.availability as Record<string, Array<{ start: string; end: string }>>)
+         : null,
      };
 
      setService(normalizedServiceData);
@@ -774,12 +777,12 @@ return (
                   </div>
                 )}
 
-                {/* Provider Weekly Availability Calendar */}
-                {service.user_id && (
+                {/* Service Availability Calendar */}
+                {service.availability && typeof service.availability === 'object' && Object.keys(service.availability).length > 0 && (
                   <div className="mb-6 p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Availability</h3>
-                    <WeeklyAvailabilityCalendar 
-                      userId={service.user_id}
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Service Availability</h3>
+                    <ServiceAvailabilityCalendar 
+                      initialAvailability={service.availability as Record<string, Array<{ start: string; end: string }>>}
                       readOnly={true}
                     />
                   </div>

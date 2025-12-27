@@ -98,7 +98,7 @@ export async function POST(
         .select('id, amount, booking_id, status')
         .eq('user_id', (withdrawalRequest as any).user_id)
         .in('id', earningsIds)
-        .eq('status', 'pending'); // Should still be pending
+        .eq('status', 'completed'); // Should still be pending
 
       if (earningsError) {
         console.error('Error fetching earnings for withdrawal request:', earningsError);
