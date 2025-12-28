@@ -136,14 +136,13 @@ const fetchServiceDetails = async (id: string) => {
        provider_user_id = serviceData.user_id;
        const { data: prof, error: profErr } = await supabase
          .from("profiles")
-         .select("first_name, last_name, rating, schedule_url, avatar_url")
+         .select("first_name, last_name, schedule_url, avatar_url")
          .eq("id", serviceData.user_id)
          .maybeSingle();
 
        if (!profErr && prof) {
          const profileData = prof as any;
          provider_name = [profileData.first_name, profileData.last_name].filter(Boolean).join(" ").trim() || null;
-         provider_rating = profileData.rating ?? null;
          provider_schedule_url = profileData.schedule_url ?? null;
          provider_avatar_url = profileData.avatar_url ?? null;
        }

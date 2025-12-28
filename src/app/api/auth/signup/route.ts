@@ -115,8 +115,43 @@ export async function POST(request: Request) {
       );
     }
 
-    // The profile will be automatically created by the database trigger
-    console.log('Profile will be created automatically by database trigger');
+    // Wait a moment for the trigger to run, then check if profile exists
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Check if profile was created by trigger
+    const { data: existingProfile, error: profileCheckError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', authData.user.id)
+      .maybeSingle();
+
+    // If profile doesn't exist, create it manually (fallback if trigger didn't run)
+    if (!existingProfile) {
+      console.log('Profile not found, creating manually...');
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          email: authData.user.email || email,
+          first_name: firstName,
+          last_name: lastName,
+          age: age || null,
+          role: (role || 'teen') as any,
+          parent_email: parentEmail || null,
+          parent_phone: parentPhone || null,
+          status: 'pending_verification' as any,
+        });
+
+      if (profileError) {
+        console.error('Error creating profile manually:', profileError);
+        // Don't fail the signup, but log the error
+        // The user can still log in and we can fix this later
+      } else {
+        console.log('Profile created manually');
+      }
+    } else {
+      console.log('Profile created by trigger');
+    }
 
     return NextResponse.json(
       { 

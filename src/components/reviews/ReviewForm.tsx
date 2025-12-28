@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Rating } from "@/components/ui/rating";
-import { Star, DollarSign } from "lucide-react";
+import { Star, DollarSign, CheckCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { TipPaymentModal } from "@/components/payments/TipPaymentModal";
 
 interface ReviewFormProps {
   bookingId: string;
@@ -20,8 +21,21 @@ export default function ReviewForm({ bookingId, serviceTitle, onSuccess, onCance
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [tipAmount, setTipAmount] = useState<string>("");
+  const [tipPaid, setTipPaid] = useState(false);
+  const [paidTipAmount, setPaidTipAmount] = useState<number>(0);
+  const [isTipPaymentModalOpen, setIsTipPaymentModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
+
+  const handleTipPaymentSuccess = (amount: number) => {
+    setTipPaid(true);
+    setPaidTipAmount(amount);
+    setTipAmount(amount.toString());
+    toast({
+      title: "Tip Payment Successful",
+      description: `Your tip of $${amount.toFixed(2)} has been processed!`,
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +49,13 @@ export default function ReviewForm({ bookingId, serviceTitle, onSuccess, onCance
       return;
     }
 
+    // If tip amount is entered but not paid, show payment modal
+    const tipValue = tipAmount ? parseFloat(tipAmount) : 0;
+    if (tipValue > 0 && !tipPaid) {
+      setIsTipPaymentModalOpen(true);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -45,7 +66,7 @@ export default function ReviewForm({ bookingId, serviceTitle, onSuccess, onCance
           booking_id: bookingId,
           rating: rating,
           review_text: reviewText.trim() || undefined,
-          tip_amount: tipAmount ? parseFloat(tipAmount) : 0,
+          tip_amount: tipPaid ? paidTipAmount : (tipValue > 0 ? tipValue : 0),
         }),
       });
 
@@ -57,7 +78,9 @@ export default function ReviewForm({ bookingId, serviceTitle, onSuccess, onCance
 
       toast({
         title: "Review Submitted",
-        description: "Thank you for your feedback!",
+        description: tipPaid 
+          ? `Thank you for your feedback and tip of $${paidTipAmount.toFixed(2)}!`
+          : "Thank you for your feedback!",
       });
 
       onSuccess();
@@ -123,21 +146,50 @@ export default function ReviewForm({ bookingId, serviceTitle, onSuccess, onCance
           <div className="flex items-center gap-2">
             <DollarSign className="w-4 h-4" />
             <span>Tip Amount (Optional)</span>
+            {tipPaid && (
+              <CheckCircle className="w-4 h-4 text-green-600" />
+            )}
           </div>
         </Label>
-        <Input
-          id="tip-amount"
-          type="number"
-          min="0"
-          step="0.01"
-          value={tipAmount}
-          onChange={(e) => setTipAmount(e.target.value)}
-          placeholder="0.00"
-          className="w-full"
-        />
-        <p className="text-xs text-gray-500 mt-1">
-          Show your appreciation with a tip (optional)
-        </p>
+        <div className="space-y-2">
+          <Input
+            id="tip-amount"
+            type="number"
+            min="0"
+            step="0.01"
+            value={tipAmount}
+            onChange={(e) => {
+              setTipAmount(e.target.value);
+              if (tipPaid && parseFloat(e.target.value) !== paidTipAmount) {
+                setTipPaid(false);
+              }
+            }}
+            placeholder="0.00"
+            className="w-full"
+            disabled={tipPaid}
+          />
+          {tipPaid && (
+            <p className="text-xs text-green-600 font-medium">
+              ✓ Tip of ${paidTipAmount.toFixed(2)} paid successfully
+            </p>
+          )}
+          {!tipPaid && tipAmount && parseFloat(tipAmount) > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsTipPaymentModalOpen(true)}
+              className="w-full"
+            >
+              Pay Tip
+            </Button>
+          )}
+          {!tipPaid && (
+            <p className="text-xs text-gray-500">
+              Show your appreciation with a tip (optional)
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-3 pt-4">
@@ -160,6 +212,15 @@ export default function ReviewForm({ bookingId, serviceTitle, onSuccess, onCance
           {submitting ? "Submitting..." : "Submit Review"}
         </Button>
       </div>
+
+      <TipPaymentModal
+        isOpen={isTipPaymentModalOpen}
+        onClose={() => setIsTipPaymentModalOpen(false)}
+        bookingId={bookingId}
+        tipAmount={tipAmount ? parseFloat(tipAmount) : 0}
+        serviceTitle={serviceTitle}
+        onPaymentSuccess={handleTipPaymentSuccess}
+      />
     </form>
   );
 }

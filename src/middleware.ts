@@ -55,12 +55,13 @@ export async function middleware(req: NextRequest) {
 
   // Check if teen users need to complete onboarding
   if (user && !req.nextUrl.pathname.startsWith('/onboarding') && !req.nextUrl.pathname.startsWith('/api')) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
+    // If profile doesn't exist, that's okay - it might be created by trigger
     // If user is a teen, allow access (onboarding check removed)
     if (profile && (profile as any).role === 'teen') {
       // Onboarding is no longer required
@@ -74,11 +75,11 @@ export async function middleware(req: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (!profile || (profile as any).role !== 'admin') {
       return NextResponse.redirect(new URL('/admin/login', req.url));
@@ -87,11 +88,11 @@ export async function middleware(req: NextRequest) {
 
   // If user is already logged in and tries to access admin login, redirect to admin dashboard
   if (req.nextUrl.pathname === '/admin/login' && user) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profile && (profile as any).role === 'admin') {
       return NextResponse.redirect(new URL('/admin/dashboard', req.url));

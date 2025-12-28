@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, Star, ChevronRight, HelpCircle } from "lucide-react";
+import { MapPin, Clock, Star, ChevronRight } from "lucide-react";
 import { Service, ServiceCategory } from "@/types/service";
 import ImageUpload from "@/components/ui/image-upload";
-import HelpDialog from "@/components/help/HelpDialog";
-import { useUser } from "@/hooks/useUser";
 
 interface ServiceCardProps {
   service: Service;
@@ -37,35 +35,6 @@ export default function ServiceCard({
   onImageUploaded, 
   onImageRemoved 
 }: ServiceCardProps) {
-  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
-  const [hasBooking, setHasBooking] = useState(false);
-  const [checkingBooking, setCheckingBooking] = useState(true);
-  const { user } = useUser({ redirectOnError: false }); // Don't redirect on public pages
-
-  useEffect(() => {
-    const checkBooking = async () => {
-      if (!user) {
-        setCheckingBooking(false);
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/bookings/check?service_id=${service.id}`, {
-          cache: "no-store"
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setHasBooking(data.hasBooking || false);
-        }
-      } catch (error) {
-        console.error("Error checking booking:", error);
-      } finally {
-        setCheckingBooking(false);
-      }
-    };
-
-    checkBooking();
-  }, [service.id, user]);
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "pet_care": return "🐕";
@@ -218,28 +187,15 @@ export default function ServiceCard({
             )}
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              asChild
-              size="sm"
-              className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2 rounded-xl font-medium"
-            >
-              <Link href={`/services/${service.id}`}>
-                View Details
-              </Link>
-            </Button>
-            {!checkingBooking && hasBooking && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsHelpDialogOpen(true)}
-                className="border-gray-300 hover:border-[#434c9d] hover:text-[#434c9d] px-4 py-2"
-                title="Get help with this service"
-              >
-                <HelpCircle className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
+          <Button
+            asChild
+            size="sm"
+            className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2 rounded-xl font-medium"
+          >
+            <Link href={`/services/${service.id}`}>
+              View Details
+            </Link>
+          </Button>
         </div>
 
         {/* Provider info */}
@@ -269,13 +225,6 @@ export default function ServiceCard({
           </div>
         )}
       </div>
-
-      <HelpDialog
-        isOpen={isHelpDialogOpen}
-        onClose={() => setIsHelpDialogOpen(false)}
-        serviceId={service.id}
-        serviceTitle={service.title}
-      />
     </div>
   );
 }
