@@ -33,45 +33,60 @@ export default function HeroSection({ user }: HeroSectionProps) {
             : "Connecting teen businesses to their community."}
         </p>
 
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link href="/neighborhood">
-            <Button className="h-auto px-6 py-3 text-lg bg-white text-[#434c9d] hover:bg-slate-100 shadow-md focus-visible:ring-2 focus-visible:ring-[#96cbc3]">
-              <Users className="mr-2 h-5 w-5" aria-hidden />
-              Browse Services
+            <Button className="group relative h-auto px-8 py-6 text-lg bg-white text-[#434c9d] hover:bg-white/95 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl overflow-hidden font-semibold">
+              <span className="relative z-10 flex items-center gap-2">
+                <Users className="w-5 h-5 group-hover:scale-110 transition-transform" aria-hidden />
+                Browse Services
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-[#96cbc3]/0 via-[#96cbc3]/5 to-[#96cbc3]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </Button>
           </Link>
           {user && user.role === "teen" && (
             <Link href="/my-teen-hustle">
-              <Button className="h-auto px-6 py-3 text-lg bg-[#ff725a] text-white hover:bg-[#ff725a]/90 shadow-md focus-visible:ring-2 focus-visible:ring-white/60">
-                <TrendingUp className="mr-2 h-5 w-5" aria-hidden />
-                Start Earning
+              <Button className="group relative h-auto px-8 py-6 text-lg bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 text-white shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl overflow-hidden font-semibold">
+                <span className="relative z-10 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 group-hover:scale-110 transition-transform" aria-hidden />
+                  Start Earning
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
               </Button>
             </Link>
           )}
         </div>
 
         {/* Highlights */}
-        <div className="mx-auto mt-12 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="rounded-2xl bg-white/10 p-6 text-white backdrop-blur-md ring-1 ring-white/15 shadow-md">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#96cbc3]/20">
-              <Users className="h-7 w-7 text-[#96cbc3]" aria-hidden />
+        <div className="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="group relative rounded-3xl bg-white/10 p-8 text-white backdrop-blur-md ring-2 ring-white/20 shadow-xl hover:shadow-2xl hover:ring-white/30 hover:-translate-y-1 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#96cbc3]/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#96cbc3]/30 to-[#434c9d]/30 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Users className="h-8 w-8 text-[#96cbc3]" aria-hidden />
+              </div>
+              <h3 className="mb-2 text-lg font-bold">Trusted Teens</h3>
+              <p className="text-sm text-white/90 leading-relaxed">Verified young entrepreneurs in your community</p>
             </div>
-            <h3 className="mb-1 font-semibold">Trusted Teens</h3>
-            <p className="text-sm text-white/85">Verified young entrepreneurs in your community</p>
           </div>
-          <div className="rounded-2xl bg-white/10 p-6 text-white backdrop-blur-md ring-1 ring-white/15 shadow-md">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-amber-300/20">
-              <Star className="h-7 w-7 text-amber-200" aria-hidden />
+          <div className="group relative rounded-3xl bg-white/10 p-8 text-white backdrop-blur-md ring-2 ring-white/20 shadow-xl hover:shadow-2xl hover:ring-white/30 hover:-translate-y-1 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-400/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400/30 to-amber-500/30 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Star className="h-8 w-8 text-amber-300" aria-hidden />
+              </div>
+              <h3 className="mb-2 text-lg font-bold">Quality Service</h3>
+              <p className="text-sm text-white/90 leading-relaxed">Rated and reviewed by real customers</p>
             </div>
-            <h3 className="mb-1 font-semibold">Quality Service</h3>
-            <p className="text-sm text-white/85">Rated and reviewed by real customers</p>
           </div>
-          <div className="rounded-2xl bg-white/10 p-6 text-white backdrop-blur-md ring-1 ring-white/15 shadow-md">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#96cbc3]/20">
-              <TrendingUp className="h-7 w-7 text-[#96cbc3]" aria-hidden />
+          <div className="group relative rounded-3xl bg-white/10 p-8 text-white backdrop-blur-md ring-2 ring-white/20 shadow-xl hover:shadow-2xl hover:ring-white/30 hover:-translate-y-1 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#96cbc3]/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#96cbc3]/30 to-[#434c9d]/30 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <TrendingUp className="h-8 w-8 text-[#96cbc3]" aria-hidden />
+              </div>
+              <h3 className="mb-2 text-lg font-bold">Fair Prices</h3>
+              <p className="text-sm text-white/90 leading-relaxed">Affordable rates that work for everyone</p>
             </div>
-            <h3 className="mb-1 font-semibold">Fair Prices</h3>
-            <p className="text-sm text-white/85">Affordable rates that work for everyone</p>
           </div>
         </div>
       </div>

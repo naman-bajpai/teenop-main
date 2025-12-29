@@ -34,18 +34,10 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
 
+    // First, get withdrawal requests
     let query = (supabase as any)
       .from('withdrawal_requests')
-      .select(`
-        *,
-        profiles!withdrawal_requests_user_id_fkey (
-          id,
-          first_name,
-          last_name,
-          email,
-          stripe_connect_account_id
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (status && status !== 'all') {
@@ -62,9 +54,41 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // If no requests, return empty array
+    if (!withdrawalRequests || withdrawalRequests.length === 0) {
+      return NextResponse.json({
+        success: true,
+        withdrawalRequests: []
+      });
+    }
+
+    // Get user IDs from withdrawal requests
+    const userIds = withdrawalRequests.map((req: any) => req.user_id).filter(Boolean);
+
+    // Fetch profiles separately if needed
+    let profilesMap: Record<string, any> = {};
+    if (userIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, stripe_connect_account_id')
+        .in('id', userIds);
+
+      if (!profilesError && profiles) {
+        profiles.forEach((profile: any) => {
+          profilesMap[profile.id] = profile;
+        });
+      }
+    }
+
+    // Attach profiles to withdrawal requests
+    const withdrawalRequestsWithProfiles = withdrawalRequests.map((request: any) => ({
+      ...request,
+      profiles: profilesMap[request.user_id] || null
+    }));
+
     return NextResponse.json({
       success: true,
-      withdrawalRequests: withdrawalRequests || []
+      withdrawalRequests: withdrawalRequestsWithProfiles || []
     });
 
   } catch (error) {

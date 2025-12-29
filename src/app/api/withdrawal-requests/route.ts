@@ -21,11 +21,20 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('stripe_connect_account_id, first_name, last_name, email')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile) {
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
       return NextResponse.json(
-        { success: false, error: "User profile not found" },
+        { success: false, error: "Failed to fetch user profile" },
+        { status: 500 }
+      );
+    }
+
+    if (!profile) {
+      console.error('User profile not found for user:', user.id);
+      return NextResponse.json(
+        { success: false, error: "User profile not found. Please complete your profile setup." },
         { status: 404 }
       );
     }
@@ -61,8 +70,9 @@ export async function POST(request: NextRequest) {
       .select('id, status')
       .eq('user_id', user.id)
       .eq('status', 'pending')
-      .single();
+      .maybeSingle();
 
+    // If there's an existing pending request (and no error), reject
     if (existingRequest && !existingError) {
       return NextResponse.json(
         { success: false, error: "You already have a pending withdrawal request" },
@@ -85,24 +95,46 @@ export async function POST(request: NextRequest) {
     const earningsIds = pendingEarnings.map((e: any) => e.id);
 
     // Create withdrawal request with earnings IDs in notes
+    const withdrawalRequestData = {
+      user_id: user.id,
+      amount: payoutAmount,
+      platform_fee: platformFee,
+      total_earnings: totalAmount,
+      status: 'pending',
+      stripe_connect_account_id: (profile as any).stripe_connect_account_id || null,
+      notes: JSON.stringify({ earnings_ids: earningsIds })
+    };
+
+    console.log('Creating withdrawal request with data:', {
+      user_id: user.id,
+      amount: payoutAmount,
+      total_earnings: totalAmount,
+      earnings_count: earningsIds.length
+    });
+
     const { data: withdrawalRequest, error: requestError } = await (supabase as any)
       .from('withdrawal_requests')
-      .insert({
-        user_id: user.id,
-        amount: payoutAmount,
-        platform_fee: platformFee,
-        total_earnings: totalAmount,
-        status: 'pending',
-        stripe_connect_account_id: (profile as any).stripe_connect_account_id || null,
-        notes: JSON.stringify({ earnings_ids: earningsIds })
-      })
+      .insert(withdrawalRequestData)
       .select()
       .single();
 
     if (requestError) {
       console.error('Error creating withdrawal request:', requestError);
+      console.error('Request data:', withdrawalRequestData);
       return NextResponse.json(
-        { success: false, error: "Failed to create withdrawal request" },
+        { 
+          success: false, 
+          error: requestError.message || "Failed to create withdrawal request",
+          details: requestError
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!withdrawalRequest) {
+      console.error('Withdrawal request created but no data returned');
+      return NextResponse.json(
+        { success: false, error: "Withdrawal request created but failed to retrieve data" },
         { status: 500 }
       );
     }

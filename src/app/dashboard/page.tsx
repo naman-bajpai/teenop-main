@@ -115,32 +115,35 @@ export default function HomePage() {
         <HeroSection user={user} />
         
         {/* Stats Bar */}
-        <div className="bg-white border-b border-gray-100 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 py-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent">
+        <div className="relative bg-gradient-to-r from-white via-blue-50/50 to-orange-50/30 border-b-2 border-gray-100 shadow-lg overflow-hidden">
+          {/* Decorative background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#96cbc3]/5 via-transparent to-[#ff725a]/5"></div>
+          
+          <div className="relative max-w-7xl mx-auto px-4 py-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="group text-center p-4 rounded-xl bg-white/60 backdrop-blur-sm border border-gray-100 hover:border-[#434c9d]/30 hover:shadow-lg transition-all duration-300">
+                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent mb-2">
                   {services.length}+
                 </div>
-                <div className="text-xs md:text-sm text-gray-600 mt-1">Active Services</div>
+                <div className="text-sm md:text-base font-semibold text-gray-700">Active Services</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-[#ff725a] to-[#434c9d] bg-clip-text text-transparent">
+              <div className="group text-center p-4 rounded-xl bg-white/60 backdrop-blur-sm border border-gray-100 hover:border-[#ff725a]/30 hover:shadow-lg transition-all duration-300">
+                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#ff725a] to-[#434c9d] bg-clip-text text-transparent mb-2">
                   {new Set(services.map(s => s.user_id)).size}+
                 </div>
-                <div className="text-xs md:text-sm text-gray-600 mt-1">Teen Providers</div>
+                <div className="text-sm md:text-base font-semibold text-gray-700">Teen Providers</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-[#96cbc3] to-[#ff725a] bg-clip-text text-transparent">
+              <div className="group text-center p-4 rounded-xl bg-white/60 backdrop-blur-sm border border-gray-100 hover:border-[#96cbc3]/30 hover:shadow-lg transition-all duration-300">
+                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#96cbc3] to-[#ff725a] bg-clip-text text-transparent mb-2">
                   {services.filter(s => s.rating && s.rating >= 4).length}+
                 </div>
-                <div className="text-xs md:text-sm text-gray-600 mt-1">Top Rated</div>
+                <div className="text-sm md:text-base font-semibold text-gray-700">Top Rated</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-[#434c9d] to-[#ff725a] bg-clip-text text-transparent">
+              <div className="group text-center p-4 rounded-xl bg-white/60 backdrop-blur-sm border border-gray-100 hover:border-[#434c9d]/30 hover:shadow-lg transition-all duration-300">
+                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#434c9d] to-[#ff725a] bg-clip-text text-transparent mb-2">
                   100%
                 </div>
-                <div className="text-xs md:text-sm text-gray-600 mt-1">Verified</div>
+                <div className="text-sm md:text-base font-semibold text-gray-700">Verified</div>
               </div>
             </div>
           </div>
@@ -189,23 +192,32 @@ export default function HomePage() {
               
               {user?.role === "teen" && (
                 <Link href={createPageUrl("Provider")}>
-                  <Button className="bg-gradient-to-r from-[#ff725a] to-[#434c9d] hover:from-[#ff725a]/90 hover:to-[#434c9d]/90 text-white shadow-lg hover:shadow-xl transition-all px-6 py-6 text-base font-semibold">
-                    <Sparkles className="w-5 h-5 mr-2" />
-                    Start Your Teen Hustle
+                  <Button className="group relative bg-gradient-to-r from-[#ff725a] via-[#ff8a6b] to-[#434c9d] hover:from-[#ff725a]/90 hover:via-[#ff8a6b]/90 hover:to-[#434c9d]/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-6 text-base font-semibold rounded-xl overflow-hidden">
+                    <span className="relative z-10 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                      Start Your Teen Hustle
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                   </Button>
                 </Link>
               )}
             </div>
 
             {/* Search Bar */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
+            <div className="relative bg-white rounded-2xl shadow-xl border-2 border-gray-100 p-6 mb-6 overflow-hidden group">
+              {/* Decorative gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#96cbc3]/5 via-transparent to-[#ff725a]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <div className="absolute left-5 top-1/2 transform -translate-y-1/2 z-10">
+                  <Search className="w-6 h-6 text-gray-400 group-hover:text-[#434c9d] transition-colors" />
+                </div>
                 <Input
-                  placeholder="Search by city or zip code..."
+                  placeholder="Search by city, zip code, or service name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 pr-4 py-6 text-base bg-gray-50 border-2 border-gray-200 focus:border-[#434c9d] focus:bg-white rounded-xl transition-all"
+                  className="pl-14 pr-4 py-7 text-base bg-gradient-to-r from-gray-50 to-white border-2 border-gray-200 focus:border-[#434c9d] focus:bg-white focus:shadow-lg rounded-xl transition-all duration-300 font-medium"
                 />
               </div>
             </div>
@@ -231,16 +243,16 @@ export default function HomePage() {
           ) : (
             <>
               {/* Results Header */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-[#96cbc3]/20 to-[#434c9d]/20 rounded-lg">
-                    <Search className="w-5 h-5 text-[#434c9d]" />
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4 p-6 bg-gradient-to-r from-white to-blue-50/30 rounded-2xl border-2 border-gray-100 shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-gradient-to-br from-[#96cbc3]/20 to-[#434c9d]/20 rounded-xl shadow-sm">
+                    <Search className="w-6 h-6 text-[#434c9d]" />
                   </div>
                   <div>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <p className="text-xl font-bold text-gray-900">
                       {filteredServices.length} {filteredServices.length === 1 ? 'Service' : 'Services'} Found
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm font-medium text-gray-600 mt-1">
                       {selectedCategory !== "all" ? `in ${selectedCategory.replace('_', ' ')}` : 'across all categories'}
                     </p>
                   </div>
@@ -249,7 +261,7 @@ export default function HomePage() {
                   <Button
                     variant="outline"
                     onClick={() => setSelectedCategory("all")}
-                    className="border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10 hover:border-[#434c9d] transition-all"
+                    className="border-2 border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10 hover:border-[#434c9d] transition-all font-semibold px-6 py-6 rounded-xl"
                   >
                     Clear filters
                   </Button>
@@ -264,31 +276,36 @@ export default function HomePage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-200 shadow-sm">
-                  <div className="w-20 h-20 bg-gradient-to-br from-[#96cbc3]/20 to-[#434c9d]/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Search className="w-10 h-10 text-[#434c9d]" />
+                <div className="text-center py-24 bg-gradient-to-br from-white to-blue-50/30 rounded-3xl border-2 border-dashed border-gray-300 shadow-lg">
+                  <div className="relative w-24 h-24 bg-gradient-to-br from-[#96cbc3]/30 to-[#434c9d]/30 rounded-full flex items-center justify-center mx-auto mb-8">
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#96cbc3]/20 to-[#434c9d]/20 rounded-full blur-xl"></div>
+                    <Search className="w-12 h-12 text-[#434c9d] relative z-10" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  <h3 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-[#434c9d] bg-clip-text text-transparent mb-4">
                     No services found
                   </h3>
-                  <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                  <p className="text-lg text-gray-600 mb-10 max-w-md mx-auto leading-relaxed">
                     We couldn't find any services matching your search. Try adjusting your filters or browse different categories.
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button
                       variant="outline"
                       onClick={() => {
                         setSearchTerm("");
                         setSelectedCategory("all");
                       }}
-                      className="border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10 px-6"
+                      className="border-2 border-[#96cbc3] text-[#434c9d] hover:bg-[#96cbc3]/10 hover:border-[#434c9d] transition-all font-semibold px-8 py-6 rounded-xl"
                     >
                       Clear all filters
                     </Button>
                     <Link href="/neighborhood">
-                      <Button className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white px-6">
-                        Browse All Services
-                        <ArrowRight className="w-4 h-4 ml-2" />
+                      <Button className="group relative bg-gradient-to-r from-[#434c9d] via-[#5a6bc4] to-[#96cbc3] hover:from-[#434c9d]/90 hover:via-[#5a6bc4]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-6 text-base font-semibold rounded-xl overflow-hidden">
+                        <span className="relative z-10 flex items-center gap-2">
+                          <Search className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                          Browse All Services
+                          <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                        </span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                       </Button>
                     </Link>
                   </div>

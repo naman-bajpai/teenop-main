@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, HelpCircle, DollarSign } from "lucide-react";
+import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, HelpCircle, DollarSign, FileText, Loader2 } from "lucide-react";
 import HelpDialog from "@/components/help/HelpDialog";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ServiceAvailabilityCalendar from "@/components/availability/ServiceAvailabilityCalendar";
@@ -811,27 +811,38 @@ return (
                           {service.status === "active" ? "Request Quote" : "Service Unavailable"}
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
+                      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                          <DialogTitle>Request Quote</DialogTitle>
-                          <DialogDescription>
-                            Fill out the form below to request a quote from {service.provider_name}.
-                          </DialogDescription>
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-12 h-12 bg-gradient-to-br from-[#434c9d]/20 to-[#96cbc3]/20 rounded-xl flex items-center justify-center">
+                              <FileText className="w-6 h-6 text-[#434c9d]" />
+                            </div>
+                            <div>
+                              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-[#434c9d] bg-clip-text text-transparent">
+                                Request Quote
+                              </DialogTitle>
+                              <DialogDescription className="text-base mt-1">
+                                Get a personalized quote from {service.provider_name || "the provider"}
+                              </DialogDescription>
+                            </div>
+                          </div>
                         </DialogHeader>
                         {providerScheduleUrl && (
-                          <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
-                            <div className="flex items-start gap-3 mb-3">
-                              <Calendar className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-xl border-2 border-blue-200 shadow-sm">
+                            <div className="flex items-start gap-4">
+                              <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center">
+                                <Calendar className="w-6 h-6 text-blue-600" />
+                              </div>
                               <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900 mb-1">Check Provider Availability</h4>
-                                <p className="text-xs text-gray-600 mb-3">
+                                <h4 className="font-bold text-gray-900 mb-1 text-lg">Check Provider Availability</h4>
+                                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
                                   View {service.provider_name ? `${service.provider_name}'s` : "the provider's"} schedule to find the best time for your quote request.
                                 </p>
                                 <a
                                   href={providerScheduleUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+                                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-semibold text-sm shadow-md hover:shadow-lg"
                                 >
                                   <span>Open Schedule</span>
                                   <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
@@ -841,38 +852,69 @@ return (
                           </div>
                         )}
                         {quoteRequestSuccess ? (
-                          <div className="text-center py-6">
-                            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Quote Request Sent!</h3>
-                            <p className="text-gray-600 mb-2">The provider will review your request and get back to you soon. You can view the status of your request under My Requests and will receive an email confirmation or an alternative proposed time.</p>
+                          <div className="text-center py-12">
+                            <div className="relative w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                              <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-200 rounded-full blur-xl opacity-50"></div>
+                              <CheckCircle className="w-12 h-12 text-green-600 relative z-10" />
+                            </div>
+                            <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-green-600 bg-clip-text text-transparent mb-3">
+                              Quote Request Sent!
+                            </h3>
+                            <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
+                              The provider will review your request and get back to you soon. You can view the status of your request under My Requests and will receive an email confirmation.
+                            </p>
+                            <Button
+                              onClick={() => {
+                                setIsQuoteDialogOpen(false);
+                                setQuoteRequestSuccess(false);
+                                router.push("/my-requests");
+                              }}
+                              className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white"
+                            >
+                              View My Requests
+                            </Button>
                           </div>
                         ) : (
-                          <form onSubmit={handleQuoteRequest} className="space-y-4">
-                            <div>
-                              <Label htmlFor="quote-date">Preferred Date *</Label>
-                              <Input
-                                id="quote-date"
-                                type="date"
-                                value={quoteRequestForm.requested_date}
-                                onChange={(e) => setQuoteRequestForm((prev) => ({ ...prev, requested_date: e.target.value }))}
-                                min={new Date().toISOString().split("T")[0]}
-                                required
-                              />
-                              <p className="text-xs text-gray-500 mt-1">Date is required to request a quote</p>
+                          <form onSubmit={handleQuoteRequest} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="quote-date" className="text-base font-semibold flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-[#434c9d]" />
+                                  Preferred Date *
+                                </Label>
+                                <Input
+                                  id="quote-date"
+                                  type="date"
+                                  value={quoteRequestForm.requested_date}
+                                  onChange={(e) => setQuoteRequestForm((prev) => ({ ...prev, requested_date: e.target.value }))}
+                                  min={new Date().toISOString().split("T")[0]}
+                                  required
+                                  className="h-11 border-2 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20"
+                                />
+                                <p className="text-xs text-gray-500">Select your preferred service date</p>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="quote-time" className="text-base font-semibold flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-[#434c9d]" />
+                                  Preferred Time *
+                                </Label>
+                                <Input
+                                  id="quote-time"
+                                  type="time"
+                                  value={quoteRequestForm.requested_time}
+                                  onChange={(e) => setQuoteRequestForm((prev) => ({ ...prev, requested_time: e.target.value }))}
+                                  required
+                                  className="h-11 border-2 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20"
+                                />
+                                <p className="text-xs text-gray-500">Select your preferred service time</p>
+                              </div>
                             </div>
-                            <div>
-                              <Label htmlFor="quote-time">Preferred Time *</Label>
-                              <Input
-                                id="quote-time"
-                                type="time"
-                                value={quoteRequestForm.requested_time}
-                                onChange={(e) => setQuoteRequestForm((prev) => ({ ...prev, requested_time: e.target.value }))}
-                                required
-                              />
-                              <p className="text-xs text-gray-500 mt-1">Time is required to request a quote</p>
-                            </div>
-                            <div>
-                              <Label htmlFor="quote-instructions">Special Instructions (Optional)</Label>
+                            <div className="space-y-2">
+                              <Label htmlFor="quote-instructions" className="text-base font-semibold flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-[#434c9d]" />
+                                Special Instructions
+                                <span className="text-xs font-normal text-gray-500">(Optional)</span>
+                              </Label>
                               <Textarea
                                 id="quote-instructions"
                                 placeholder="Any specific requirements or details you'd like the provider to know..."
@@ -880,11 +922,16 @@ return (
                                 onChange={(e) =>
                                   setQuoteRequestForm((prev) => ({ ...prev, special_instructions: e.target.value }))
                                 }
-                                rows={3}
+                                rows={4}
+                                className="border-2 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 resize-none"
                               />
                             </div>
-                            <div>
-                              <Label htmlFor="quote-address">Service Address (Optional)</Label>
+                            <div className="space-y-2">
+                              <Label htmlFor="quote-address" className="text-base font-semibold flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-[#434c9d]" />
+                                Service Address
+                                <span className="text-xs font-normal text-gray-500">(Optional)</span>
+                              </Label>
                               <Input
                                 id="quote-address"
                                 placeholder="Enter address if service will take place at your location..."
@@ -892,29 +939,35 @@ return (
                                 onChange={(e) =>
                                   setQuoteRequestForm((prev) => ({ ...prev, service_address: e.target.value }))
                                 }
+                                className="h-11 border-2 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20"
                               />
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-gray-500">
                                 Only include if the service will be performed at your address
                               </p>
                             </div>
-                            <div>
-                              <Label>Upload Image (Optional)</Label>
-                              <div className="space-y-2">
+                            <div className="space-y-2">
+                              <Label className="text-base font-semibold flex items-center gap-2">
+                                <ImageIcon className="w-4 h-4 text-[#434c9d]" />
+                                Upload Image
+                                <span className="text-xs font-normal text-gray-500">(Optional)</span>
+                              </Label>
+                              <div className="space-y-3">
                                 {imagePreview && (
-                                  <div className="relative inline-block">
+                                  <div className="relative inline-block group">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-[#434c9d]/10 to-[#96cbc3]/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                     <img
                                       src={imagePreview}
                                       alt="Preview"
-                                      className="max-w-full max-h-48 rounded-lg object-contain border border-gray-200"
+                                      className="max-w-full max-h-64 rounded-xl object-contain border-2 border-gray-200 shadow-md"
                                     />
                                     <Button
                                       type="button"
                                       variant="destructive"
                                       size="sm"
-                                      className="absolute top-2 right-2 h-6 w-6 p-0"
+                                      className="absolute top-3 right-3 h-8 w-8 p-0 rounded-full shadow-lg"
                                       onClick={removeImage}
                                     >
-                                      <X className="w-3 h-3" />
+                                      <X className="w-4 h-4" />
                                     </Button>
                                   </div>
                                 )}
@@ -930,12 +983,12 @@ return (
                                   <Button
                                     type="button"
                                     variant="outline"
-                                    size="sm"
+                                    size="lg"
                                     onClick={() => fileInputRef.current?.click()}
                                     disabled={uploadingImage || quoteRequestLoading}
-                                    className="flex items-center gap-2"
+                                    className="flex items-center gap-2 border-2 hover:border-[#434c9d] hover:bg-[#434c9d]/5"
                                   >
-                                    <ImageIcon className="w-4 h-4" />
+                                    <ImageIcon className="w-5 h-5" />
                                     {selectedImage ? "Change Image" : "Select Image"}
                                   </Button>
                                 </div>
@@ -944,16 +997,41 @@ return (
                                 </p>
                               </div>
                             </div>
-                            <div className="flex gap-3 pt-4">
-                              <Button type="button" variant="outline" onClick={() => {
-                                setIsQuoteDialogOpen(false);
-                                removeImage();
-                              }} className="flex-1" disabled={quoteRequestLoading || uploadingImage}>
+                            <div className="flex gap-3 pt-4 border-t border-gray-200">
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                onClick={() => {
+                                  setIsQuoteDialogOpen(false);
+                                  removeImage();
+                                }} 
+                                className="flex-1 h-12 border-2 hover:bg-gray-50" 
+                                disabled={quoteRequestLoading || uploadingImage}
+                              >
                                 Cancel
                               </Button>
-                              <Button type="submit" disabled={quoteRequestLoading || uploadingImage} className="flex-1 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90">
-                                {uploadingImage ? "Uploading..." : quoteRequestLoading ? "Sending..." : "Request Quote"}
-                    </Button>
+                              <Button 
+                                type="submit" 
+                                disabled={quoteRequestLoading || uploadingImage} 
+                                className="flex-1 h-12 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all font-semibold"
+                              >
+                                {uploadingImage ? (
+                                  <span className="flex items-center gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Uploading...
+                                  </span>
+                                ) : quoteRequestLoading ? (
+                                  <span className="flex items-center gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Sending...
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-2">
+                                    <FileText className="w-4 h-4" />
+                                    Request Quote
+                                  </span>
+                                )}
+                              </Button>
                             </div>
                           </form>
                         )}

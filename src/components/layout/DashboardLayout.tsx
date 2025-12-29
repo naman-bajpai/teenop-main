@@ -29,7 +29,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-orange-50/20 flex flex-col">
       <AuthenticatedNavbar user={user} />
       <main className="flex-1">
         {children}

@@ -542,58 +542,89 @@ export async function PATCH(
       }
 
       // Automatically create withdrawal request for this earning
+      // Each completed booking should create its own withdrawal request
       if (earningsId && earningsAmount > 0) {
         const providerId = updatedBookingData.services?.user_id;
         
-        // Get user's profile
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('stripe_connect_account_id, first_name, last_name, email')
-          .eq('id', providerId)
-          .single();
-
-        if (!profileError && profile) {
-          // Check if there's already a pending withdrawal request for this user
-          const { data: existingRequest } = await (supabase as any)
-            .from('withdrawal_requests')
-            .select('id, status')
-            .eq('user_id', providerId)
-            .eq('status', 'pending')
+        if (!providerId) {
+          console.warn(`[WITHDRAWAL REQUEST] Cannot create withdrawal request: missing providerId for booking ${bookingId}`);
+        } else {
+          // Get user's profile
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('stripe_connect_account_id, first_name, last_name, email')
+            .eq('id', providerId)
             .maybeSingle();
 
-          if (!existingRequest) {
-            // No existing pending request, create a new one for this earning
+          if (profileError) {
+            console.error(`[WITHDRAWAL REQUEST] Error fetching profile for provider ${providerId}:`, profileError);
+          } else if (!profile) {
+            console.warn(`[WITHDRAWAL REQUEST] Profile not found for provider ${providerId}`);
+          } else {
+            // Always create a withdrawal request for each completed booking
+            // This ensures every completed booking shows up in the admin dashboard
             const platformFee = earningsAmount * 0; // 0% platform fee
             const payoutAmount = earningsAmount - platformFee;
 
-            const { data: withdrawalRequest, error: requestError } = await (supabase as any)
+            // Check if a withdrawal request already exists for this specific booking/earning
+            const { data: existingRequestForEarning } = await (supabase as any)
               .from('withdrawal_requests')
-              .insert({
-                user_id: providerId,
-                amount: payoutAmount,
-                platform_fee: platformFee,
-                total_earnings: earningsAmount,
-                status: 'pending',
-                stripe_connect_account_id: (profile as any).stripe_connect_account_id || null,
-                notes: JSON.stringify({ earnings_ids: [earningsId] })
-              })
-              .select()
-              .single();
+              .select('id, status, notes')
+              .eq('user_id', providerId)
+              .eq('status', 'pending')
+              .maybeSingle();
 
-            if (requestError) {
-              console.error('[WITHDRAWAL REQUEST] Error creating automatic withdrawal request:', requestError);
-              // Don't fail the booking update, just log the error
-            } else {
-              console.log(`[WITHDRAWAL REQUEST] Automatically created withdrawal request for booking ${bookingId}:`, withdrawalRequest);
+            // Parse notes to check if this earning is already in a pending request
+            let earningAlreadyInRequest = false;
+            if (existingRequestForEarning && existingRequestForEarning.notes) {
+              try {
+                const notes = JSON.parse(existingRequestForEarning.notes);
+                if (notes.earnings_ids && Array.isArray(notes.earnings_ids) && notes.earnings_ids.includes(earningsId)) {
+                  earningAlreadyInRequest = true;
+                  console.log(`[WITHDRAWAL REQUEST] Earning ${earningsId} already included in pending withdrawal request ${existingRequestForEarning.id}`);
+                }
+              } catch (e) {
+                // If notes parsing fails, continue to create new request
+              }
             }
-          } else {
-            // There's already a pending request, we could add this earning to it, but for simplicity
-            // we'll just log that a request already exists
-            console.log(`[WITHDRAWAL REQUEST] User ${providerId} already has a pending withdrawal request, skipping automatic creation`);
+
+            if (!earningAlreadyInRequest) {
+              const { data: withdrawalRequest, error: requestError } = await (supabase as any)
+                .from('withdrawal_requests')
+                .insert({
+                  user_id: providerId,
+                  amount: payoutAmount,
+                  platform_fee: platformFee,
+                  total_earnings: earningsAmount,
+                  status: 'pending',
+                  stripe_connect_account_id: (profile as any).stripe_connect_account_id || null,
+                  notes: JSON.stringify({ 
+                    earnings_ids: [earningsId],
+                    booking_id: bookingId,
+                    created_from: 'completed_booking'
+                  })
+                })
+                .select()
+                .single();
+
+              if (requestError) {
+                console.error('[WITHDRAWAL REQUEST] Error creating automatic withdrawal request:', requestError);
+                console.error('[WITHDRAWAL REQUEST] Request data:', {
+                  user_id: providerId,
+                  amount: payoutAmount,
+                  total_earnings: earningsAmount,
+                  earnings_id: earningsId,
+                  booking_id: bookingId
+                });
+                // Don't fail the booking update, just log the error
+              } else {
+                console.log(`[WITHDRAWAL REQUEST] ✅ Successfully created withdrawal request ${withdrawalRequest?.id} for booking ${bookingId} (earning ${earningsId}, amount: $${payoutAmount})`);
+              }
+            }
           }
-        } else {
-          console.warn(`[WITHDRAWAL REQUEST] Could not fetch profile for provider ${providerId} to create withdrawal request`);
         }
+      } else {
+        console.warn(`[WITHDRAWAL REQUEST] Cannot create withdrawal request for booking ${bookingId}: missing earningsId (${earningsId}) or earningsAmount (${earningsAmount})`);
       }
     }
 

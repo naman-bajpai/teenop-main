@@ -39,15 +39,7 @@ export async function POST(
     // Get the withdrawal request
     const { data: withdrawalRequest, error: requestError } = await (supabase as any)
       .from('withdrawal_requests')
-      .select(`
-        *,
-        profiles!withdrawal_requests_user_id_fkey (
-          id,
-          first_name,
-          last_name,
-          email
-        )
-      `)
+      .select('*')
       .eq('id', requestId)
       .single();
 
@@ -66,8 +58,14 @@ export async function POST(
       );
     }
 
-    const userProfile = (withdrawalRequest as any).profiles;
-    if (!userProfile) {
+    // Get user profile separately
+    const { data: userProfile, error: userProfileError } = await supabase 
+      .from('profiles')
+      .select('id, first_name, last_name, email')
+      .eq('id', (withdrawalRequest as any).user_id)
+      .single();
+
+    if (profileError || !userProfile) {
       return NextResponse.json(
         { success: false, error: "User profile not found" },
         { status: 400 }

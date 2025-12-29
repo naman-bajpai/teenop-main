@@ -303,6 +303,13 @@ export default function AdminDashboard() {
     }
   }, [selectedSupportConversation]);
 
+  // Refresh withdrawal requests when withdrawals tab is opened
+  useEffect(() => {
+    if (activeTab === "withdrawals") {
+      fetchWithdrawalRequests().then(setWithdrawalRequests);
+    }
+  }, [activeTab]);
+
   async function handleProcessWithdrawal(requestId: string) {
     setProcessingRequest(requestId);
     try {
