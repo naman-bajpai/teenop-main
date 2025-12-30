@@ -74,11 +74,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create earnings records for bookings that don't have them
+    // Earnings should be 'pending' until withdrawn, not 'completed'
     const earningsToInsert = bookingsToProcess.map((booking: any) => ({
       user_id: user.id,
       booking_id: booking.id,
       amount: booking.service_price, // Use service_price directly
-      status: 'completed',
+      status: 'pending', // Changed from 'completed' to 'pending' - earnings should be pending until withdrawn
       earned_at: booking.payment_completed_at
     }));
 

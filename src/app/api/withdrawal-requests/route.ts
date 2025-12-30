@@ -64,18 +64,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if there's already a pending withdrawal request
+    // Check if there's already a processing withdrawal request
     const { data: existingRequest, error: existingError } = await (supabase as any)
       .from('withdrawal_requests')
       .select('id, status')
       .eq('user_id', user.id)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'processing'])
       .maybeSingle();
 
-    // If there's an existing pending request (and no error), reject
+    // If there's an existing pending/processing request (and no error), reject
     if (existingRequest && !existingError) {
       return NextResponse.json(
-        { success: false, error: "You already have a pending withdrawal request" },
+        { success: false, error: "You already have a withdrawal request being processed" },
         { status: 400 }
       );
     }
@@ -95,12 +95,13 @@ export async function POST(request: NextRequest) {
     const earningsIds = pendingEarnings.map((e: any) => e.id);
 
     // Create withdrawal request with earnings IDs in notes
+    // Note: Manual requests also use 'processing' status to match automatic creation
     const withdrawalRequestData = {
       user_id: user.id,
       amount: payoutAmount,
       platform_fee: platformFee,
       total_earnings: totalAmount,
-      status: 'pending',
+      status: 'processing',
       stripe_connect_account_id: (profile as any).stripe_connect_account_id || null,
       notes: JSON.stringify({ earnings_ids: earningsIds })
     };

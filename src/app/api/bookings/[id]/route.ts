@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 
 // GET specific booking details
 export async function GET(
@@ -484,9 +485,61 @@ export async function PATCH(
         earningsId = existingEarnings.id;
         earningsAmount = existingEarnings.amount;
         
-        // Earnings exist, update them to pending regardless of current status (unless already pending or completed)
-        if (existingEarnings.status !== "pending" && existingEarnings.status !== "completed") {
-          const { error: earningsUpdateError } = await (supabase as any)
+        // Earnings exist, update them to pending if needed
+        // If earnings are 'completed', check if they're in an approved withdrawal request
+        // If not, they might have been incorrectly marked as completed (e.g., from sync route)
+        // and should be updated to 'pending' so they can be withdrawn
+        if (existingEarnings.status === "completed") {
+          // Check if these earnings are in an approved withdrawal request
+          const supabaseService = createServiceRoleClient();
+          const { data: withdrawalRequests } = await (supabaseService as any)
+            .from('withdrawal_requests')
+            .select('id, status, notes')
+            .eq('user_id', updatedBookingData.services?.user_id)
+            .in('status', ['approved', 'processed'])
+            .limit(100);
+
+          let isInApprovedRequest = false;
+          if (withdrawalRequests && Array.isArray(withdrawalRequests)) {
+            for (const wr of withdrawalRequests) {
+              if (wr.notes) {
+                try {
+                  const notes = JSON.parse(wr.notes);
+                  if (notes.earnings_ids && Array.isArray(notes.earnings_ids) && notes.earnings_ids.includes(existingEarnings.id)) {
+                    isInApprovedRequest = true;
+                    console.log(`[EARNINGS] Earnings ${existingEarnings.id} is already in approved withdrawal request ${wr.id}`);
+                    break;
+                  }
+                } catch (e) {
+                  // Ignore parse errors
+                }
+              }
+            }
+          }
+
+          if (!isInApprovedRequest) {
+            // Earnings are marked as 'completed' but not in an approved withdrawal request
+            // This likely means they were incorrectly marked as completed (e.g., from sync route)
+            // Update them to 'pending' so they can be withdrawn
+            console.log(`[EARNINGS] Earnings ${existingEarnings.id} is 'completed' but not in an approved withdrawal request. Updating to 'pending'.`);
+            const { error: earningsUpdateError } = await (supabaseService as any)
+              .from("earnings")
+              .update({ 
+                status: 'pending', // Make earnings available for withdrawal
+                updated_at: new Date().toISOString()
+              })
+              .eq("booking_id", bookingId);
+
+            if (earningsUpdateError) {
+              console.error("[EARNINGS] Error updating earnings status:", earningsUpdateError);
+            } else {
+              console.log(`[EARNINGS] Updated earnings for booking ${bookingId} from 'completed' to 'pending' status`);
+            }
+          }
+        } else if (existingEarnings.status !== "pending") {
+          // Earnings exist but are not pending, update them to pending
+          const supabaseService = createServiceRoleClient();
+          const { error: earningsUpdateError } = await (supabaseService as any)
             .from("earnings")
             .update({ 
               status: 'pending', // Make earnings available for withdrawal
@@ -517,7 +570,9 @@ export async function PATCH(
         });
         
         if (providerId && earningsAmount) {
-          const { data: newEarnings, error: earningsCreateError } = await (supabase as any)
+          // Use service role client to bypass RLS for automatic earnings creation
+          const supabaseService = createServiceRoleClient();
+          const { data: newEarnings, error: earningsCreateError } = await (supabaseService as any)
             .from("earnings")
             .insert({
               user_id: providerId,
@@ -530,11 +585,19 @@ export async function PATCH(
             .single();
 
           if (earningsCreateError) {
-            console.error("[EARNINGS] Error creating earnings:", earningsCreateError);
+            console.error("[EARNINGS] ❌ Error creating earnings:", earningsCreateError);
+            console.error("[EARNINGS] Error details:", {
+              code: earningsCreateError.code,
+              message: earningsCreateError.message,
+              details: earningsCreateError.details,
+              hint: earningsCreateError.hint
+            });
             // Don't fail the request, just log the error
-          } else {
-            console.log(`[EARNINGS] Created pending earnings for booking ${bookingId}:`, newEarnings);
+          } else if (newEarnings) {
+            console.log(`[EARNINGS] ✅ Created pending earnings for booking ${bookingId}:`, newEarnings);
             earningsId = newEarnings.id;
+          } else {
+            console.error(`[EARNINGS] ⚠️ Earnings insert returned no data and no error for booking ${bookingId}`);
           }
         } else {
           console.warn(`[EARNINGS] Cannot create earnings for booking ${bookingId}: missing providerId (${providerId}) or earnings amount (${earningsAmount})`);
@@ -549,6 +612,23 @@ export async function PATCH(
         if (!providerId) {
           console.warn(`[WITHDRAWAL REQUEST] Cannot create withdrawal request: missing providerId for booking ${bookingId}`);
         } else {
+          // Verify the earnings exist and are in pending status before creating withdrawal request
+          const supabaseService = createServiceRoleClient();
+          const { data: verifiedEarnings, error: verifyError } = await (supabaseService as any)
+            .from('earnings')
+            .select('id, amount, status')
+            .eq('id', earningsId)
+            .eq('user_id', providerId)
+            .single();
+
+          if (verifyError || !verifiedEarnings) {
+            console.error(`[WITHDRAWAL REQUEST] ⚠️ Cannot verify earnings ${earningsId} before creating withdrawal request:`, verifyError);
+            console.error(`[WITHDRAWAL REQUEST] Earnings may not exist or RLS is blocking access. Skipping withdrawal request creation.`);
+          } else if (verifiedEarnings.status !== 'pending') {
+            console.warn(`[WITHDRAWAL REQUEST] ⚠️ Earnings ${earningsId} is not in 'pending' status (current: ${verifiedEarnings.status}). Skipping withdrawal request creation.`);
+          } else {
+            console.log(`[WITHDRAWAL REQUEST] ✅ Verified earnings ${earningsId} exists with 'pending' status. Proceeding with withdrawal request creation.`);
+
           // Get user's profile
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
@@ -567,61 +647,92 @@ export async function PATCH(
             const payoutAmount = earningsAmount - platformFee;
 
             // Check if a withdrawal request already exists for this specific booking/earning
-            const { data: existingRequestForEarning } = await (supabase as any)
+            // Check for both 'processing' and 'pending' statuses (for backward compatibility)
+            const { data: existingRequests, error: existingRequestsError } = await (supabase as any)
               .from('withdrawal_requests')
               .select('id, status, notes')
               .eq('user_id', providerId)
-              .eq('status', 'pending')
-              .maybeSingle();
+              .in('status', ['processing', 'pending'])
+              .order('created_at', { ascending: false });
 
-            // Parse notes to check if this earning is already in a pending request
+            // Parse notes to check if this earning is already in any processing/pending request
             let earningAlreadyInRequest = false;
-            if (existingRequestForEarning && existingRequestForEarning.notes) {
-              try {
-                const notes = JSON.parse(existingRequestForEarning.notes);
-                if (notes.earnings_ids && Array.isArray(notes.earnings_ids) && notes.earnings_ids.includes(earningsId)) {
-                  earningAlreadyInRequest = true;
-                  console.log(`[WITHDRAWAL REQUEST] Earning ${earningsId} already included in pending withdrawal request ${existingRequestForEarning.id}`);
+            if (existingRequests && Array.isArray(existingRequests)) {
+              for (const existingRequest of existingRequests) {
+                if (existingRequest.notes) {
+                  try {
+                    const notes = JSON.parse(existingRequest.notes);
+                    if (notes.earnings_ids && Array.isArray(notes.earnings_ids) && notes.earnings_ids.includes(earningsId)) {
+                      earningAlreadyInRequest = true;
+                      console.log(`[WITHDRAWAL REQUEST] Earning ${earningsId} already included in ${existingRequest.status} withdrawal request ${existingRequest.id}`);
+                      break;
+                    }
+                  } catch (e) {
+                    // If notes parsing fails, continue checking other requests
+                    console.warn(`[WITHDRAWAL REQUEST] Error parsing notes for request ${existingRequest.id}:`, e);
+                  }
                 }
-              } catch (e) {
-                // If notes parsing fails, continue to create new request
               }
+            }
+            
+            if (existingRequestsError) {
+              console.error('[WITHDRAWAL REQUEST] Error checking for existing withdrawal requests:', existingRequestsError);
             }
 
             if (!earningAlreadyInRequest) {
-              const { data: withdrawalRequest, error: requestError } = await (supabase as any)
-                .from('withdrawal_requests')
-                .insert({
-                  user_id: providerId,
-                  amount: payoutAmount,
-                  platform_fee: platformFee,
-                  total_earnings: earningsAmount,
-                  status: 'pending',
-                  stripe_connect_account_id: (profile as any).stripe_connect_account_id || null,
-                  notes: JSON.stringify({ 
-                    earnings_ids: [earningsId],
-                    booking_id: bookingId,
-                    created_from: 'completed_booking'
-                  })
+              const withdrawalRequestData = {
+                user_id: providerId,
+                amount: payoutAmount,
+                platform_fee: platformFee,
+                total_earnings: earningsAmount,
+                status: 'processing',
+                stripe_connect_account_id: (profile as any).stripe_connect_account_id || null,
+                notes: JSON.stringify({ 
+                  earnings_ids: [earningsId],
+                  booking_id: bookingId,
+                  created_from: 'completed_booking'
                 })
+              };
+
+              console.log('[WITHDRAWAL REQUEST] Attempting to create withdrawal request with data:', {
+                user_id: providerId,
+                amount: payoutAmount,
+                platform_fee: platformFee,
+                total_earnings: earningsAmount,
+                status: 'processing',
+                earnings_id: earningsId,
+                booking_id: bookingId
+              });
+
+              // Use service role client to bypass RLS since this is an automatic system action
+              // The current user might be the customer, not the provider
+              // supabaseService already created above for earnings verification
+              const { data: withdrawalRequest, error: requestError } = await (supabaseService as any)
+                .from('withdrawal_requests')
+                .insert(withdrawalRequestData)
                 .select()
                 .single();
 
               if (requestError) {
-                console.error('[WITHDRAWAL REQUEST] Error creating automatic withdrawal request:', requestError);
-                console.error('[WITHDRAWAL REQUEST] Request data:', {
-                  user_id: providerId,
-                  amount: payoutAmount,
-                  total_earnings: earningsAmount,
-                  earnings_id: earningsId,
-                  booking_id: bookingId
+                console.error('[WITHDRAWAL REQUEST] ❌ Error creating automatic withdrawal request:', requestError);
+                console.error('[WITHDRAWAL REQUEST] Error details:', {
+                  code: requestError.code,
+                  message: requestError.message,
+                  details: requestError.details,
+                  hint: requestError.hint
                 });
+                console.error('[WITHDRAWAL REQUEST] Request data that failed:', withdrawalRequestData);
                 // Don't fail the booking update, just log the error
+              } else if (withdrawalRequest) {
+                console.log(`[WITHDRAWAL REQUEST] ✅ Successfully created withdrawal request ${withdrawalRequest.id} for booking ${bookingId} (earning ${earningsId}, amount: $${payoutAmount})`);
               } else {
-                console.log(`[WITHDRAWAL REQUEST] ✅ Successfully created withdrawal request ${withdrawalRequest?.id} for booking ${bookingId} (earning ${earningsId}, amount: $${payoutAmount})`);
+                console.error('[WITHDRAWAL REQUEST] ⚠️ Withdrawal request insert returned no data and no error');
               }
+            } else {
+              console.log(`[WITHDRAWAL REQUEST] Skipping creation - earning ${earningsId} already in a withdrawal request`);
             }
           }
+          } // End of verifiedEarnings check
         }
       } else {
         console.warn(`[WITHDRAWAL REQUEST] Cannot create withdrawal request for booking ${bookingId}: missing earningsId (${earningsId}) or earningsAmount (${earningsAmount})`);

@@ -379,6 +379,48 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleToggleVerification = async (userId: string) => {
+    setActionLoading(userId);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || "Failed to update verification status");
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        // Update local state
+        setUsers(prev => prev.map(user => 
+          user.id === userId ? { ...user, is_verified: data.is_verified } : user
+        ));
+        
+        // Update filtered users as well
+        setFilteredUsers(prev => prev.map(user => 
+          user.id === userId ? { ...user, is_verified: data.is_verified } : user
+        ));
+
+        toast({
+          title: "Verification updated",
+          description: data.message || `User ${data.is_verified ? 'verified' : 'unverified'} successfully`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error toggling verification:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update verification status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       return;
@@ -671,7 +713,7 @@ export default function AdminDashboard() {
                 }`}
               >
                 <Wallet className="w-4 h-4 inline mr-2" />
-                Withdrawals ({withdrawalRequests.filter((r: any) => r.status === 'pending').length})
+                Withdrawals ({withdrawalRequests.filter((r: any) => r.status === 'processing').length})
               </button>
               <button
                 onClick={() => setActiveTab("support")}
@@ -984,12 +1026,16 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {request.status === 'pending' ? (
+                          {request.status === 'processing' ? (
+                            <Badge className="bg-blue-100 text-blue-800">Processing</Badge>
+                          ) : request.status === 'approved' ? (
+                            <Badge className="bg-green-100 text-green-800">Approved</Badge>
+                          ) : request.status === 'pending' ? (
                             <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
-                          ) : request.status === 'processed' ? (
-                            <Badge className="bg-green-100 text-green-800">Processed</Badge>
                           ) : request.status === 'failed' ? (
                             <Badge className="bg-red-100 text-red-800">Failed</Badge>
+                          ) : request.status === 'cancelled' ? (
+                            <Badge className="bg-gray-100 text-gray-800">Cancelled</Badge>
                           ) : (
                             <Badge className="bg-gray-100 text-gray-800">{request.status}</Badge>
                           )}
@@ -998,7 +1044,7 @@ export default function AdminDashboard() {
                           {request.created_at ? new Date(request.created_at).toLocaleDateString() : 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          {request.status === 'pending' ? (
+                          {request.status === 'processing' ? (
                             <Button
                               onClick={() => handleProcessWithdrawal(request.id)}
                               disabled={processingRequest === request.id}
@@ -1057,6 +1103,9 @@ export default function AdminDashboard() {
                   </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
+                  </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Verified
                   </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Location
@@ -1148,6 +1197,21 @@ export default function AdminDashboard() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge className={user.is_verified ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800 border-gray-200"}>
+                        {user.is_verified ? (
+                          <>
+                            <UserCheck className="w-3 h-3 inline mr-1" />
+                            Verified
+                          </>
+                        ) : (
+                          <>
+                            <UserX className="w-3 h-3 inline mr-1" />
+                            Unverified
+                          </>
+                        )}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-1.5 text-sm text-gray-600">
                         <MapPin className="h-3.5 w-3.5" />
                         <span>
@@ -1193,7 +1257,7 @@ export default function AdminDashboard() {
                             disabled={actionLoading === user.id}
                             className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
                           >
-                            Verify
+                            Activate
                           </Button>
                         ) : (
                           <Button
@@ -1206,6 +1270,26 @@ export default function AdminDashboard() {
                             Activate
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleToggleVerification(user.id)}
+                          disabled={actionLoading === user.id}
+                          className={user.is_verified ? "border-orange-300 text-orange-600 hover:bg-orange-50 text-xs" : "border-green-300 text-green-600 hover:bg-green-50 text-xs"}
+                          title={user.is_verified ? "Unverify user" : "Verify user"}
+                        >
+                          {user.is_verified ? (
+                            <>
+                              <UserX className="h-3.5 w-3.5 mr-1" />
+                              Unverify
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="h-3.5 w-3.5 mr-1" />
+                              Verify
+                            </>
+                          )}
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
