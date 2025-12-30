@@ -557,12 +557,14 @@ export default function TeenHustlePage() {
           }
         }
 
-        // Fetch pending quote requests count
+        // Fetch pending quote requests
         const quoteRequestsRes = await fetch("/api/quotes/request?role=provider&status=pending", { cache: "no-store" });
         if (quoteRequestsRes.ok) {
           const quoteRequestsData = await quoteRequestsRes.json();
           if (quoteRequestsData.success) {
-            setPendingQuoteRequestsCount(quoteRequestsData.quote_requests?.length || 0);
+            const pendingQuotes = quoteRequestsData.quote_requests || [];
+            setPendingQuoteRequestsCount(pendingQuotes.length);
+            setQuoteRequests(pendingQuotes);
           }
         }
 
@@ -663,6 +665,29 @@ export default function TeenHustlePage() {
     
     if (user) {
       fetchBookings();
+    }
+  }, [user]);
+
+  // Fetch quote requests when user changes
+  useEffect(() => {
+    const fetchQuoteRequests = async () => {
+      try {
+        const quoteRequestsRes = await fetch("/api/quotes/request?role=provider&status=pending", { cache: "no-store" });
+        if (quoteRequestsRes.ok) {
+          const quoteRequestsData = await quoteRequestsRes.json();
+          if (quoteRequestsData.success) {
+            const pendingQuotes = quoteRequestsData.quote_requests || [];
+            setPendingQuoteRequestsCount(pendingQuotes.length);
+            setQuoteRequests(pendingQuotes);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch quote requests:", e);
+      }
+    };
+    
+    if (user) {
+      fetchQuoteRequests();
     }
   }, [user]);
 
