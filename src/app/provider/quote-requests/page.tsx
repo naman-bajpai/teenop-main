@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -66,7 +66,8 @@ function getStatusConfig(status: string) {
   return configs[status] || configs.pending;
 }
 
-export default function ProviderQuoteRequestsPage() {
+// Component that uses useSearchParams - must be wrapped in Suspense
+function QuoteRequestsContent() {
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -395,6 +396,24 @@ export default function ProviderQuoteRequestsPage() {
         )}
       </div>
     </DashboardLayout>
+  );
+}
+
+// Main component that wraps the content in Suspense
+export default function ProviderQuoteRequestsPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout user={null}>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-[#434c9d] mx-auto mb-4" />
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    }>
+      <QuoteRequestsContent />
+    </Suspense>
   );
 }
 
