@@ -41,28 +41,29 @@ export default function Navbar() {
         {/* Brand */}
         <Link
           href="/"
-          className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#434c9d]"
+          className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#434c9d] transition-transform hover:scale-105 duration-200"
         >
           <Image
             src="/images/newlogo.png"
             alt="TeenOp Logo"
             width={250}
             height={250}
-            className="h-20 w-20"
+            className="h-20 w-20 transition-all"
           />
         </Link>
 
         {/* Desktop */}
-        <div className="hidden items-center gap-6 md:flex">
-          <div className="flex items-center gap-2">
+        <div className="hidden items-center gap-4 md:flex">
+          <div className="flex items-center gap-3">
             <Link href="/login">
               <Button
                 variant="ghost"
+                size="sm"
                 className={clsx(
-                  "cursor-pointer focus-visible:ring-2 focus-visible:ring-[#434c9d]",
+                  "cursor-pointer focus-visible:ring-2 focus-visible:ring-[#434c9d] transition-all duration-200 px-4",
                   overHero
-                    ? "text-white hover:text-white/90 hover:bg-white/10"
-                    : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-[#96cbc3]/20"
+                    ? "text-white/90 hover:text-white hover:bg-white/10 backdrop-blur-sm"
+                    : "text-[#434c9d] hover:text-[#434c9d] hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
                 )}
               >
                 Log In
@@ -70,11 +71,12 @@ export default function Navbar() {
             </Link>
             <Link href="/signup">
               <Button
+                size="sm"
                 className={clsx(
-                  "cursor-pointer focus-visible:ring-2 focus-visible:ring-offset-2",
+                  "cursor-pointer focus-visible:ring-2 focus-visible:ring-offset-2 transition-all duration-200 px-6 shadow-md hover:shadow-lg",
                   overHero
-                    ? "bg-white text-[#434c9d] hover:bg-slate-100"
-                    : "bg-[#ff725a] hover:bg-[#ff725a]/90 text-white"
+                    ? "bg-white text-[#434c9d] hover:bg-slate-50 hover:scale-105"
+                    : "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 text-white hover:scale-105"
                 )}
               >
                 Sign Up
@@ -90,10 +92,10 @@ export default function Navbar() {
               variant="ghost"
               size="sm"
               className={clsx(
-                "cursor-pointer focus-visible:ring-2 focus-visible:ring-[#434c9d]",
+                "cursor-pointer focus-visible:ring-2 focus-visible:ring-[#434c9d] transition-all duration-200",
                 overHero
-                  ? "text-white hover:text-white/90 hover:bg-white/10"
-                  : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-[#96cbc3]/20"
+                  ? "text-white/90 hover:text-white hover:bg-white/10 backdrop-blur-sm"
+                  : "text-[#434c9d] hover:text-[#434c9d] hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
               )}
             >
               Log In
@@ -103,10 +105,10 @@ export default function Navbar() {
             <Button
               size="sm"
               className={clsx(
-                "cursor-pointer focus-visible:ring-2 focus-visible:ring-offset-2",
+                "cursor-pointer focus-visible:ring-2 focus-visible:ring-offset-2 transition-all duration-200 shadow-md hover:shadow-lg",
                 overHero
-                  ? "bg-white text-[#434c9d] hover:bg-slate-100"
-                  : "bg-[#ff725a] hover:bg-[#ff725a]/90 text-white"
+                  ? "bg-white text-[#434c9d] hover:bg-slate-50 hover:scale-105"
+                  : "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 text-white hover:scale-105"
               )}
             >
               Sign Up

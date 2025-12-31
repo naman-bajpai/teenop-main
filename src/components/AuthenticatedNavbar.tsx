@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, X, MessageCircle, User, Home, Briefcase, Calendar, Wallet, ChevronDown, MoreVertical } from "lucide-react";
+import { LogOut, Menu, X, MessageCircle, User, Home, Briefcase, Calendar, Wallet, ChevronDown, MoreVertical, Sparkles, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import clsx from "clsx";
@@ -105,6 +105,11 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
     },
     ...(user?.role === "teen" ? [
       {
+        name: "My Services",
+        href: "/my-services",
+        icon: Sparkles,
+      },
+      {
         name: "My Teen Hustle",
         href: "/my-teen-hustle",
         icon: Briefcase,
@@ -135,14 +140,14 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
         {/* Brand */}
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#434c9d]"
+          className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#434c9d] transition-transform hover:scale-105 duration-200"
         >
           <Image
             src="/images/newlogo.png"
             alt="TeenOp Logo"
             width={250}
             height={250}
-            className="h-20 w-20"
+            className="h-20 w-20 transition-all"
           />
         </Link>
 
@@ -195,11 +200,11 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
 
               {isMoreMenuOpen && (
                 <div className={clsx(
-                  "absolute right-0 top-full mt-1 w-56 rounded-lg border bg-white shadow-lg z-50",
+                  "absolute right-0 top-full mt-2 w-56 rounded-xl border bg-white shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200",
                   overHero ? "border-white/20 bg-white/95 backdrop-blur-md" : "border-gray-200"
                 )}>
-                  <div className="py-1">
-                    {secondaryNavItems.map((item) => {
+                  <div className="py-1.5">
+                    {secondaryNavItems.map((item, idx) => {
                       const Icon = item.icon;
                       const active = isActive(item.href);
                       return (
@@ -210,16 +215,17 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                         >
                           <div
                             className={clsx(
-                              "flex items-center gap-3 px-4 py-2 text-sm transition-colors cursor-pointer",
+                              "flex items-center gap-3 px-4 py-2.5 text-sm transition-all cursor-pointer mx-1 rounded-lg",
                               active
-                                ? "bg-[#ff725a]/10 text-[#ff725a] font-medium"
-                                : "text-gray-700 hover:bg-gray-100"
+                                ? "bg-gradient-to-r from-[#ff725a]/10 to-[#ff725a]/5 text-[#ff725a] font-semibold shadow-sm"
+                                : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100"
                             )}
+                            style={{ animationDelay: `${idx * 30}ms` }}
                           >
-                            <Icon className="h-4 w-4" />
+                            <Icon className={clsx("h-4 w-4 transition-transform", active && "scale-110")} />
                             <span>{item.name}</span>
                             {active && (
-                              <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#ff725a]" />
+                              <div className="ml-auto w-2 h-2 rounded-full bg-[#ff725a] animate-pulse" />
                             )}
                           </div>
                         </Link>
@@ -250,19 +256,32 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                 )}
               >
                 {user.avatar_url ? (
-                  <img
-                    src={user.avatar_url}
-                    alt={user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.name || "User"}
-                    className="w-8 h-8 rounded-full object-cover border-2 border-white/20"
-                  />
+                  <div className="relative">
+                    <img
+                      src={user.avatar_url}
+                      alt={user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.name || "User"}
+                      className="w-9 h-9 rounded-full object-cover border-2 transition-all hover:scale-105"
+                      style={{ borderColor: overHero ? 'rgba(255,255,255,0.3)' : '#96cbc3' }}
+                    />
+                    {user.is_verified && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
+                        <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className={clsx(
-                    "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                    overHero ? "bg-white/20" : "bg-[#23a699]"
+                    "w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105 relative",
+                    overHero ? "bg-white/20 border-2 border-white/30" : "bg-gradient-to-br from-[#434c9d] to-[#96cbc3] border-2 border-transparent"
                   )}>
                     <span className="text-white font-semibold text-sm">
                       {(user.first_name?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase()}
                     </span>
+                    {user.is_verified && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
+                        <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="text-left hidden xl:block">
@@ -291,36 +310,36 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
 
               {isUserMenuOpen && (
                 <div className={clsx(
-                  "absolute right-0 top-full mt-1 w-56 rounded-lg border shadow-lg z-50",
+                  "absolute right-0 top-full mt-2 w-56 rounded-xl border shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200",
                   overHero ? "border-white/20 bg-white/95 backdrop-blur-md" : "border-gray-200 bg-white"
                 )}>
-                  <div className="py-1">
+                  <div className="py-1.5">
                     <Link
                       href="/profile"
                       onClick={() => setIsUserMenuOpen(false)}
                     >
                       <div
                         className={clsx(
-                          "flex items-center gap-3 px-4 py-2 text-sm transition-colors cursor-pointer",
+                          "flex items-center gap-3 px-4 py-2.5 text-sm transition-all cursor-pointer mx-1 rounded-lg",
                           isActive("/profile")
-                            ? "bg-[#ff725a]/10 text-[#ff725a] font-medium"
-                            : "text-gray-700 hover:bg-gray-100"
+                            ? "bg-gradient-to-r from-[#ff725a]/10 to-[#ff725a]/5 text-[#ff725a] font-semibold shadow-sm"
+                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100"
                         )}
                       >
-                        <User className="h-4 w-4" />
+                        <User className={clsx("h-4 w-4 transition-transform", isActive("/profile") && "scale-110")} />
                         <span>Profile</span>
                         {isActive("/profile") && (
-                          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#ff725a]" />
+                          <div className="ml-auto w-2 h-2 rounded-full bg-[#ff725a] animate-pulse" />
                         )}
                       </div>
                     </Link>
-                    <div className="border-t border-gray-200 my-1" />
+                    <div className="border-t border-gray-200 my-1.5 mx-2" />
                     <button
                       onClick={() => {
                         setIsUserMenuOpen(false);
                         handleLogout();
                       }}
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full transition-colors cursor-pointer"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 w-full transition-all cursor-pointer mx-1 rounded-lg font-medium"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Logout</span>
@@ -336,19 +355,32 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
         <div className="flex items-center gap-2 lg:hidden">
           {user && (
             user.avatar_url ? (
-              <img
-                src={user.avatar_url}
-                alt={user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.name || "User"}
-                className="w-8 h-8 rounded-full object-cover border-2 border-white/20"
-              />
+              <div className="relative">
+                <img
+                  src={user.avatar_url}
+                  alt={user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.name || "User"}
+                  className="w-9 h-9 rounded-full object-cover border-2 transition-all"
+                  style={{ borderColor: overHero ? 'rgba(255,255,255,0.3)' : '#96cbc3' }}
+                />
+                {user.is_verified && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                  </div>
+                )}
+              </div>
             ) : (
               <div className={clsx(
-                "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                overHero ? "bg-white/20" : "bg-[#23a699]"
+                "w-9 h-9 rounded-full flex items-center justify-center transition-all relative",
+                overHero ? "bg-white/20 border-2 border-white/30" : "bg-gradient-to-br from-[#434c9d] to-[#96cbc3] border-2 border-transparent"
               )}>
                 <span className="text-white font-semibold text-sm">
                   {(user.first_name?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase()}
                 </span>
+                {user.is_verified && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                  </div>
+                )}
               </div>
             )
           )}
@@ -374,8 +406,8 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white">
-          <div className="px-4 py-2 space-y-1">
+        <div className="lg:hidden border-t border-slate-200 bg-white animate-in slide-in-from-top duration-300">
+          <div className="px-4 py-3 space-y-1">
             {/* Primary items */}
             <div className="pb-2 border-b border-gray-200">
               {primaryNavItems.map((item) => {
@@ -388,13 +420,13 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                   >
                     <Button
                       variant={isActive(item.href) ? "default" : "ghost"}
-                      className={`w-full justify-start gap-2 ${
+                      className={`w-full justify-start gap-3 py-2.5 transition-all ${
                         isActive(item.href)
-                          ? "bg-[#ff725a] text-white hover:bg-[#ff725a]/90"
-                          : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-[#96cbc3]/20"
+                          ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
+                          : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
                       }`}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className={clsx("h-4 w-4 transition-transform", isActive(item.href) && "scale-110")} />
                       {item.name}
                     </Button>
                   </Link>
@@ -414,13 +446,13 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                   >
                     <Button
                       variant={isActive(item.href) ? "default" : "ghost"}
-                      className={`w-full justify-start gap-2 ${
+                      className={`w-full justify-start gap-3 py-2.5 transition-all ${
                         isActive(item.href)
-                          ? "bg-[#ff725a] text-white hover:bg-[#ff725a]/90"
-                          : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-[#96cbc3]/20"
+                          ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
+                          : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
                       }`}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className={clsx("h-4 w-4 transition-transform", isActive(item.href) && "scale-110")} />
                       {item.name}
                     </Button>
                   </Link>
@@ -436,13 +468,13 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                 >
                   <Button
                     variant={isActive("/profile") ? "default" : "ghost"}
-                    className={`w-full justify-start gap-2 ${
+                    className={`w-full justify-start gap-3 py-2.5 transition-all ${
                       isActive("/profile")
-                        ? "bg-[#ff725a] text-white hover:bg-[#ff725a]/90"
-                        : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-[#96cbc3]/20"
+                        ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
+                        : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
                     }`}
                   >
-                    <User className="h-4 w-4" />
+                    <User className={clsx("h-4 w-4 transition-transform", isActive("/profile") && "scale-110")} />
                     Profile
                   </Button>
                 </Link>
@@ -450,7 +482,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
               <Button
                 onClick={handleLogout}
                 variant="ghost"
-                className="w-full justify-start gap-2 text-[#434c9d] hover:text-red-700 hover:bg-red-50"
+                className="w-full justify-start gap-3 py-2.5 text-[#434c9d] hover:text-red-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 transition-all"
               >
                 <LogOut className="h-4 w-4" />
                 Logout
