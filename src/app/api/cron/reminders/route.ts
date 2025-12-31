@@ -317,7 +317,77 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(`Reminder cron job completed: ${results.tomorrowReminders} 24-hour reminders, ${results.threeHourReminders} 3-hour reminders, ${results.oneHourReminders} 1-hour reminders, ${results.errors.length} errors`);
+    // Check for paid bookings that have passed their scheduled time and need completion
+    const { data: paidBookings, error: paidBookingsError } = await supabase
+      .from("bookings")
+      .select(`
+        *,
+        services (
+          id,
+          title,
+          location,
+          user_id,
+          profiles:profiles!services_user_id_fkey (
+            first_name,
+            last_name,
+            email,
+            phone
+          )
+        )
+      `)
+      .eq("status", "paid")
+      .lte("requested_date", now.toISOString().split('T')[0]);
+
+    let completionReminders = 0;
+    if (!paidBookingsError && paidBookings) {
+      // Filter for bookings that have passed their scheduled time (date + time has passed)
+      const pastDueBookings = paidBookings.filter((booking: any) => {
+        try {
+          const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
+          // Check if booking time has passed (at least 1 hour after scheduled time to give buffer)
+          const oneHourAfterBooking = new Date(bookingDateTime);
+          oneHourAfterBooking.setHours(oneHourAfterBooking.getHours() + 1);
+          return now >= oneHourAfterBooking;
+        } catch (error) {
+          console.error(`Error parsing date/time for booking ${booking.id}:`, error);
+          return false;
+        }
+      });
+
+      console.log(`Found ${pastDueBookings.length} paid bookings that need completion reminders`);
+
+      // Send completion reminder emails to service providers
+      for (const booking of pastDueBookings) {
+        try {
+          const bookingData = booking as any;
+          const service = bookingData.services;
+          const provider = service?.profiles;
+
+          if (provider?.email) {
+            try {
+              const { emailService } = await import("@/lib/email");
+              await emailService.sendServiceProviderCompletionReminder({
+                providerName: `${provider.first_name || ''} ${provider.last_name || ''}`.trim() || 'Provider',
+                providerEmail: provider.email,
+                serviceName: service?.title || 'Service',
+                bookingId: bookingData.id
+              });
+
+              completionReminders++;
+              console.log(`Sent completion reminder to provider for booking ${bookingData.id}`);
+            } catch (emailError) {
+              console.error(`Error sending completion reminder email for booking ${bookingData.id}:`, emailError);
+              results.errors.push(`Completion reminder failed for booking ${bookingData.id}: ${emailError}`);
+            }
+          }
+        } catch (error) {
+          console.error("Error processing completion reminder:", error);
+          results.errors.push(`Completion reminder error for booking ${(booking as any).id}: ${error}`);
+        }
+      }
+    }
+
+    console.log(`Reminder cron job completed: ${results.tomorrowReminders} 24-hour reminders, ${results.threeHourReminders} 3-hour reminders, ${results.oneHourReminders} 1-hour reminders, ${completionReminders} completion reminders, ${results.errors.length} errors`);
 
     return NextResponse.json({
       success: true,
@@ -326,7 +396,8 @@ export async function GET(request: NextRequest) {
         ...results,
         processed24h: tomorrowBookings.length,
         processed3h: threeHourBookings.length,
-        processed1h: oneHourBookings.length
+        processed1h: oneHourBookings.length,
+        completionReminders
       }
     });
 

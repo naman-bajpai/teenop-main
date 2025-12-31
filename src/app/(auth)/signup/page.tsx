@@ -369,6 +369,23 @@ export default function SignupPage() {
               />
             </div>
 
+            <div className="space-y-2">
+              <label htmlFor="role" className="block text-sm font-semibold text-gray-700">
+                Account Type
+              </label>
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                className="w-full h-11 px-4 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200"
+                disabled={isSubmitting}
+              >
+                <option value="teen">Teen (Service Provider)</option>
+                <option value="parent">Community Member</option>
+              </select>
+            </div>
+
             {formData.role === "teen" && (
               <div className="space-y-2">
                 <label htmlFor="age" className="block text-sm font-semibold text-gray-700">
@@ -389,23 +406,6 @@ export default function SignupPage() {
                 />
               </div>
             )}
-
-            <div className="space-y-2">
-              <label htmlFor="role" className="block text-sm font-semibold text-gray-700">
-                Account Type
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                className="w-full h-11 px-4 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200"
-                disabled={isSubmitting}
-              >
-                <option value="teen">Teen (Service Provider)</option>
-                <option value="parent">Community Member</option>
-              </select>
-            </div>
 
             {formData.role === "teen" && (
               <div className="space-y-4 p-4 bg-[#96cbc3]/10 rounded-xl border border-[#96cbc3]/20">

@@ -759,12 +759,57 @@ export async function PATCH(
             (customerProfile as any).email,
             "Good News! Your TeenOp Service Is Ready to Be Confirmed",
             `
-              <p>Hello,</p>
-              <p>Good news! A teen has accepted your service request, and you're almost all set.</p>
-              <p>To officially schedule the service, simply complete payment within TeenOp.</p>
-              <p><a href="${appUrl}/my-requests" style="background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Click here to confirm and pay with Stripe</a></p>
-              <p>Thank you for supporting a local teen and for being part of the TeenOp community!</p>
-              <p>Best,<br>The TeenOp Team</p>
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <meta charset="utf-8">
+                <title>Service Ready to Confirm</title>
+                <style>
+                  body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                  .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                  .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                  .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
+                  .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+                  .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
+                  .button { display: inline-block; background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+                </style>
+              </head>
+              <body>
+                <div class="container">
+                  <div class="header">
+                    <h1>Good News! Your TeenOp Service Is Ready to Be Confirmed</h1>
+                    <p>A teen has accepted your service request, and you're almost all set.</p>
+                  </div>
+                  
+                  <div class="content">
+                    <div class="booking-details">
+                      <h3>Service Details</h3>
+                      <p><strong>Service:</strong> ${serviceTitle}</p>
+                    </div>
+
+                    <h3>What's next?</h3>
+                    <ul>
+                      <li>To officially schedule the service, simply complete payment within TeenOp.</li>
+                      <li>Click the button below to confirm and pay with Stripe.</li>
+                      <li>Once payment is complete, your booking will be confirmed and you'll receive all the details.</li>
+                    </ul>
+
+                    <p style="text-align: center; margin: 20px 0;">
+                      <a href="${appUrl}/my-requests" class="button">Click here to confirm and pay with Stripe</a>
+                    </p>
+
+                    <p><strong>Important:</strong> Please complete payment as soon as possible to secure your booking.</p>
+                    
+                    <p>Thank you for supporting a local teen and for being part of the TeenOp community!</p>
+                  </div>
+
+                  <div class="footer">
+                    <p>Best,<br>The TeenOp Team</p>
+                    <p>teenop.co@gmail.com | www.teenop.com</p>
+                  </div>
+                </div>
+              </body>
+              </html>
             `
           );
         }

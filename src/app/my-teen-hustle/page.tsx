@@ -43,6 +43,7 @@ import {
   Wallet,
   FileText,
   XCircle,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -604,6 +605,7 @@ export default function TeenHustlePage() {
   const [completedBookings, setCompletedBookings] = useState<Booking[]>([]);
   const [cancelledBookings, setCancelledBookings] = useState<Booking[]>([]);
   const [quoteRequests, setQuoteRequests] = useState<any[]>([]);
+  const [servicesNeedingCompletion, setServicesNeedingCompletion] = useState<number>(0);
   
   // Helper function to check if booking is expired
   const isBookingExpired = (booking: Booking): boolean => {
@@ -646,6 +648,21 @@ export default function TeenHustlePage() {
             // Scheduled: paid bookings
             const scheduled = allIncoming.filter((booking: Booking) => booking.status === "paid");
             setScheduledBookings(scheduled);
+            
+            // Calculate services that need completion (paid bookings past their scheduled time)
+            const now = new Date();
+            const needsCompletion = scheduled.filter((booking: Booking) => {
+              try {
+                const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
+                // Check if booking time has passed (at least 1 hour after scheduled time to give buffer)
+                const oneHourAfterBooking = new Date(bookingDateTime);
+                oneHourAfterBooking.setHours(oneHourAfterBooking.getHours() + 1);
+                return now >= oneHourAfterBooking;
+              } catch {
+                return false;
+              }
+            });
+            setServicesNeedingCompletion(needsCompletion.length);
             
             // Completed: completed bookings
             const completed = allIncoming.filter((booking: Booking) => booking.status === "completed");
@@ -1140,6 +1157,12 @@ export default function TeenHustlePage() {
               <p className="text-gray-600 text-lg">Manage your services, bookings, and earnings</p>
             </div>
             <div className="flex gap-3 flex-wrap">
+              <Link href="/my-services">
+                <Button variant="outline" className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white">
+                  <Star className="w-4 h-4 mr-2" />
+                  My Services
+                </Button>
+              </Link>
               <Link href="/provider/quote-requests">
                 <Button variant="outline" className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white relative">
                   <FileText className="w-4 h-4 mr-2" />
@@ -1161,15 +1184,6 @@ export default function TeenHustlePage() {
                   }
                   setOpen(newOpen);
                 }}>
-                <DialogTrigger asChild>
-                  <Button 
-                    className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90"
-                    disabled={!stripeAccountStatus.loading && !stripeAccountStatus.hasAccount}
-                    title={!stripeAccountStatus.loading && !stripeAccountStatus.hasAccount ? "Please connect your payment account first" : ""}
-                  >
-                    <Plus className="w-4 h-4 mr-2" /> Add New Service
-                  </Button>
-                </DialogTrigger>
                 <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto mx-auto p-8">
                 <DialogHeader className="text-center pb-6">
                   <DialogTitle className="text-2xl font-bold text-gray-800">{editingService ? 'Edit Service' : 'Add a Service'}</DialogTitle>
@@ -1575,71 +1589,19 @@ export default function TeenHustlePage() {
           </div>
         )}
 
-        {/* My Services Section */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">My Services</h2>
-              <p className="text-sm text-gray-600 mt-1">Manage your service offerings</p>
-            </div>
-            <div className="flex gap-2 items-center">
-                  <Badge variant="secondary">Active: {activeServices.length}</Badge>
-                  <Badge variant="outline">Paused: {pausedServices.length}</Badge>
-              <Button
-                onClick={() => {
-                  if (!stripeAccountStatus.hasAccount) {
-                    toast({
-                      title: "Payment setup required",
-                      description: "Please set up your payment account before creating your first service.",
-                      variant: "destructive"
-                    });
-                  } else {
-                    setOpen(true);
-                  }
-                }}
-                className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90"
-              >
-                <Plus className="w-4 h-4 mr-2" />Add Service
-              </Button>
-                </div>
-              </div>
-
-              {loading ? (
-                <div className="text-center py-12 bg-white rounded-xl border">Loading…</div>
-              ) : services.length > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {services.map((s) => <ServiceCard key={s.id} service={s} onEdit={openEditDialog} onDelete={handleDeleteService} />)}  
-                </div>
-              ) : (
-                <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Plus className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No services yet</h3>
-                  <p className="text-gray-600 mb-4">Start your teen hustle by adding your first service</p>
-                  <Button onClick={() => {
-                    if (!stripeAccountStatus.hasAccount) {
-                      toast({
-                        title: "Payment setup required",
-                        description: "Please set up your payment account before creating your first service.",
-                        variant: "destructive"
-                      });
-                    } else {
-                      setOpen(true);
-                    }
-              }}><Plus className="w-4 h-4 mr-2" />Add Service</Button>
-                </div>
-              )}
-            </div>
-
         {/* Tabs */}
         <Tabs defaultValue="pending" className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-xl">
             <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm">
               Pending Requests ({pendingBookings.length + quoteRequests.length})
             </TabsTrigger>
-            <TabsTrigger value="scheduled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm">
+            <TabsTrigger value="scheduled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm relative">
               Scheduled Services ({scheduledBookings.length})
+              {servicesNeedingCompletion > 0 && (
+                <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5">
+                  {servicesNeedingCompletion}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm">
               Completed Services ({completedBookings.length})
@@ -1733,6 +1695,22 @@ export default function TeenHustlePage() {
                 <h2 className="text-xl font-semibold text-gray-900">Scheduled Services</h2>
                 <p className="text-sm text-gray-600">Confirmed and paid bookings</p>
               </div>
+              {servicesNeedingCompletion > 0 && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-orange-900 mb-1">Action Needed!</h3>
+                      <p className="text-sm text-orange-800 mb-2">
+                        You have <strong>{servicesNeedingCompletion}</strong> {servicesNeedingCompletion === 1 ? 'service' : 'services'} that {servicesNeedingCompletion === 1 ? 'has' : 'have'} passed {servicesNeedingCompletion === 1 ? 'its' : 'their'} scheduled time and needs to be marked as complete.
+                      </p>
+                      <p className="text-sm text-orange-700">
+                        Mark {servicesNeedingCompletion === 1 ? 'it' : 'them'} as complete so your {servicesNeedingCompletion === 1 ? 'customer' : 'customers'} can tip you and leave reviews!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               {scheduledBookings.length > 0 ? (
                 <div className="space-y-4">{scheduledBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
               ) : (

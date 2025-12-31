@@ -325,15 +325,8 @@ export default function MyRequestsPage() {
       return;
     }
 
-    // Navigate to messages page - conversations are automatically created from bookings
-    // The messages page will show all conversations based on bookings
-    router.push("/messages");
-    
-    // Show a toast to help user find the conversation
-    toast({
-      title: "Opening Messages",
-      description: "Your conversation with the service provider will appear in the messages page.",
-    });
+    // Navigate to messages page with booking_id to automatically open the conversation
+    router.push(`/messages?booking_id=${booking.id}`);
   };
 
   const formatPrice = (price: number) =>

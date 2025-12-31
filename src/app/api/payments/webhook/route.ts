@@ -105,14 +105,55 @@ export async function POST(request: NextRequest) {
                 (providerProfile as any).email,
                 "You're Booked! Your TeenOp Service Is Scheduled",
                 `
-                  <p>Hello,</p>
-                  <p>Great news! A community member has scheduled your service, and payment has been completed. Your service is now officially confirmed.</p>
-                  <p>You can find the details on your <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">My Teen Hustle page</a> under Scheduled Services or <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">click here</a>.</p>
-                  <p>You'll receive an email and text reminder 1 day before and 3 hours before the service.</p>
-                  <p>After the service is completed, your payment will be processed and sent to you within 1–3 days.</p>
-                  <p>If you need to reach out to your client, you can message them anytime through <a href="${appUrl}/messages" style="color: #434c9d; text-decoration: underline;">TeenOp Messages</a>.</p>
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <meta charset="utf-8">
+                    <title>Service Scheduled</title>
+                    <style>
+                      body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                      .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                      .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                      .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
+                      .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+                      .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
+                      .button { display: inline-block; background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+                    </style>
+                  </head>
+                  <body>
+                    <div class="container">
+                      <div class="header">
+                        <h1>You're Booked! Your TeenOp Service Is Scheduled</h1>
+                        <p>Great news! A community member has scheduled your service, and payment has been completed.</p>
+                      </div>
+                      
+                      <div class="content">
+                        <div class="booking-details">
+                          <h3>Booking Details</h3>
+                          <p><strong>Service:</strong> ${serviceTitle}</p>
+                          <p><strong>Status:</strong> Confirmed and Paid</p>
+                        </div>
+
+                        <h3>What's next?</h3>
+                        <ul>
+                          <li>You can find all the details on your <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">My Teen Hustle page</a> under Scheduled Services.</li>
+                          <li>You'll receive an email and text reminder 1 day before and 3 hours before the service.</li>
+                          <li>After the service is completed, your payment will be processed and sent to you within 1–3 days.</li>
+                          <li>If you need to reach out to your client, you can message them anytime through <a href="${appUrl}/messages" style="color: #434c9d; text-decoration: underline;">TeenOp Messages</a>.</li>
+                        </ul>
+
+                        <p><strong>Important:</strong> Your service is now officially confirmed. Make sure you're prepared and ready for the scheduled time.</p>
+                        
                   <p>Nice work, and good luck with your upcoming service!</p>
+                      </div>
+
+                      <div class="footer">
                   <p>Best,<br>The TeenOp Team</p>
+                        <p>teenop.co@gmail.com | www.teenop.com</p>
+                      </div>
+                    </div>
+                  </body>
+                  </html>
                 `
               );
             }

@@ -440,6 +440,75 @@ export class EmailService {
 
     return this.sendEmail(data.buyerEmail, subject, html);
   }
+
+  // Service provider completion reminder email
+  async sendServiceProviderCompletionReminder(data: {
+    providerName: string;
+    providerEmail: string;
+    serviceName: string;
+    bookingId: string;
+  }) {
+    const subject = 'Action Needed: Mark your service complete';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Mark Service Complete</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+          .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
+          .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
+          .button { display: inline-block; background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Action Needed: Mark your service complete</h1>
+            <p>It's time to mark your service as completed so your customer can tip you and leave a rating and review!</p>
+          </div>
+          
+          <div class="content">
+            <div class="booking-details">
+              <h3>Service Details</h3>
+              <p><strong>Service:</strong> ${data.serviceName}</p>
+              <p><strong>Booking ID:</strong> #${data.bookingId}</p>
+            </div>
+
+            <h3>What's next?</h3>
+            <ul>
+              <li>Log in to your TeenOp account and navigate to your Teen Hustle page.</li>
+              <li>Find this service in your Scheduled Services tab.</li>
+              <li>Click "Mark as Complete" to finalize the service.</li>
+              <li>Once marked complete, your customer will be able to tip you and leave a review!</li>
+            </ul>
+
+            <p style="text-align: center; margin: 20px 0;">
+              <a href="${appUrl}/my-teen-hustle" class="button">Click here to mark your service complete</a>
+            </p>
+
+            <p><strong>Important:</strong> It only takes a moment and helps you get credit for your work!</p>
+            
+            <p>Thanks for being part of TeenOp!</p>
+          </div>
+
+          <div class="footer">
+            <p>Best,<br>The TeenOp Team</p>
+            <p>teenop.co@gmail.com | www.teenop.com</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail(data.providerEmail, subject, html);
+  }
 }
 
 export const emailService = new EmailService();

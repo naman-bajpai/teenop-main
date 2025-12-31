@@ -115,7 +115,12 @@ export async function GET(request: NextRequest) {
       images: imagesMap.get(service.id) || []
     })) || [];
 
-    return NextResponse.json({ services: transformedServices });
+    console.log(`[GET /api/services] Returning ${transformedServices.length} services for user ${user.id} (allServices: ${allServices})`);
+
+    return NextResponse.json({ 
+      success: true,
+      services: transformedServices 
+    });
   } catch (error) {
     console.error("Unexpected error in GET /api/services:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

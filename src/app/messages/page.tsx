@@ -1,11 +1,12 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, Suspense } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useUser } from "@/hooks/useUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   MessageCircle,
@@ -59,9 +60,10 @@ interface Message {
   sender_name: string;
 }
 
-export default function MessagesPage() {
+function MessagesPageContent() {
   const { user, loading: userLoading, error: userError } = useUser();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -126,6 +128,17 @@ export default function MessagesPage() {
       fetchConversations();
     }
   }, [user, fetchConversations]);
+
+  // Auto-select conversation from URL parameter
+  useEffect(() => {
+    const bookingId = searchParams.get('booking_id');
+    if (bookingId && conversations.length > 0) {
+      const conversation = conversations.find(conv => conv.booking_id === bookingId);
+      if (conversation && (!selectedConversation || selectedConversation.id !== conversation.id)) {
+        setSelectedConversation(conversation);
+      }
+    }
+  }, [searchParams, conversations, selectedConversation]);
 
   // Listen for messages sent from other components (like MessageDialog)
   useEffect(() => {
@@ -821,5 +834,21 @@ export default function MessagesPage() {
       )}
 
     </DashboardLayout>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout user={null}>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600">Loading messages...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    }>
+      <MessagesPageContent />
+    </Suspense>
   );
 }

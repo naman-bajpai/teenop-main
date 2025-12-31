@@ -171,14 +171,58 @@ export async function POST(request: NextRequest) {
           (providerProfile as any).email,
           `New Quote Request for ${serviceData.title}`,
           `
-            <h2>New Quote Request</h2>
-            <p>You have received a new quote request for your service: <strong>${serviceData.title}</strong></p>
-            <p><strong>Customer:</strong> ${(customerProfile as any).first_name} ${(customerProfile as any).last_name}</p>
-            <p><strong>Requested Date:</strong> ${requested_date}</p>
-            <p><strong>Requested Time:</strong> ${requested_time}</p>
-            ${special_instructions ? `<p><strong>Special Instructions:</strong> ${special_instructions}</p>` : ''}
-            <p><strong>Important:</strong> Please message the customer through the platform to discuss pricing and details before submitting a quote.</p>
-            <p>Log in to view the quote request and start messaging the customer.</p>
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <title>New Quote Request</title>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
+                .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+                .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
+                .button { display: inline-block; background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>You have a new quote request!</h1>
+                  <p>Someone wants a quote for your service. Review the details below.</p>
+                </div>
+                
+                <div class="content">
+                  <div class="booking-details">
+                    <h3>Quote Request Details</h3>
+                    <p><strong>Service:</strong> ${serviceData.title}</p>
+                    <p><strong>Requested by:</strong> ${(customerProfile as any).first_name} ${(customerProfile as any).last_name}</p>
+                    <p><strong>Requested Date:</strong> ${requested_date}</p>
+                    <p><strong>Requested Time:</strong> ${requested_time}</p>
+                    ${special_instructions ? `<p><strong>Special Instructions:</strong> ${special_instructions}</p>` : ''}
+                  </div>
+
+                  <h3>What's next?</h3>
+                  <ul>
+                    <li>Log in to your TeenOp account to review this quote request.</li>
+                    <li>Message the customer through the platform to discuss pricing and details before submitting a quote.</li>
+                    <li>Once you've discussed the details, submit your quote through the TeenOp platform.</li>
+                    <li>If you need more information, use TeenOp messages to communicate with the customer.</li>
+                  </ul>
+
+                  <p><strong>Important:</strong> Please respond to this quote request as soon as possible so the customer knows if you can help them.</p>
+                  
+                  <p>Thanks for being part of TeenOp!</p>
+                </div>
+
+                <div class="footer">
+                  <p>Best,<br>The TeenOp Team</p>
+                  <p>teenop.co@gmail.com | www.teenop.com</p>
+                </div>
+              </div>
+            </body>
+            </html>
           `
         );
       } catch (emailError) {

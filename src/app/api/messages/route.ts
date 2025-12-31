@@ -302,13 +302,51 @@ export async function POST(request: NextRequest) {
           receiverProfile.email,
           "You Have a New Message on TeenOp!",
           `
-            <h2>You Have a New Message on TeenOp!</h2>
-            <p>Hi ${receiverProfile.first_name || 'there'},</p>
-            <p>You've received a new message from ${senderProfile.first_name || 'a user'} on TeenOp.</p>
-            <p>Log in to read and respond.</p>
-            <p><a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com'}/messages" style="background-color: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Click here to view your message</a></p>
-            <p>Thanks for being part of the TeenOp community.</p>
-            <p>Best,<br>The TeenOp Team</p>
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <title>New Message</title>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
+                .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
+                .button { display: inline-block; background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>You Have a New Message on TeenOp!</h1>
+                  <p>You've received a new message from ${senderProfile.first_name || 'a user'} on TeenOp.</p>
+                </div>
+                
+                <div class="content">
+                  <h3>What's next?</h3>
+                  <ul>
+                    <li>Log in to your TeenOp account to read and respond to this message.</li>
+                    <li>Click the button below to view your message and continue the conversation.</li>
+                    <li>Keep all communication on TeenOp for safety and record-keeping.</li>
+                  </ul>
+
+                  <p style="text-align: center; margin: 20px 0;">
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com'}/messages" class="button">Click here to view your message</a>
+                  </p>
+
+                  <p><strong>Important:</strong> Please respond to messages in a timely manner to maintain good communication with other users.</p>
+                  
+                  <p>Thanks for being part of the TeenOp community!</p>
+                </div>
+
+                <div class="footer">
+                  <p>Best,<br>The TeenOp Team</p>
+                  <p>teenop.co@gmail.com | www.teenop.com</p>
+                </div>
+              </div>
+            </body>
+            </html>
           `
         );
       }
