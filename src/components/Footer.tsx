@@ -3,39 +3,45 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 
-export default function Footer() {
+interface FooterProps {
+  user?: any | null;
+}
+
+export default function Footer({ user }: FooterProps) {
   return (
     <footer className="border-t border-slate-200 bg-white mt-auto">
-      {/* Top CTA strip */}
-      <div className="bg-slate-50">
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-            <div>
-              <h3 className="text-xl font-semibold text-slate-900">
-                Ready to try TeenOp in your town?
-              </h3>
-              <p className="mt-1 text-slate-600">
-                Teens earn. Neighbors get help. Communities get stronger.
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Link href="/neighborhood">
-                <Button className="bg-[#ff725a] text-white hover:bg-[#ff725a]/90">
-                  Browse Services
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button
-                  variant="outline"
-                  className="border-slate-300 text-slate-900 hover:bg-white"
-                >
-                  Start as a Teen
-                </Button>
-              </Link>
+      {/* Top CTA strip - Only show for non-logged-in users */}
+      {!user && (
+        <div className="bg-slate-50">
+          <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+            <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">
+                  Ready to try TeenOp in your town?
+                </h3>
+                <p className="mt-1 text-slate-600">
+                  Teens earn. Neighbors get help. Communities get stronger.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Link href="/neighborhood">
+                  <Button className="bg-[#ff725a] text-white hover:bg-[#ff725a]/90">
+                    Browse Services
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button
+                    variant="outline"
+                    className="border-slate-300 text-slate-900 hover:bg-white"
+                  >
+                    Start as a Teen
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main footer */}
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">

@@ -1592,8 +1592,13 @@ export default function TeenHustlePage() {
         {/* Tabs */}
         <Tabs defaultValue="pending" className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-xl">
-            <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm">
+            <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm relative">
               Pending Requests ({pendingBookings.length + quoteRequests.length})
+              {(pendingBookings.length > 0 || quoteRequests.length > 0) && (
+                <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5 animate-pulse">
+                  {pendingBookings.length + quoteRequests.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="scheduled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm relative">
               Scheduled Services ({scheduledBookings.length})

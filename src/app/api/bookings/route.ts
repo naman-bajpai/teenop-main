@@ -409,10 +409,10 @@ export async function GET(request: NextRequest) {
           service: {
             id: booking.services?.id,
             title: booking.services?.title,
-            provider_id: booking.services?.user_id,
             pricing_model: booking.services?.pricing_model,
             location: booking.services?.location,
             category: booking.services?.category,
+            user_id: booking.services?.user_id, // Add user_id for messaging
           },
         });
       }

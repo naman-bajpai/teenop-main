@@ -463,7 +463,7 @@ export default function BookingDetailsPage() {
               </div>
             )}
 
-            {booking.status === "paid" && (
+            {booking.status === "paid" && isCustomer && (
               <div className="bg-white rounded-xl p-6 border border-gray-200">
                 <div className="bg-green-50 p-4 rounded-lg">
                   <div className="flex items-center mb-2">

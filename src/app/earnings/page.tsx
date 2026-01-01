@@ -407,7 +407,33 @@ export default function EarningsPage() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent mb-3">
             Earnings & Account
           </h1>
-          <p className="text-gray-500 text-lg">Manage your earnings, withdrawals, and payment account</p>
+          <p className="text-gray-500 text-lg mb-4">Manage your earnings, withdrawals, and payment account</p>
+          
+          {/* How Earnings Work Section */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-100 shadow-sm mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Wallet className="w-6 h-6 text-[#434c9d]" />
+              How Earnings on TeenOp work
+            </h2>
+            <div className="space-y-3 text-gray-700">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">1</div>
+                <p className="flex-1">First, your service must be booked and paid by buyer</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">2</div>
+                <p className="flex-1">After the service is completed, the service must be marked as completed (by you or the buyer)</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">3</div>
+                <p className="flex-1">After service is marked as completed, your earnings will be transferred to your account within 1–3 business days.</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">4</div>
+                <p className="flex-1">When your earnings are being transferred, the payment will appear in your Earnings dashboard</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Earnings Overview */}

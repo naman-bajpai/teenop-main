@@ -316,17 +316,33 @@ export default function MyRequestsPage() {
   };
 
   const handleMessageUser = async (booking: Booking) => {
-    if (!booking.service?.user_id) {
+    try {
+      // Check if we have the booking ID
+      if (!booking.id) {
+        toast({
+          title: "Error",
+          description: "Booking information not available",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Navigate to messages page with booking_id to automatically open the conversation
+      // The messages page will handle finding or creating the conversation based on the booking
+      router.push(`/messages?booking_id=${booking.id}`);
+      
+      toast({
+        title: "Opening Messages",
+        description: "Your conversation with the service provider will appear in the messages page.",
+      });
+    } catch (error) {
+      console.error("Error opening messages:", error);
       toast({
         title: "Error",
-        description: "Service provider information not available",
+        description: "Failed to open messages. Please try again.",
         variant: "destructive",
       });
-      return;
     }
-
-    // Navigate to messages page with booking_id to automatically open the conversation
-    router.push(`/messages?booking_id=${booking.id}`);
   };
 
   const formatPrice = (price: number) =>
@@ -351,22 +367,29 @@ export default function MyRequestsPage() {
 
   // Filter bookings by status
   const allBookings = bookings;
+  // Pending: service is accepted and waiting for payment (pending, alternative_proposed, confirmed)
   const pendingBookings = bookings.filter(booking => 
-    booking.status === "pending" || booking.status === "alternative_proposed"
+    booking.status === "pending" || 
+    booking.status === "alternative_proposed" || 
+    booking.status === "confirmed"
   );
-  const confirmedBookings = bookings.filter(booking => booking.status === "confirmed");
+  // Scheduled: once it is paid
+  const scheduledBookings = bookings.filter(booking => booking.status === "paid");
+  // Completed: once the service is completed
+  const completedBookings = bookings.filter(booking => booking.status === "completed");
+  // Cancelled: cancelled or rejected requests
+  const cancelledBookings = bookings.filter(booking => 
+    booking.status === "cancelled" || booking.status === "rejected"
+  );
   
-  // Filter quote requests by status
+  // Filter quote requests by status (only show in pending tab)
   const pendingQuoteRequests = quoteRequests.filter((qr: any) => 
     qr.status === "pending" || qr.status === "quoted"
   );
-  const completedBookings = bookings.filter(booking => booking.status === "completed");
-  const paidBookings = bookings.filter(booking => booking.status === "paid");
-  const cancelledBookings = bookings.filter(booking => booking.status === "cancelled");
 
   // Calculate stats
   const totalSpent = bookings
-    .filter(booking => booking.status === "paid")
+    .filter(booking => booking.status === "paid" || booking.status === "completed")
     .reduce((sum, booking) => sum + booking.total_price, 0);
 
   if (userLoading) {
@@ -455,7 +478,7 @@ export default function MyRequestsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Completed</p>
-                  <p className="text-xl md:text-3xl font-bold text-gray-900">{paidBookings.length}</p>
+                  <p className="text-xl md:text-3xl font-bold text-gray-900">{completedBookings.length}</p>
                 </div>
               </div>
             </div>
@@ -510,18 +533,15 @@ export default function MyRequestsPage() {
           {/* Tabs */}
           <Tabs defaultValue="pending" className="w-full">
             <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-              <TabsList className="inline-flex w-full sm:grid sm:grid-cols-5 bg-gray-100 p-1 rounded-xl h-auto min-w-max sm:min-w-0">
+              <TabsList className="inline-flex w-full sm:grid sm:grid-cols-4 bg-gray-100 p-1 rounded-xl h-auto min-w-max sm:min-w-0">
             <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
               Pending ({pendingBookings.length + pendingQuoteRequests.length})
               </TabsTrigger>
-                <TabsTrigger value="confirmed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                Confirmed ({confirmedBookings.length})
+                <TabsTrigger value="scheduled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
+                Scheduled ({scheduledBookings.length})
               </TabsTrigger>
                 <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
                 Completed ({completedBookings.length})
-              </TabsTrigger>
-                <TabsTrigger value="paid" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                Paid ({paidBookings.length})
               </TabsTrigger>
                 <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
                 Cancelled ({cancelledBookings.length})
@@ -532,9 +552,8 @@ export default function MyRequestsPage() {
             {/* Status-specific tabs */}
             {[
               { value: "pending", bookings: pendingBookings, quoteRequests: pendingQuoteRequests, icon: <AlertCircle className="w-16 h-16" />, title: "No pending requests", description: "All your requests have been processed." },
-              { value: "confirmed", bookings: confirmedBookings, quoteRequests: [], icon: <CheckCircle className="w-16 h-16" />, title: "No confirmed requests", description: "Confirmed bookings will appear here." },
+              { value: "scheduled", bookings: scheduledBookings, quoteRequests: [], icon: <Calendar className="w-16 h-16" />, title: "No scheduled services", description: "Paid services will appear here once payment is completed." },
               { value: "completed", bookings: completedBookings, quoteRequests: [], icon: <CheckCircle className="w-16 h-16" />, title: "No completed requests", description: "Completed services will appear here." },
-              { value: "paid", bookings: paidBookings, quoteRequests: [], icon: <CheckCircle className="w-16 h-16" />, title: "No paid requests", description: "Paid services will appear here." },
               { value: "cancelled", bookings: cancelledBookings, quoteRequests: [], icon: <XCircle className="w-16 h-16" />, title: "No cancelled requests", description: "Cancelled requests will appear here." }
             ].map(({ value, bookings: tabBookings, quoteRequests: tabQuoteRequests, icon, title, description }) => (
               <TabsContent key={value} value={value} className="mt-6">
@@ -924,8 +943,8 @@ function BookingCard({
           <div className="space-y-2">
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-center">
               <div className="flex items-center justify-center text-emerald-700 gap-2">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">Payment Completed</span>
+                <Calendar className="w-4 h-4" />
+                <span className="text-sm font-medium">Scheduled - Payment Completed</span>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">

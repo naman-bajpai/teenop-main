@@ -34,7 +34,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       <main className="flex-1">
         {children}
       </main>
-      <Footer />
+      <Footer user={user} />
     </div>
   );
 }
