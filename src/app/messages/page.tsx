@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback, Suspense } from "react";
+import React, { useEffect, useState, useCallback, Suspense, useRef } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useUser } from "@/hooks/useUser";
 import { Button } from "@/components/ui/button";
@@ -15,12 +15,20 @@ import {
   Clock,
   ArrowLeft,
   Send,
-  MoreVertical,
   Trash2,
   Image as ImageIcon,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Conversation {
   id: string;
@@ -76,13 +84,11 @@ function MessagesPageContent() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ conversation: Conversation | null; show: boolean }>({
-    conversation: null,
-    show: false
-  });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Helper function to add a message without duplicates
   const addMessageSafely = (newMessage: Message) => {
     setMessages(prev => {
       const messageExists = prev.some(msg => msg.id === newMessage.id);
@@ -93,7 +99,6 @@ function MessagesPageContent() {
     });
   };
 
-  // Fetch conversations
   const fetchConversations = useCallback(async () => {
     try {
       setLoading(true);
@@ -110,17 +115,16 @@ function MessagesPageContent() {
         setConversations(data.conversations || []);
       }
     } catch (error: any) {
-        console.error("Error fetching conversations:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to load conversations",
-          variant: "destructive"
-        });
-        // Set empty conversations array on error so the page still renders
-        setConversations([]);
-      } finally {
-        setLoading(false);
-      }
+      console.error("Error fetching conversations:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load conversations",
+        variant: "destructive"
+      });
+      setConversations([]);
+    } finally {
+      setLoading(false);
+    }
   }, [toast]);
 
   useEffect(() => {
@@ -129,7 +133,6 @@ function MessagesPageContent() {
     }
   }, [user, fetchConversations]);
 
-  // Auto-select conversation from URL parameter
   useEffect(() => {
     const bookingId = searchParams.get('booking_id');
     if (bookingId && conversations.length > 0) {
@@ -140,15 +143,12 @@ function MessagesPageContent() {
     }
   }, [searchParams, conversations, selectedConversation]);
 
-  // Listen for messages sent from other components (like MessageDialog)
   useEffect(() => {
     const handleMessageSent = (event: CustomEvent) => {
       const { bookingId, message } = event.detail;
       
-      // If the current conversation matches the booking, add the message to the current view
       if (selectedConversation && selectedConversation.booking_id === bookingId) {
         addMessageSafely(message);
-        // Update the last message in the current conversation
         setConversations(prev => 
           prev.map(conv => 
             conv.id === selectedConversation.id 
@@ -157,15 +157,8 @@ function MessagesPageContent() {
           )
         );
       } else {
-        // Only refresh conversations if it's a different conversation
         fetchConversations();
       }
-      
-      // Show a toast notification about the new message
-      toast({
-        title: "New message sent",
-        description: "Your message has been sent. Check the Messages page to continue the conversation.",
-      });
     };
 
     window.addEventListener('messageSent', handleMessageSent as EventListener);
@@ -173,9 +166,8 @@ function MessagesPageContent() {
     return () => {
       window.removeEventListener('messageSent', handleMessageSent as EventListener);
     };
-  }, [selectedConversation, toast, fetchConversations]);
+  }, [selectedConversation, fetchConversations]);
 
-  // Fetch messages for selected conversation
   useEffect(() => {
     const fetchMessages = async () => {
       if (!selectedConversation) return;
@@ -188,7 +180,6 @@ function MessagesPageContent() {
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            // Remove duplicates based on message ID when fetching from API
             const uniqueMessages = (data.messages || []).filter((message: Message, index: number, self: Message[]) => 
               index === self.findIndex(m => m.id === message.id)
             );
@@ -204,7 +195,6 @@ function MessagesPageContent() {
       if (!selectedConversation) return;
       
       try {
-        // Call the API to mark messages as read
         const response = await fetch("/api/messages/mark-read", {
           method: "POST",
           headers: {
@@ -216,7 +206,6 @@ function MessagesPageContent() {
         });
         
         if (response.ok) {
-          // Only update local state if API call was successful
           setConversations(prev => 
             prev.map(conv => 
               conv.id === selectedConversation.id 
@@ -234,7 +223,11 @@ function MessagesPageContent() {
     markMessagesAsRead();
   }, [selectedConversation]);
 
-  // Cleanup image preview URL on unmount
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   useEffect(() => {
     return () => {
       if (imagePreview) {
@@ -247,7 +240,6 @@ function MessagesPageContent() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Error",
@@ -257,7 +249,6 @@ function MessagesPageContent() {
       return;
     }
 
-    // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Error",
@@ -289,7 +280,6 @@ function MessagesPageContent() {
       setSending(true);
       let imageUrl = null;
 
-      // Upload image if selected
       if (selectedImage) {
         setUploadingImage(true);
         const formData = new FormData();
@@ -311,7 +301,6 @@ function MessagesPageContent() {
         setUploadingImage(false);
       }
 
-      // Send message with image
       const response = await fetch("/api/messages", {
         method: "POST",
         headers: {
@@ -332,12 +321,10 @@ function MessagesPageContent() {
 
       const data = await response.json();
       if (data.success) {
-        // Add message to current view
         addMessageSafely(data.message);
         setNewMessage("");
         removeImage();
         
-        // Update last message in conversations
         setConversations(prev => 
           prev.map(conv => 
             conv.id === selectedConversation.id 
@@ -346,7 +333,6 @@ function MessagesPageContent() {
           )
         );
 
-        // Trigger event for other components to listen
         window.dispatchEvent(new CustomEvent('messageSent', {
           detail: {
             bookingId: selectedConversation.booking_id,
@@ -373,12 +359,20 @@ function MessagesPageContent() {
     }
   };
 
+  const handleDeleteClick = (conversation: Conversation, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setConversationToDelete(conversation);
+    setDeleteDialogOpen(true);
+  };
+
   const deleteConversation = async () => {
-    if (!deleteConfirm.conversation) return;
+    if (!conversationToDelete) return;
 
     try {
       setDeleting(true);
-      const response = await fetch(`/api/messages/conversations?booking_id=${deleteConfirm.conversation.booking_id}`, {
+      const response = await fetch(`/api/messages/conversations?booking_id=${conversationToDelete.booking_id}`, {
         method: "DELETE",
       });
 
@@ -389,13 +383,11 @@ function MessagesPageContent() {
 
       const data = await response.json();
       if (data.success) {
-        // Remove conversation from list
         setConversations(prev => 
-          prev.filter(conv => conv.id !== deleteConfirm.conversation!.id)
+          prev.filter(conv => conv.id !== conversationToDelete.id)
         );
         
-        // If the deleted conversation was selected, clear the selection
-        if (selectedConversation?.id === deleteConfirm.conversation.id) {
+        if (selectedConversation?.id === conversationToDelete.id) {
           setSelectedConversation(null);
           setMessages([]);
         }
@@ -404,19 +396,20 @@ function MessagesPageContent() {
           title: "Conversation deleted",
           description: "The conversation has been permanently deleted.",
         });
+        
+        setDeleteDialogOpen(false);
+        setConversationToDelete(null);
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to delete conversation",
         variant: "destructive",
       });
     } finally {
       setDeleting(false);
-      setDeleteConfirm({ conversation: null, show: false });
     }
   };
-
 
   const formatTime = (timeString: string) => {
     try {
@@ -437,7 +430,7 @@ function MessagesPageContent() {
     
     if (diffInHours < 24) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInHours < 168) { // 7 days
+    } else if (diffInHours < 168) {
       return date.toLocaleDateString([], { weekday: 'short' });
     } else {
       return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -454,14 +447,13 @@ function MessagesPageContent() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#434c9d] border-t-transparent mx-auto mb-4"></div>
           <p className="text-gray-600">Loading messages...</p>
         </div>
       </div>
     );
   }
 
-  // Show error state if no user data
   if (!userLoading && (!user || userError)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -484,19 +476,24 @@ function MessagesPageContent() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="h-[calc(100vh-80px)] flex">
+      <div className="h-[calc(100vh-80px)] flex bg-gradient-to-br from-gray-50 via-white to-gray-50">
         {/* Conversations Sidebar */}
-        <div className="w-1/3 border-r border-gray-200 bg-white flex flex-col">
+        <div className="w-full md:w-96 border-r border-gray-200 bg-white flex flex-col shadow-sm">
           {/* Header */}
-          <div className="p-4 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Messages</h1>
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-[#434c9d]/5 to-[#96cbc3]/5">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#434c9d] to-[#96cbc3] rounded-lg flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-white" />
+              </div>
+              Messages
+            </h1>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <Input
                 placeholder="Search conversations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 border-gray-300 focus:border-[#434c9d] focus:ring-[#434c9d] rounded-xl"
               />
             </div>
           </div>
@@ -504,33 +501,32 @@ function MessagesPageContent() {
           {/* Conversations List */}
           <div className="flex-1 overflow-y-auto">
             {filteredConversations.length === 0 ? (
-              <div className="p-6 text-center">
-                <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-[#434c9d]/10 to-[#96cbc3]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageCircle className="w-8 h-8 text-[#434c9d]" />
+                </div>
+                <p className="text-gray-900 font-semibold mb-1">
                   {searchQuery ? "No conversations found" : "No messages yet"}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {searchQuery ? "Try a different search term" : "Start a conversation by booking a service or accepting a booking request"}
-                </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Conversations will appear here once you have bookings with other users
+                <p className="text-sm text-gray-600">
+                  {searchQuery ? "Try a different search term" : "Start a conversation by booking a service"}
                 </p>
               </div>
             ) : (
-              <div className="space-y-1 p-2">
+              <div className="p-2 space-y-1">
                 {filteredConversations.map((conversation) => (
                   <div
                     key={conversation.id}
                     onClick={() => setSelectedConversation(conversation)}
                     className={cn(
-                      "p-4 rounded-lg cursor-pointer transition-colors",
+                      "p-4 rounded-xl cursor-pointer transition-all duration-200 group",
                       selectedConversation?.id === conversation.id
-                        ? "bg-blue-50 border border-blue-200"
-                        : "hover:bg-gray-50"
+                        ? "bg-gradient-to-r from-[#434c9d]/10 to-[#96cbc3]/10 border-2 border-[#434c9d]/20 shadow-sm"
+                        : "hover:bg-gray-50 border-2 border-transparent"
                     )}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center flex-shrink-0 ring-2 ring-white">
                         {conversation.other_person.avatar_url ? (
                           <img
                             src={conversation.other_person.avatar_url}
@@ -547,29 +543,26 @@ function MessagesPageContent() {
                           <h3 className="font-semibold text-gray-900 truncate">
                             {conversation.other_person.first_name} {conversation.other_person.last_name}
                           </h3>
-                          {conversation.unread_count > 0 && (
-                            <Badge className="bg-blue-600 text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full px-2">
-                              {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {conversation.unread_count > 0 && (
+                              <Badge className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full px-2 font-semibold">
+                                {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                              </Badge>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => handleDeleteClick(conversation, e)}
+                              className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
                         
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-sm text-gray-600 truncate">
-                            {conversation.booking.service.title}
-                          </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirm({ conversation, show: true });
-                            }}
-                            className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
+                        <p className="text-sm text-gray-600 truncate mb-1">
+                          {conversation.booking.service.title}
+                        </p>
                         
                         {conversation.last_message && (
                           <div className="flex items-center justify-between">
@@ -578,7 +571,7 @@ function MessagesPageContent() {
                                 ? "📷 Image" 
                                 : conversation.last_message.content}
                             </p>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
                               {formatMessageTime(conversation.last_message.created_at)}
                             </span>
                           </div>
@@ -593,36 +586,27 @@ function MessagesPageContent() {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col hidden md:flex">
           {selectedConversation ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-gray-200 bg-white">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedConversation(null)}
-                      className="md:hidden"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                    </Button>
-                    
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+              <div className="p-6 border-b border-gray-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#434c9d] to-[#96cbc3] rounded-full flex items-center justify-center ring-2 ring-white shadow-md">
                       {selectedConversation.other_person.avatar_url ? (
                         <img
                           src={selectedConversation.other_person.avatar_url}
                           alt={`${selectedConversation.other_person.first_name} ${selectedConversation.other_person.last_name}`}
-                          className="w-10 h-10 rounded-full object-cover"
+                          className="w-12 h-12 rounded-full object-cover"
                         />
                       ) : (
-                        <User className="w-5 h-5 text-gray-400" />
+                        <User className="w-6 h-6 text-white" />
                       )}
                     </div>
                     
                     <div>
-                      <h2 className="font-semibold text-gray-900">
+                      <h2 className="font-bold text-gray-900 text-lg">
                         {selectedConversation.other_person.first_name} {selectedConversation.other_person.last_name}
                       </h2>
                       <p className="text-sm text-gray-600">
@@ -631,33 +615,32 @@ function MessagesPageContent() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setDeleteConfirm({ conversation: selectedConversation, show: true })}
-                      className="text-gray-400 hover:text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleDeleteClick(selectedConversation)}
+                    className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </Button>
                 </div>
                 
                 {/* Booking Info */}
-                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {new Date(selectedConversation.booking.requested_date).toLocaleDateString()}
+                <div className="mt-4 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200">
+                  <div className="flex items-center gap-4 text-sm text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#434c9d]" />
+                      <span className="font-medium">{new Date(selectedConversation.booking.requested_date).toLocaleDateString()}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {formatTime(selectedConversation.booking.requested_time)}
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-[#434c9d]" />
+                      <span className="font-medium">{formatTime(selectedConversation.booking.requested_time)}</span>
                     </div>
                     <Badge className={cn(
-                      "text-xs",
+                      "text-xs font-semibold",
                       selectedConversation.booking.status === "confirmed" && "bg-green-100 text-green-800",
                       selectedConversation.booking.status === "pending" && "bg-yellow-100 text-yellow-800",
+                      selectedConversation.booking.status === "paid" && "bg-blue-100 text-blue-800",
                       selectedConversation.booking.status === "completed" && "bg-gray-100 text-gray-800",
                       selectedConversation.booking.status === "rejected" && "bg-red-100 text-red-800"
                     )}>
@@ -668,12 +651,16 @@ function MessagesPageContent() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-gray-50 to-white space-y-4">
                 {messages.length === 0 ? (
-                  <div className="text-center py-8">
-                    <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No messages yet</p>
-                    <p className="text-sm text-gray-500">Start the conversation!</p>
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="w-20 h-20 bg-gradient-to-br from-[#434c9d]/10 to-[#96cbc3]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <MessageCircle className="w-10 h-10 text-[#434c9d]" />
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900 mb-2">No messages yet</p>
+                      <p className="text-sm text-gray-600">Start the conversation!</p>
+                    </div>
                   </div>
                 ) : (
                   messages.map((message) => {
@@ -682,16 +669,21 @@ function MessagesPageContent() {
                       <div
                         key={message.id}
                         className={cn(
-                          "flex",
-                          isOwn ? "justify-end" : "justify-start"
+                          "flex items-end gap-2",
+                          isOwn ? "flex-row-reverse" : "flex-row"
                         )}
                       >
+                        {!isOwn && (
+                          <div className="w-8 h-8 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+                            <User className="w-4 h-4 text-gray-600" />
+                          </div>
+                        )}
                         <div
                           className={cn(
-                            "max-w-[70%] p-3 rounded-lg",
+                            "max-w-[75%] rounded-2xl px-4 py-3 shadow-sm",
                             isOwn
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-100 text-gray-900"
+                              ? "bg-gradient-to-br from-[#434c9d] to-[#434c9d]/90 text-white"
+                              : "bg-white border border-gray-200 text-gray-900"
                           )}
                         >
                           {message.image_url && (
@@ -699,17 +691,21 @@ function MessagesPageContent() {
                               <img
                                 src={message.image_url}
                                 alt="Message attachment"
-                                className="max-w-full max-h-64 object-contain rounded-lg"
+                                className="max-w-full max-h-64 object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                                 onClick={() => window.open(message.image_url!, '_blank')}
-                                style={{ cursor: 'pointer' }}
                               />
                             </div>
                           )}
                           {message.content && (
-                            <p className="text-sm">{message.content}</p>
+                            <p className={cn(
+                              "text-sm leading-relaxed whitespace-pre-wrap break-words",
+                              isOwn ? "text-white" : "text-gray-900"
+                            )}>
+                              {message.content}
+                            </p>
                           )}
                           <p className={cn(
-                            "text-xs mt-1",
+                            "text-xs mt-2",
                             isOwn ? "text-blue-100" : "text-gray-500"
                           )}>
                             {formatMessageTime(message.created_at)}
@@ -719,29 +715,30 @@ function MessagesPageContent() {
                     );
                   })
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Message Input */}
-              <div className="p-4 border-t border-gray-200 bg-white space-y-2">
+              <div className="p-4 border-t bg-white space-y-3">
                 {imagePreview && (
                   <div className="relative inline-block">
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      className="max-w-xs max-h-48 rounded-lg object-contain border border-gray-200"
+                      className="max-w-xs max-h-48 rounded-xl object-contain border-2 border-gray-200 shadow-sm"
                     />
                     <Button
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="absolute top-2 right-2 h-6 w-6 p-0"
+                      className="absolute top-2 right-2 h-7 w-7 p-0 rounded-full shadow-lg"
                       onClick={removeImage}
                     >
                       <X className="w-3 h-3" />
                     </Button>
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-end">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -755,35 +752,39 @@ function MessagesPageContent() {
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={sending || uploadingImage}
+                    className="h-10 w-10 p-0 border-gray-300 hover:border-[#434c9d] hover:bg-[#434c9d]/5 transition-colors"
                   >
-                    <ImageIcon className="w-4 h-4" />
+                    <ImageIcon className="w-5 h-5 text-gray-600" />
                   </Button>
                   <Input
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Type your message..."
-                    className="flex-1"
+                    className="flex-1 border-gray-300 focus:border-[#434c9d] focus:ring-[#434c9d] rounded-xl"
                     disabled={uploadingImage}
                   />
                   <Button
                     onClick={sendMessage}
                     disabled={(!newMessage.trim() && !selectedImage) || sending || uploadingImage}
+                    className="h-10 px-6 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-md hover:shadow-lg transition-all rounded-xl"
                   >
                     {uploadingImage ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
-                      <Send className="w-4 h-4" />
+                      <Send className="w-5 h-5" />
                     )}
                   </Button>
                 </div>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
+            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-white">
               <div className="text-center">
-                <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a conversation</h3>
+                <div className="w-24 h-24 bg-gradient-to-br from-[#434c9d]/10 to-[#96cbc3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <MessageCircle className="w-12 h-12 text-[#434c9d]" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Select a conversation</h3>
                 <p className="text-gray-600">Choose a conversation from the sidebar to start messaging</p>
               </div>
             </div>
@@ -791,48 +792,55 @@ function MessagesPageContent() {
         </div>
       </div>
 
-      {/* Delete Conversation Confirmation Dialog */}
-      {deleteConfirm.show && deleteConfirm.conversation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-red-600" />
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Delete Conversation</h3>
-                <p className="text-sm text-gray-600">This action cannot be undone</p>
-              </div>
+              <DialogTitle className="text-xl font-bold">Delete Conversation</DialogTitle>
             </div>
-            
-            <p className="text-gray-700 mb-6">
+            <DialogDescription className="text-gray-600 pt-2">
               Are you sure you want to delete the conversation with{" "}
-              <span className="font-semibold">
-                {deleteConfirm.conversation.other_person.first_name} {deleteConfirm.conversation.other_person.last_name}
+              <span className="font-semibold text-gray-900">
+                {conversationToDelete?.other_person.first_name} {conversationToDelete?.other_person.last_name}
               </span>? 
-              All messages in this conversation will be permanently deleted.
-            </p>
-            
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteConfirm({ conversation: null, show: false })}
-                disabled={deleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={deleteConversation}
-                disabled={deleting}
-              >
-                {deleting ? "Deleting..." : "Delete Conversation"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
+              <br /><br />
+              This action cannot be undone. All messages in this conversation will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setConversationToDelete(null);
+              }}
+              disabled={deleting}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={deleteConversation}
+              disabled={deleting}
+              className="flex-1 bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Conversation"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
@@ -843,6 +851,7 @@ export default function MessagesPage() {
       <DashboardLayout user={null}>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#434c9d] border-t-transparent mx-auto mb-4"></div>
             <p className="text-gray-600">Loading messages...</p>
           </div>
         </div>
