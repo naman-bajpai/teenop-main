@@ -194,16 +194,35 @@ function LoginInner() {
         if (profileError || !profile) {
           console.error("Profile error:", profileError);
           setError("User profile not found. Please contact support.");
+          setIsSubmitting(false);
           return;
         }
 
         if (data.session) {
           await supabase.auth.setSession(data.session);
           console.log("Session persisted successfully");
+          
+          // Wait a bit to ensure cookies are set before redirecting
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
 
         console.log("Login successful, redirecting to:", redirectTo);
+        
+        // Store current pathname to check if redirect worked
+        const currentPath = window.location.pathname;
+        
+        // Use router.push for client-side navigation
         router.push(redirectTo);
+        
+        // Fallback to window.location if router doesn't work
+        // This ensures redirect happens even if router.push fails
+        setTimeout(() => {
+          // Check if we're still on the login page (redirect didn't work)
+          if (window.location.pathname === currentPath || window.location.pathname === '/login') {
+            console.log("Router push may have failed, using window.location fallback");
+            window.location.href = redirectTo;
+          }
+        }, 500);
       }
     } catch (err: any) {
       console.error("Login exception:", err);

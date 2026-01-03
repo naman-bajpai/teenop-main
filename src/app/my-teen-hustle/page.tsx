@@ -365,7 +365,7 @@ function BookingCard({ booking, onStatusUpdate }: {
               ✓ Accept
             </Button>
             <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50 font-semibold px-6" onClick={handleDecline}>
-              ✕ Decline
+              ✕ Decline or Propose Alternate Time
             </Button>
           </>
         )}
@@ -1528,38 +1528,6 @@ export default function TeenHustlePage() {
                     <Clock className="w-5 h-5 mr-2" />
                     Complete Setup
                   </Button>
-                </div>
-              </div>
-            ) : earningsStats.pendingEarnings > 0 ? (
-              <div className="bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 p-8 rounded-2xl shadow-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30">
-                      <Wallet className="w-8 h-8 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold mb-2">Ready to Request Withdrawal</h3>
-                      <p className="text-green-100 text-lg">You have <span className="font-bold text-2xl">${earningsStats.pendingEarnings.toFixed(2)}</span> available for withdrawal</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <Link href="/earnings">
-                      <Button 
-                        variant="outline"
-                        className="bg-white/20 backdrop-blur-sm border-2 border-white/30 text-white hover:bg-white/30 px-6 py-3 text-base font-semibold shadow-lg hover:shadow-xl transition-all"
-                      >
-                        <Wallet className="w-5 h-5 mr-2" />
-                        Manage Account
-                      </Button>
-                    </Link>
-                    <Button 
-                      onClick={handleRequestWithdrawal}
-                      className="bg-white text-green-600 hover:bg-green-50 px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
-                    >
-                      <Wallet className="w-5 h-5 mr-2" />
-                      Request Withdrawal
-                    </Button>
-                  </div>
                 </div>
               </div>
             ) : (
