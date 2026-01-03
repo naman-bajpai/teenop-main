@@ -763,7 +763,14 @@ function QuoteRequestDetailsDialog({
               Close
             </Button>
             <Button
-              onClick={() => window.location.href = "/messages"}
+              onClick={() => {
+                if (quoteRequest.booking_id) {
+                  window.location.href = `/messages?booking_id=${quoteRequest.booking_id}`;
+                } else {
+                  // Fallback: try to find booking by quote request ID in special_instructions
+                  window.location.href = "/messages";
+                }
+              }}
               className="flex-1 h-12 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white"
             >
               <MessageCircle className="w-5 h-5 mr-2" />

@@ -155,6 +155,15 @@ export async function POST(request: NextRequest) {
     if (bookingError) {
       console.error("Error creating messaging booking:", bookingError);
       // Don't fail the quote request if booking creation fails, but log it
+    } else if (messagingBooking) {
+      // Update quote request with booking_id for easy messaging access
+      await supabase
+        .from("quote_requests")
+        .update({ booking_id: messagingBooking.id } as any)
+        .eq("id", quoteRequest.id);
+      
+      // Update quoteRequest object to include booking_id
+      (quoteRequest as any).booking_id = messagingBooking.id;
     }
 
     // Get provider profile for notification
@@ -269,6 +278,7 @@ export async function GET(request: NextRequest) {
       .from("quote_requests")
       .select(`
         *,
+        booking_id,
         services (
           id,
           title,

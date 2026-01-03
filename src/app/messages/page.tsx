@@ -135,13 +135,104 @@ function MessagesPageContent() {
 
   useEffect(() => {
     const bookingId = searchParams.get('booking_id');
-    if (bookingId && conversations.length > 0) {
+    if (bookingId) {
+      // First, try to find in existing conversations
+      if (conversations.length > 0) {
       const conversation = conversations.find(conv => conv.booking_id === bookingId);
       if (conversation && (!selectedConversation || selectedConversation.id !== conversation.id)) {
         setSelectedConversation(conversation);
+          return;
+        }
+      }
+      
+      // If not found in conversations, fetch booking details and create conversation entry
+      const fetchBookingConversation = async () => {
+        try {
+          const response = await fetch(`/api/bookings/${bookingId}`, { cache: "no-store" });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.booking) {
+              const booking = data.booking;
+              const service = booking.service || booking.services;
+              
+              // Determine the other person - booking includes both customer and provider profiles
+              let otherPerson;
+              if (booking.user_id === user?.id) {
+                // Current user is customer, other person is provider (from service)
+                otherPerson = service?.profiles || service?.user_id ? {
+                  id: service?.user_id || service?.profiles?.id,
+                  first_name: service?.profiles?.first_name || "",
+                  last_name: service?.profiles?.last_name || "",
+                  avatar_url: service?.profiles?.avatar_url
+                } : null;
+              } else {
+                // Current user is provider, other person is customer (from booking)
+                otherPerson = booking.profiles ? {
+                  id: booking.profiles.id,
+                  first_name: booking.profiles.first_name || "",
+                  last_name: booking.profiles.last_name || "",
+                  avatar_url: booking.profiles.avatar_url
+                } : null;
+              }
+              
+              if (otherPerson && otherPerson.id) {
+                // Create a conversation entry for this booking
+                const newConversation: Conversation = {
+                  id: booking.id,
+                  booking_id: booking.id,
+                  other_person: {
+                    id: otherPerson.id,
+                    first_name: otherPerson.first_name || "",
+                    last_name: otherPerson.last_name || "",
+                    avatar_url: otherPerson.avatar_url || undefined
+                  },
+                  last_message: undefined,
+                  unread_count: 0,
+                  booking: {
+                    id: booking.id,
+                    service: {
+                      title: service?.title || "Service",
+                      category: service?.category || ""
+                    },
+                    status: booking.status,
+                    requested_date: booking.requested_date,
+                    requested_time: booking.requested_time
+                  }
+                };
+                
+                // Add to conversations if not already there
+                setConversations(prev => {
+                  const exists = prev.some(conv => conv.booking_id === bookingId);
+                  if (!exists) {
+                    return [newConversation, ...prev];
+                  }
+                  return prev;
+                });
+                
+                // Select this conversation
+                setSelectedConversation(newConversation);
+                
+                // Fetch messages for this booking
+                const messagesResponse = await fetch(`/api/messages?booking_id=${bookingId}`, { cache: "no-store" });
+                if (messagesResponse.ok) {
+                  const messagesData = await messagesResponse.json();
+                  if (messagesData.success && messagesData.messages) {
+                    setMessages(messagesData.messages);
+                  }
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching booking conversation:", error);
+        }
+      };
+      
+      if (user && !loading) {
+        fetchBookingConversation();
       }
     }
-  }, [searchParams, conversations, selectedConversation]);
+  }, [searchParams, conversations, selectedConversation, user, loading]);
 
   useEffect(() => {
     const handleMessageSent = (event: CustomEvent) => {
@@ -476,14 +567,17 @@ function MessagesPageContent() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="h-[calc(100vh-80px)] flex bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <div className="h-[calc(100vh-80px)] flex bg-gradient-to-br from-gray-50 via-white to-gray-50 relative">
         {/* Conversations Sidebar */}
-        <div className="w-full md:w-96 border-r border-gray-200 bg-white flex flex-col shadow-sm">
+        <div className={cn(
+          "w-full md:w-96 border-r border-gray-200 bg-white flex flex-col shadow-sm transition-transform duration-300",
+          selectedConversation ? "hidden md:flex" : "flex"
+        )}>
           {/* Header */}
-          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-[#434c9d]/5 to-[#96cbc3]/5">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#434c9d] to-[#96cbc3] rounded-lg flex items-center justify-center">
-                <MessageCircle className="w-5 h-5 text-white" />
+          <div className="p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-[#434c9d]/5 to-[#96cbc3]/5">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-[#434c9d] to-[#96cbc3] rounded-lg flex items-center justify-center">
+                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               Messages
             </h1>
@@ -513,34 +607,34 @@ function MessagesPageContent() {
                 </p>
               </div>
             ) : (
-              <div className="p-2 space-y-1">
+              <div className="p-2 sm:p-2 space-y-1">
                 {filteredConversations.map((conversation) => (
                   <div
                     key={conversation.id}
                     onClick={() => setSelectedConversation(conversation)}
                     className={cn(
-                      "p-4 rounded-xl cursor-pointer transition-all duration-200 group",
+                      "p-3 sm:p-4 rounded-xl cursor-pointer transition-all duration-200 group",
                       selectedConversation?.id === conversation.id
                         ? "bg-gradient-to-r from-[#434c9d]/10 to-[#96cbc3]/10 border-2 border-[#434c9d]/20 shadow-sm"
                         : "hover:bg-gray-50 border-2 border-transparent"
                     )}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center flex-shrink-0 ring-2 ring-white">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center flex-shrink-0 ring-2 ring-white">
                         {conversation.other_person.avatar_url ? (
                           <img
                             src={conversation.other_person.avatar_url}
                             alt={`${conversation.other_person.first_name} ${conversation.other_person.last_name}`}
-                            className="w-12 h-12 rounded-full object-cover"
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                           />
                         ) : (
-                          <User className="w-6 h-6 text-gray-400" />
+                          <User className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
                         )}
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-semibold text-gray-900 truncate">
+                        <div className="flex items-center justify-between mb-1 gap-2">
+                          <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
                             {conversation.other_person.first_name} {conversation.other_person.last_name}
                           </h3>
                           <div className="flex items-center gap-2">
@@ -560,18 +654,18 @@ function MessagesPageContent() {
                           </div>
                         </div>
                         
-                        <p className="text-sm text-gray-600 truncate mb-1">
+                        <p className="text-xs sm:text-sm text-gray-600 truncate mb-1">
                           {conversation.booking.service.title}
                         </p>
                         
                         {conversation.last_message && (
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm text-gray-500 truncate">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs sm:text-sm text-gray-500 truncate flex-1 min-w-0">
                               {conversation.last_message.image_url 
                                 ? "📷 Image" 
                                 : conversation.last_message.content}
                             </p>
-                            <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                            <span className="text-xs text-gray-400 flex-shrink-0">
                               {formatMessageTime(conversation.last_message.created_at)}
                             </span>
                           </div>
@@ -586,13 +680,25 @@ function MessagesPageContent() {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col hidden md:flex">
+        <div className={cn(
+          "flex-1 flex flex-col transition-transform duration-300",
+          selectedConversation ? "flex" : "hidden md:flex"
+        )}>
           {selectedConversation ? (
             <>
               {/* Chat Header */}
-              <div className="p-6 border-b border-gray-200 bg-white shadow-sm">
+              <div className="p-4 sm:p-6 border-b border-gray-200 bg-white shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    {/* Back button for mobile */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedConversation(null)}
+                      className="md:hidden mr-2"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </Button>
                     <div className="w-12 h-12 bg-gradient-to-br from-[#434c9d] to-[#96cbc3] rounded-full flex items-center justify-center ring-2 ring-white shadow-md">
                       {selectedConversation.other_person.avatar_url ? (
                         <img
@@ -605,11 +711,11 @@ function MessagesPageContent() {
                       )}
                     </div>
                     
-                    <div>
-                      <h2 className="font-bold text-gray-900 text-lg">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="font-bold text-gray-900 text-base sm:text-lg truncate">
                         {selectedConversation.other_person.first_name} {selectedConversation.other_person.last_name}
                       </h2>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-xs sm:text-sm text-gray-600 truncate">
                         {selectedConversation.booking.service.title}
                       </p>
                     </div>
@@ -626,14 +732,14 @@ function MessagesPageContent() {
                 </div>
                 
                 {/* Booking Info */}
-                <div className="mt-4 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200">
-                  <div className="flex items-center gap-4 text-sm text-gray-700">
+                <div className="mt-4 p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-700">
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-[#434c9d]" />
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-[#434c9d]" />
                       <span className="font-medium">{new Date(selectedConversation.booking.requested_date).toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-[#434c9d]" />
+                      <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-[#434c9d]" />
                       <span className="font-medium">{formatTime(selectedConversation.booking.requested_time)}</span>
                     </div>
                     <Badge className={cn(
@@ -651,7 +757,7 @@ function MessagesPageContent() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-gray-50 to-white space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gradient-to-b from-gray-50 to-white space-y-4">
                 {messages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
@@ -719,7 +825,7 @@ function MessagesPageContent() {
               </div>
 
               {/* Message Input */}
-              <div className="p-4 border-t bg-white space-y-3">
+              <div className="p-3 sm:p-4 border-t bg-white space-y-3">
                 {imagePreview && (
                   <div className="relative inline-block">
                     <img

@@ -8,6 +8,7 @@ export interface QuoteRequest {
   special_instructions: string | null;
   image_url: string | null;
   service_address: string | null;
+  booking_id: string | null;
   created_at: string;
   updated_at: string;
   // Joined data

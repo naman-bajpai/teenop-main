@@ -468,31 +468,33 @@ function QuoteRequestCard({
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
             variant="outline"
             onClick={onViewDetails}
-            className="flex-1 border-2 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+            className="flex-1 min-w-[100px] border-2 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
           >
-            <FileText className="w-4 h-4 mr-2" />
-            Details
+            <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Details</span>
+            <span className="sm:hidden">View</span>
           </Button>
           {hasQuote && onAcceptQuote && (
             <Button
               size="sm"
               onClick={onAcceptQuote}
               disabled={acceptingQuote === quote!.id}
-              className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+              className="flex-1 min-w-[100px] bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white text-xs sm:text-sm"
             >
               {acceptingQuote === quote!.id ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Accepting...
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin" />
+                  <span className="hidden sm:inline">Accepting...</span>
+                  <span className="sm:hidden">...</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                   Accept
                 </>
               )}
@@ -502,9 +504,9 @@ function QuoteRequestCard({
             size="sm"
             variant="outline"
             onClick={onMessage}
-            className="flex-1 border-2 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+            className="flex-1 min-w-[100px] border-2 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
           >
-            <MessageCircle className="w-4 h-4 mr-2" />
+            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             Message
           </Button>
         </div>
@@ -533,6 +535,7 @@ function QuoteRequestDetailsDialog({
   formatTime: (time: string) => string;
   formatPrice: (price: number) => string;
 }) {
+  const [loadingMessage, setLoadingMessage] = useState(false);
   const hasQuote = quoteRequest.quotes && quoteRequest.quotes.length > 0;
   const quote = hasQuote ? quoteRequest.quotes![0] : null;
 
@@ -680,11 +683,49 @@ function QuoteRequestDetailsDialog({
               Close
             </Button>
             <Button
-              onClick={() => window.location.href = "/messages"}
-              className="flex-1 h-12 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white"
+              onClick={async () => {
+                setLoadingMessage(true);
+                try {
+                  // Get or create booking for this quote request
+                  const response = await fetch(`/api/quotes/request/${quoteRequest.id}/booking`, {
+                    cache: "no-store"
+                  });
+                  
+                  if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.booking_id) {
+                      // Navigate to messages page with the booking_id
+                      window.location.href = `/messages?booking_id=${data.booking_id}`;
+                    } else {
+                      // Fallback to general messages page
+                      window.location.href = "/messages";
+                    }
+                  } else {
+                    // Fallback to general messages page
+                    window.location.href = "/messages";
+                  }
+                } catch (error) {
+                  console.error("Error getting booking for quote request:", error);
+                  // Fallback to general messages page
+                  window.location.href = "/messages";
+                } finally {
+                  setLoadingMessage(false);
+                }
+              }}
+              disabled={loadingMessage}
+              className="flex-1 h-12 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white disabled:opacity-50"
             >
-              <MessageCircle className="w-5 h-5 mr-2" />
-              Message Provider
+              {loadingMessage ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Opening...
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  Message Provider
+                </>
+              )}
             </Button>
           </div>
         </div>

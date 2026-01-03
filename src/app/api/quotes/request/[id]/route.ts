@@ -29,6 +29,7 @@ export async function GET(
       .from("quote_requests")
       .select(`
         *,
+        booking_id,
         services (
           id,
           title,

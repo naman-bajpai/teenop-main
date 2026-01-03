@@ -126,16 +126,16 @@ const getStatusColor = (status: string) => {
 
 function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: (service: Service) => void; onDelete: (serviceId: string) => void }) {
   return (
-    <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#434c9d] hover:shadow-xl transition-all transform hover:-translate-y-1">
-      <div className="flex gap-4">
+    <div className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-gray-200 hover:border-[#434c9d] hover:shadow-xl transition-all transform hover:-translate-y-1">
+      <div className="flex flex-col sm:flex-row gap-4">
         {service.banner_url ? (
           <img
             src={service.banner_url}
             alt={service.title}
-            className="w-36 h-24 object-cover rounded-xl border-2 border-gray-200 shadow-md"
+            className="w-full sm:w-36 h-32 sm:h-24 object-cover rounded-xl border-2 border-gray-200 shadow-md"
           />
         ) : (
-          <div className="w-36 h-24 rounded-xl border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center shadow-md">
+          <div className="w-full sm:w-36 h-32 sm:h-24 rounded-xl border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center shadow-md">
             <Star className="w-8 h-8 text-gray-400" />
           </div>
         )}
@@ -178,20 +178,20 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
               <span className="font-semibold">{service.total_bookings} {service.total_bookings === 1 ? 'booking' : 'bookings'}</span>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button 
               variant="outline" 
               size="sm" 
-              className="border-gray-300 hover:border-[#434c9d] hover:text-[#434c9d]"
+              className="border-gray-300 hover:border-[#434c9d] hover:text-[#434c9d] text-xs sm:text-sm"
               onClick={() => window.location.href = `/services/${service.id}`}
             >
-              <Eye className="w-4 h-4 mr-1" />View
+              <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />View
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onEdit(service)} className="border-gray-300 hover:border-blue-500 hover:text-blue-600">
-              <Edit className="w-4 h-4 mr-1" />Edit
+            <Button variant="outline" size="sm" onClick={() => onEdit(service)} className="border-gray-300 hover:border-blue-500 hover:text-blue-600 text-xs sm:text-sm">
+              <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />Edit
             </Button>
-            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50" onClick={() => onDelete(service.id)}>
-              <Trash2 className="w-4 h-4 mr-1" />Delete
+            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 text-xs sm:text-sm" onClick={() => onDelete(service.id)}>
+              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />Delete
             </Button>
           </div>
         </div>
@@ -1146,17 +1146,17 @@ export default function TeenHustlePage() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-start">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent mb-3">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent mb-2 sm:mb-3">
                 My Teen Hustle
               </h1>
-              <p className="text-gray-600 text-lg">Manage your services, bookings, and earnings</p>
+              <p className="text-gray-600 text-sm sm:text-base md:text-lg">Manage your services, bookings, and earnings</p>
             </div>
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-2 sm:gap-3 flex-wrap">
               <Link href="/my-services">
                 <Button variant="outline" className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white">
                   <Star className="w-4 h-4 mr-2" />
@@ -1489,65 +1489,65 @@ export default function TeenHustlePage() {
         {!stripeAccountStatus.loading && (
           <div className="mb-8">
             {!stripeAccountStatus.hasAccount ? (
-              <div className="bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 p-8 rounded-2xl shadow-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30">
-                      <Wallet className="w-8 h-8 text-white" />
+              <div className="bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 p-4 sm:p-6 md:p-8 rounded-2xl shadow-xl text-white">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-4 sm:gap-6">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30 flex-shrink-0">
+                      <Wallet className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold mb-2">Set Up Payments</h3>
-                      <p className="text-blue-100 text-lg">Connect your bank account to receive payments for your services</p>
+                      <h3 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">Set Up Payments</h3>
+                      <p className="text-blue-100 text-sm sm:text-base md:text-lg">Connect your bank account to receive payments for your services</p>
                     </div>
                   </div>
                   <Button 
                     onClick={handleStripeConnectSetup}
-                    className="bg-white text-blue-600 hover:bg-blue-50 px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+                    className="bg-white text-blue-600 hover:bg-blue-50 px-4 sm:px-6 md:px-8 py-2 sm:py-3 text-sm sm:text-base md:text-lg font-semibold shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
                   >
-                    <Wallet className="w-5 h-5 mr-2" />
+                    <Wallet className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                     Set Up Payments
                   </Button>
                 </div>
               </div>
             ) : !stripeAccountStatus.accountStatus?.chargesEnabled ? (
-              <div className="bg-gradient-to-br from-yellow-400 via-orange-400 to-amber-500 p-8 rounded-2xl shadow-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30">
-                      <Clock className="w-8 h-8 text-white" />
+              <div className="bg-gradient-to-br from-yellow-400 via-orange-400 to-amber-500 p-4 sm:p-6 md:p-8 rounded-2xl shadow-xl text-white">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-4 sm:gap-6">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30 flex-shrink-0">
+                      <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold mb-2">Complete Payment Setup</h3>
-                      <p className="text-yellow-100 text-lg">Your payment account is being verified. Complete the setup to receive payments.</p>
+                      <h3 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">Complete Payment Setup</h3>
+                      <p className="text-yellow-100 text-sm sm:text-base md:text-lg">Your payment account is being verified. Complete the setup to receive payments.</p>
                     </div>
                   </div>
                   <Button 
                     onClick={handleStripeConnectLogin}
-                    className="bg-white text-orange-600 hover:bg-orange-50 px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+                    className="bg-white text-orange-600 hover:bg-orange-50 px-4 sm:px-6 md:px-8 py-2 sm:py-3 text-sm sm:text-base md:text-lg font-semibold shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
                   >
-                    <Clock className="w-5 h-5 mr-2" />
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                     Complete Setup
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200 p-8 rounded-2xl border-2 border-gray-300 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center shadow-inner">
-                      <Wallet className="w-8 h-8 text-white" />
+              <div className="bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200 p-4 sm:p-6 md:p-8 rounded-2xl border-2 border-gray-300 shadow-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-4 sm:gap-6">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center shadow-inner flex-shrink-0">
+                      <Wallet className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">Payment Account Ready</h3>
-                      <p className="text-gray-600 text-lg">Your payment account is set up. Complete jobs to start earning!</p>
+                      <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Payment Account Ready</h3>
+                      <p className="text-gray-600 text-sm sm:text-base md:text-lg">Your payment account is set up. Complete jobs to start earning!</p>
                     </div>
                   </div>
-                  <Link href="/earnings">
+                  <Link href="/earnings" className="w-full sm:w-auto">
                     <Button 
                       variant="outline"
-                      className="bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 text-base font-semibold shadow-md hover:shadow-lg transition-all"
+                      className="bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-4 sm:px-6 md:px-8 py-2 sm:py-3 text-sm sm:text-base font-semibold shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
                     >
-                      <Wallet className="w-5 h-5 mr-2" />
+                      <Wallet className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                       Manage Account
                     </Button>
                   </Link>
@@ -1559,7 +1559,7 @@ export default function TeenHustlePage() {
 
         {/* Tabs */}
         <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-gray-100 p-1 rounded-xl gap-1">
             <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold text-xs sm:text-sm relative">
               Pending Requests ({pendingBookings.length + quoteRequests.length})
               {(pendingBookings.length > 0 || quoteRequests.length > 0) && (
@@ -1584,11 +1584,11 @@ export default function TeenHustlePage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pending" className="mt-6">
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Pending Requests</h2>
-                <p className="text-sm text-gray-600">Requests awaiting your response</p>
+          <TabsContent value="pending" className="mt-4 sm:mt-6">
+            <div className="mb-4 sm:mb-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Pending Requests</h2>
+                <p className="text-xs sm:text-sm text-gray-600">Requests awaiting your response</p>
               </div>
               {(pendingBookings.length > 0 || quoteRequests.length > 0) ? (
                 <div className="space-y-4">
@@ -1597,12 +1597,12 @@ export default function TeenHustlePage() {
                   
                   {/* Quote Requests */}
                   {quoteRequests.map((qr: any) => (
-                    <div key={qr.id} className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#434c9d] hover:shadow-xl transition-all">
-                      <div className="flex justify-between items-start mb-4">
+                    <div key={qr.id} className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-gray-200 hover:border-[#434c9d] hover:shadow-xl transition-all">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
                             <Badge className="bg-purple-100 text-purple-700">Quote Request</Badge>
-                            <h3 className="text-xl font-bold text-gray-900">{qr.services?.title || 'Service'}</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-gray-900">{qr.services?.title || 'Service'}</h3>
                           </div>
                           <p className="text-sm text-gray-600 flex items-center gap-2">
                             <Users className="w-4 h-4" />
@@ -1662,11 +1662,11 @@ export default function TeenHustlePage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="scheduled" className="mt-6">
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Scheduled Services</h2>
-                <p className="text-sm text-gray-600">Confirmed and paid bookings</p>
+          <TabsContent value="scheduled" className="mt-4 sm:mt-6">
+            <div className="mb-4 sm:mb-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Scheduled Services</h2>
+                <p className="text-xs sm:text-sm text-gray-600">Confirmed and paid bookings</p>
               </div>
               {servicesNeedingCompletion > 0 && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl">
@@ -1698,11 +1698,11 @@ export default function TeenHustlePage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="completed" className="mt-6">
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Completed Services</h2>
-                <p className="text-sm text-gray-600">Services you've completed</p>
+          <TabsContent value="completed" className="mt-4 sm:mt-6">
+            <div className="mb-4 sm:mb-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Completed Services</h2>
+                <p className="text-xs sm:text-sm text-gray-600">Services you've completed</p>
               </div>
               {completedBookings.length > 0 ? (
                 <div className="space-y-4">{completedBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
@@ -1718,11 +1718,11 @@ export default function TeenHustlePage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="cancelled" className="mt-6">
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Cancelled Services</h2>
-                <p className="text-sm text-gray-600">Cancelled or rejected bookings</p>
+          <TabsContent value="cancelled" className="mt-4 sm:mt-6">
+            <div className="mb-4 sm:mb-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Cancelled Services</h2>
+                <p className="text-xs sm:text-sm text-gray-600">Cancelled or rejected bookings</p>
               </div>
               {cancelledBookings.length > 0 ? (
                 <div className="space-y-4">{cancelledBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}</div>
