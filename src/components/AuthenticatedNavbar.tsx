@@ -39,6 +39,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [overHero, setOverHero] = useState(true);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +72,31 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Fetch unread message count
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await fetch("/api/messages/conversations", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.conversations) {
+            const totalUnread = data.conversations.reduce((sum: number, conv: any) => sum + (conv.unread_count || 0), 0);
+            setUnreadMessageCount(totalUnread);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching unread messages:", error);
+      }
+    };
+
+    fetchUnreadCount();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -156,13 +182,14 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
           {/* Primary items */}
           {primaryNavItems.map((item) => {
             const Icon = item.icon;
+            const isMessages = item.name === "Messages";
             return (
               <Link key={item.name} href={item.href}>
                 <Button
                   variant={isActive(item.href) ? "default" : "ghost"}
                   size="sm"
                   className={clsx(
-                    "flex items-center gap-2 transition-colors px-3",
+                    "flex items-center gap-2 transition-colors px-3 relative",
                     isActive(item.href)
                       ? "bg-[#ff725a] text-white hover:bg-[#ff725a]/90"
                       : overHero
@@ -172,6 +199,11 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                 >
                   <Icon className="h-4 w-4" />
                   <span className="hidden xl:inline">{item.name}</span>
+                  {isMessages && unreadMessageCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[18px] h-4.5 flex items-center justify-center rounded-full px-1 font-semibold">
+                      {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                    </span>
+                  )}
                 </Button>
               </Link>
             );
@@ -412,6 +444,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
             <div className="pb-2 border-b border-gray-200">
               {primaryNavItems.map((item) => {
                 const Icon = item.icon;
+                const isMessages = item.name === "Messages";
                 return (
                   <Link
                     key={item.name}
@@ -420,7 +453,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                   >
                     <Button
                       variant={isActive(item.href) ? "default" : "ghost"}
-                      className={`w-full justify-start gap-3 py-2.5 transition-all ${
+                      className={`w-full justify-start gap-3 py-2.5 transition-all relative ${
                         isActive(item.href)
                           ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
                           : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
@@ -428,6 +461,11 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                     >
                       <Icon className={clsx("h-4 w-4 transition-transform", isActive(item.href) && "scale-110")} />
                       {item.name}
+                      {isMessages && unreadMessageCount > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-xs min-w-[18px] h-4.5 flex items-center justify-center rounded-full px-1 font-semibold">
+                          {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                        </span>
+                      )}
                     </Button>
                   </Link>
                 );

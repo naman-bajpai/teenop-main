@@ -451,23 +451,23 @@ export default function MyRequestsPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-8">
             <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
               <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
-                <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
-                  <Calendar className="w-5 h-5 md:w-7 md:h-7 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Total Requests</p>
-                  <p className="text-xl md:text-3xl font-bold text-gray-900">{allBookings.length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
                 <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
                   <AlertCircle className="w-5 h-5 md:w-7 md:h-7 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Pending</p>
                   <p className="text-xl md:text-3xl font-bold text-gray-900">{pendingBookings.length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
+                <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
+                  <Calendar className="w-5 h-5 md:w-7 md:h-7 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Scheduled</p>
+                  <p className="text-xl md:text-3xl font-bold text-gray-900">{scheduledBookings.length}</p>
                 </div>
               </div>
             </div>
@@ -534,8 +534,13 @@ export default function MyRequestsPage() {
           <Tabs defaultValue="pending" className="w-full">
             <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
               <TabsList className="inline-flex w-full sm:grid sm:grid-cols-4 bg-gray-100 p-1 rounded-xl h-auto min-w-max sm:min-w-0">
-            <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
+            <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap relative">
               Pending ({pendingBookings.length + pendingQuoteRequests.length})
+              {pendingBookings.some(b => b.status === "confirmed") && (
+                <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[18px] h-4.5 flex items-center justify-center rounded-full px-1 animate-pulse">
+                  !
+                </Badge>
+              )}
               </TabsTrigger>
                 <TabsTrigger value="scheduled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
                 Scheduled ({scheduledBookings.length})

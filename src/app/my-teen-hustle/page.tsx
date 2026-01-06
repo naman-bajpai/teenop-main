@@ -309,7 +309,7 @@ function BookingCard({ booking, onStatusUpdate }: {
           </p>
         </div>
         <Badge className={`${getStatusColor(booking.status)} text-xs font-semibold px-3 py-1`}>
-          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+          {booking.status === "confirmed" ? "Awaiting Payment" : booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
         </Badge>
       </div>
       {booking.special_instructions && (
@@ -427,9 +427,19 @@ function BookingCard({ booking, onStatusUpdate }: {
           </Button>
         )}
         {booking.status === "paid" && (
-          <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white">
-            <MessageCircle className="w-4 h-4 mr-1" />View Details
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onStatusUpdate(booking.id, "completed")}
+              className="border-green-500 text-green-600 hover:bg-green-50"
+            >
+              <CheckCircle className="w-4 h-4 mr-1" />Mark as Complete
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white">
+              <MessageCircle className="w-4 h-4 mr-1" />View Details
+            </Button>
+          </div>
         )}
         {booking.status === "completed" && (
           <div className="flex gap-2">

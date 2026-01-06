@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, HelpCircle, DollarSign, FileText, Loader2 } from "lucide-react";
+import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, HelpCircle, DollarSign, FileText, Loader2, MessageCircle } from "lucide-react";
 import HelpDialog from "@/components/help/HelpDialog";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ServiceAvailabilityCalendar from "@/components/availability/ServiceAvailabilityCalendar";
@@ -1058,6 +1058,16 @@ return (
                         </Button>
                       </DialogTrigger>
                       </Dialog>
+                    {service.user_id && user && user.id !== service.user_id && (
+                      <Button
+                        variant="outline"
+                        className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white transition-all duration-200 py-3 text-lg font-semibold"
+                        onClick={() => router.push(`/messages?provider_id=${service.user_id}`)}
+                      >
+                        <MessageCircle className="w-5 h-5 mr-2" />
+                        Message Provider
+                      </Button>
+                    )}
                     <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>

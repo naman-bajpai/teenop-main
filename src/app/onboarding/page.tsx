@@ -5,10 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Upload,
   CheckCircle,
   Loader2,
-  FileText,
   Sparkles,
   AlertCircle,
 } from "lucide-react";
@@ -22,10 +20,6 @@ function OnboardingContent() {
   const { user, loading: userLoading } = useUser();
   const supabase = createClient();
 
-  const [scheduleFile, setScheduleFile] = useState<File | null>(null);
-  const [scheduleUrl, setScheduleUrl] = useState<string | null>(null);
-  const [uploadingSchedule, setUploadingSchedule] = useState(false);
-  const [scheduleError, setScheduleError] = useState("");
   const [canComplete, setCanComplete] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [stripeSuccess, setStripeSuccess] = useState(false);
@@ -53,134 +47,31 @@ function OnboardingContent() {
 
   // Check if user has already completed onboarding
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      if (!user || userLoading) return;
+    if (!user || userLoading) return;
 
-      // Only teens need onboarding
-      if (user.role !== "teen") {
-        router.push("/dashboard");
-        return;
-      }
+    // Only teens need onboarding
+    if (user.role !== "teen") {
+      router.push("/dashboard");
+      return;
+    }
+  }, [user, userLoading, router]);
 
-      // Check if user already has schedule
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("schedule_url")
-        .eq("id", user.id)
-        .single();
-
-      if (profile && (profile as any).schedule_url) {
-        setScheduleUrl((profile as any).schedule_url);
-      }
-    };
-
-    checkOnboardingStatus();
-  }, [user, userLoading, router, supabase]);
-
-  // Check if requirement is met
+  // Check if requirement is met - schedule is now optional
   useEffect(() => {
-    setCanComplete(!!scheduleUrl);
-  }, [scheduleUrl]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    const allowedTypes = [
-      "application/pdf",
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/webp",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      setScheduleError(
-        "Invalid file type. Please upload PDF, Word document, or image files only."
-      );
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setScheduleError("File size exceeds 10MB limit");
-      return;
-    }
-
-    setScheduleFile(file);
-    setScheduleError("");
-  };
-
-  const handleScheduleUpload = async () => {
-    if (!scheduleFile) return;
-
-    setUploadingSchedule(true);
-    setScheduleError("");
-
-    try {
-      const formData = new FormData();
-      formData.append("file", scheduleFile);
-
-      const response = await fetch("/api/schedule/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to upload schedule");
-      }
-
-      // Update state with the uploaded URL
-      setScheduleUrl(result.url);
-      setScheduleFile(null);
-      
-      // Refresh the profile to ensure database is updated
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("schedule_url")
-        .eq("id", user!.id)
-        .single();
-      
-      if (profile && (profile as any).schedule_url) {
-        setScheduleUrl((profile as any).schedule_url);
-      }
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      setScheduleError(error.message || "Failed to upload schedule");
-    } finally {
-      setUploadingSchedule(false);
-    }
-  };
+    setCanComplete(true); // Always allow completion, schedule is optional
+  }, []);
 
   const handleComplete = async () => {
-    if (!canComplete || !scheduleUrl) {
-      console.error("Cannot complete: canComplete =", canComplete, "scheduleUrl =", scheduleUrl);
+    if (!canComplete) {
+      console.error("Cannot complete: canComplete =", canComplete);
       return;
     }
 
     try {
-      // Verify schedule is in database before redirecting
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("schedule_url")
-        .eq("id", user!.id)
-        .single();
-
-      if (!profile || !(profile as any).schedule_url) {
-        setScheduleError("Schedule not found. Please try uploading again.");
-        return;
-      }
-
       // Redirect to dashboard
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Complete error:", error);
-      setScheduleError("Failed to complete setup. Please try again.");
     }
   };
 
@@ -215,7 +106,7 @@ function OnboardingContent() {
             Complete Your Setup
           </h1>
           <p className="text-gray-600">
-            Upload your schedule to complete your setup
+            You're all set! Continue to your dashboard to get started.
           </p>
         </div>
 
@@ -265,104 +156,15 @@ function OnboardingContent() {
         )}
 
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 space-y-6 border border-white/20">
-          {/* Schedule Upload Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div
-                className={`p-3 rounded-xl ${
-                  scheduleUrl
-                    ? "bg-green-100"
-                    : "bg-blue-100"
-                }`}
-              >
-                <FileText
-                  className={`w-6 h-6 ${
-                    scheduleUrl ? "text-green-600" : "text-blue-600"
-                  }`}
-                />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Upload Your Schedule
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Upload a PDF, Word document, or image of your weekly schedule
-                </p>
-              </div>
-              {scheduleUrl && (
-                <Badge className="bg-green-100 text-green-700 border-green-200">
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Uploaded
-                </Badge>
-              )}
-            </div>
-
-            {scheduleError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-500" />
-                <span className="text-sm text-red-700">{scheduleError}</span>
-              </div>
-            )}
-
-            {scheduleUrl ? (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-700 mb-2">
-                  Schedule uploaded successfully
-                </p>
-                <a
-                  href={scheduleUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-green-600 hover:underline"
-                >
-                  View uploaded schedule →
-                </a>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <Input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
-                  onChange={handleFileChange}
-                  className="cursor-pointer"
-                  disabled={uploadingSchedule}
-                />
-                <Button
-                  onClick={handleScheduleUpload}
-                  disabled={!scheduleFile || uploadingSchedule}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {uploadingSchedule ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Schedule
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-
           {/* Complete Button */}
-          <div className="pt-6 border-t border-gray-200">
+          <div className="pt-6">
             <Button
               onClick={handleComplete}
               disabled={!canComplete}
               className="w-full bg-gradient-to-r from-[#ff725a] to-[#434c9d] hover:from-[#ff725a]/90 hover:to-[#434c9d]/90 text-white font-semibold py-6 text-lg"
             >
-              {canComplete ? (
-                <>
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Complete Setup & Continue
-                </>
-              ) : (
-                "Please complete all steps above"
-              )}
+              <CheckCircle className="w-5 h-5 mr-2" />
+              Complete Setup & Continue
             </Button>
           </div>
         </div>

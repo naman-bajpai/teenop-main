@@ -21,13 +21,13 @@ export default function HeroSection({ user }: HeroSectionProps) {
         <div className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_50%_-10%,rgba(255,255,255,.25),transparent_60%)]" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-4 py-20 text-center md:py-28">
+      <div className="relative mx-auto max-w-7xl px-4 py-16 text-center md:py-20">
 
-        <h1 className="mx-auto mt-6 max-w-4xl text-balance text-4xl font-extrabold tracking-tight text-white drop-shadow md:text-6xl lg:text-7xl">
+        <h1 className="mx-auto mt-4 max-w-4xl text-balance text-4xl font-extrabold tracking-tight text-white drop-shadow md:text-6xl lg:text-7xl">
           {user ? `Welcome to TeenOp` : "Find Help in Your Neighborhood"}
         </h1>
 
-        <p className="mx-auto mt-4 max-w-3xl text-lg leading-relaxed text-white md:text-2xl font-semibold drop-shadow-lg bg-black/20 backdrop-blur-sm px-4 py-2 rounded-lg">
+        <p className="mx-auto mt-3 max-w-3xl text-lg leading-relaxed text-white md:text-2xl font-semibold drop-shadow-lg bg-black/20 backdrop-blur-sm px-4 py-2 rounded-lg">
           {user
             ? "Ready to discover services by teens near you or start your own teen hustle?"
             : "Connecting teen businesses to their community."}
