@@ -30,7 +30,6 @@ const [error, setError] = useState<string | null>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
-  const [providerScheduleUrl, setProviderScheduleUrl] = useState<string | null>(null);
   const [providerAvatarUrl, setProviderAvatarUrl] = useState<string | null>(null);
   const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
   const [quoteRequestLoading, setQuoteRequestLoading] = useState(false);
@@ -126,7 +125,6 @@ const fetchServiceDetails = async (id: string) => {
      // 2) fetch provider profile separately using user_id
      let provider_name: string | null = null;
      let provider_rating: number | null = null;
-     let provider_schedule_url: string | null = null;
      let provider_avatar_url: string | null = null;
      let provider_user_id: string | null = null;
 
@@ -134,14 +132,13 @@ const fetchServiceDetails = async (id: string) => {
        provider_user_id = serviceData.user_id;
        const { data: prof, error: profErr } = await supabase
          .from("profiles")
-         .select("first_name, last_name, schedule_url, avatar_url")
+         .select("first_name, last_name, avatar_url")
          .eq("id", serviceData.user_id)
          .maybeSingle();
 
        if (!profErr && prof) {
          const profileData = prof as any;
          provider_name = [profileData.first_name, profileData.last_name].filter(Boolean).join(" ").trim() || null;
-         provider_schedule_url = profileData.schedule_url ?? null;
          provider_avatar_url = profileData.avatar_url ?? null;
        }
      }
@@ -155,6 +152,25 @@ const fetchServiceDetails = async (id: string) => {
        .order("created_at", { ascending: true });
 
      // 4) normalize for UI (schema default is duration=30, pricing_model='per_job')
+     // Parse availability if it's a string (JSON), otherwise use as-is
+     let parsedAvailability: Record<string, Array<{ start: string; end: string }>> | null = null;
+     if (serviceData.availability) {
+       if (typeof serviceData.availability === 'string') {
+         try {
+           parsedAvailability = JSON.parse(serviceData.availability);
+         } catch (e) {
+           console.error('Error parsing availability JSON:', e);
+           parsedAvailability = null;
+         }
+       } else if (typeof serviceData.availability === 'object') {
+         parsedAvailability = serviceData.availability as Record<string, Array<{ start: string; end: string }>>;
+       }
+       // Ensure it's not an empty object
+       if (parsedAvailability && Object.keys(parsedAvailability).length === 0) {
+         parsedAvailability = null;
+       }
+     }
+
      const normalizedServiceData: Service = {
        ...serviceData,
        duration: serviceData.duration ?? 30,
@@ -167,13 +183,17 @@ const fetchServiceDetails = async (id: string) => {
        provider_name,
        images: images || [],
        user_id: serviceData.user_id, // Already included in serviceData
-       availability: serviceData.availability && typeof serviceData.availability === 'object' 
-         ? (serviceData.availability as Record<string, Array<{ start: string; end: string }>>)
-         : null,
+       availability: parsedAvailability,
      };
 
+     // Debug: Log availability for troubleshooting
+     console.log('Service availability:', {
+       raw: serviceData.availability,
+       parsed: parsedAvailability,
+       hasKeys: parsedAvailability ? Object.keys(parsedAvailability).length > 0 : false
+     });
+
      setService(normalizedServiceData);
-     setProviderScheduleUrl(provider_schedule_url);
      setProviderAvatarUrl(provider_avatar_url);
      setBookingForm((prev) => ({ ...prev, service_id: id }));
      
@@ -181,8 +201,7 @@ const fetchServiceDetails = async (id: string) => {
      console.log('Provider info:', {
        user_id: serviceData.user_id,
        provider_name,
-       provider_avatar_url,
-       provider_schedule_url
+       provider_avatar_url
      });
   } catch (err: any) {
     console.error("Error fetching service:", err);
@@ -749,11 +768,22 @@ return (
                 </div>
 
                 {/* Service Availability Calendar */}
-                {service.availability && typeof service.availability === 'object' && Object.keys(service.availability).length > 0 && (
+                {service && service.id && (
                   <div className="mb-6 p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Service Availability</h3>
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Service Availability</h3>
+                      <p className="text-sm text-gray-600">
+                        Select the times you're typically available to provide this service. Customers will see your availability, send a booking request, and you can confirm it or suggest an alternative time if needed.
+                      </p>
+                    </div>
                     <ServiceAvailabilityCalendar 
-                      initialAvailability={service.availability as Record<string, Array<{ start: string; end: string }>>}
+                      serviceId={service.id}
+                      initialAvailability={service.availability && 
+                                         service.availability !== null && 
+                                         typeof service.availability === 'object' && 
+                                         Object.keys(service.availability).length > 0
+                        ? (service.availability as Record<string, Array<{ start: string; end: string }>>)
+                        : undefined}
                       readOnly={true}
                     />
                   </div>

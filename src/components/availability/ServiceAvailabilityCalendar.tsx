@@ -177,12 +177,12 @@ export default function ServiceAvailabilityCalendar({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <Clock className="w-5 h-5" />
-          Service Availability
-        </h3>
-        {!readOnly && (
+      {!readOnly && (
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            Service Availability
+          </h3>
           <Button
             onClick={handleSave}
             disabled={saving}
@@ -191,8 +191,8 @@ export default function ServiceAvailabilityCalendar({
             <Save className="w-4 h-4 mr-2" />
             {saving ? "Saving..." : "Save Schedule"}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         {DAYS_OF_WEEK.map((day) => {

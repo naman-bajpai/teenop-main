@@ -32,9 +32,23 @@ export async function GET(
     }
 
     // Parse availability from JSONB if it exists
-    let availability = {};
-    if (service.availability && typeof service.availability === 'object') {
-      availability = service.availability;
+    let availability: any = {};
+    if (service.availability) {
+      if (typeof service.availability === 'string') {
+        try {
+          availability = JSON.parse(service.availability);
+        } catch (e) {
+          console.error('Error parsing availability JSON string:', e);
+          availability = {};
+        }
+      } else if (typeof service.availability === 'object' && service.availability !== null) {
+        availability = service.availability;
+      }
+    }
+
+    // Ensure availability is an object (not null)
+    if (!availability || typeof availability !== 'object') {
+      availability = {};
     }
 
     return NextResponse.json({
@@ -105,7 +119,6 @@ export async function POST(
       .from("services")
       .update({
         availability: availability,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", serviceId)
       .select()
