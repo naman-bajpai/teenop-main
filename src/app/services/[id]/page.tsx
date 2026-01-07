@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, HelpCircle, DollarSign, FileText, Loader2, MessageCircle } from "lucide-react";
-import HelpDialog from "@/components/help/HelpDialog";
+import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, DollarSign, FileText, Loader2, MessageCircle } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ServiceAvailabilityCalendar from "@/components/availability/ServiceAvailabilityCalendar";
 import ReviewsList from "@/components/reviews/ReviewsList";
@@ -36,7 +35,6 @@ const [error, setError] = useState<string | null>(null);
   const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
   const [quoteRequestLoading, setQuoteRequestLoading] = useState(false);
   const [quoteRequestSuccess, setQuoteRequestSuccess] = useState(false);
-  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [hasBooking, setHasBooking] = useState(false);
   const [checkingBooking, setCheckingBooking] = useState(true);
   const [quoteRequestForm, setQuoteRequestForm] = useState({
@@ -750,32 +748,6 @@ return (
                   </div>
                 </div>
 
-                {/* Provider Schedule - Prominent Display */}
-                {providerScheduleUrl && (
-                  <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-sm">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Calendar className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-1">Provider Schedule</h3>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Check {service.provider_name ? `${service.provider_name}'s` : "the provider's"} uploaded schedule document.
-                        </p>
-                        <a
-                          href={providerScheduleUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
-                        >
-                          <span>View Schedule</span>
-                          <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Service Availability Calendar */}
                 {service.availability && typeof service.availability === 'object' && Object.keys(service.availability).length > 0 && (
                   <div className="mb-6 p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -827,30 +799,6 @@ return (
                             </div>
                           </div>
                         </DialogHeader>
-                        {providerScheduleUrl && (
-                          <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-xl border-2 border-blue-200 shadow-sm">
-                            <div className="flex items-start gap-4">
-                              <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center">
-                                <Calendar className="w-6 h-6 text-blue-600" />
-                              </div>
-                              <div className="flex-1">
-                                <h4 className="font-bold text-gray-900 mb-1 text-lg">Check Provider Availability</h4>
-                                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                                  View {service.provider_name ? `${service.provider_name}'s` : "the provider's"} schedule to find the best time for your quote request.
-                                </p>
-                                <a
-                                  href={providerScheduleUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-semibold text-sm shadow-md hover:shadow-lg"
-                                >
-                                  <span>Open Schedule</span>
-                                  <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        )}
                         {quoteRequestSuccess ? (
                           <div className="text-center py-12">
                             <div className="relative w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -1037,6 +985,16 @@ return (
                         )}
                       </DialogContent>
                     </Dialog>
+                    {service.user_id && user && user.id !== service.user_id && (
+                      <Button
+                        variant="outline"
+                        className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white transition-all duration-200 py-3 text-lg font-semibold"
+                        onClick={() => router.push(`/messages?provider_id=${service.user_id}`)}
+                      >
+                        <MessageCircle className="w-5 h-5 mr-2" />
+                        Message Provider
+                      </Button>
+                    )}
                   </div>
                 </>
               ) : (
@@ -1076,28 +1034,6 @@ return (
                       Fill out the form below to request this service from {service.provider_name}.
                     </DialogDescription>
                   </DialogHeader>
-                  {providerScheduleUrl && (
-                    <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
-                      <div className="flex items-start gap-3 mb-3">
-                        <Calendar className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 mb-1">Check Provider Availability</h4>
-                          <p className="text-xs text-gray-600 mb-3">
-                            View {service.provider_name ? `${service.provider_name}'s` : "the provider's"} schedule to find the best time for your booking.
-                          </p>
-                          <a
-                            href={providerScheduleUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
-                          >
-                            <span>Open Schedule</span>
-                            <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                   <form onSubmit={handleBookingSubmit} className="space-y-4">
                     <div>
                       <Label htmlFor="date">Preferred Date</Label>
@@ -1160,42 +1096,8 @@ return (
                 </DialogContent>
               </Dialog>
               
-              {!checkingBooking && hasBooking && (
-                <Button
-                  variant="outline"
-                  className="w-full border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-[#434c9d] hover:text-[#434c9d] transition-all duration-200 py-3 text-lg font-semibold mt-3"
-                  onClick={() => setIsHelpDialogOpen(true)}
-                >
-                  <HelpCircle className="w-5 h-5 mr-2" />
-                  Get Help
-                </Button>
-              )}
               </div>
                 </>
-              )}
-
-              {/* Provider Schedule - Sidebar */}
-              {providerScheduleUrl && (
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Calendar className="w-5 h-5 text-blue-600" />
-                      <h3 className="font-semibold text-gray-900">Provider Schedule</h3>
-                    </div>
-                    <p className="text-xs text-gray-600 mb-3">
-                      Check availability before booking
-                    </p>
-                    <a
-                      href={providerScheduleUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 w-full justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
-                    >
-                      <span>View Schedule</span>
-                      <ArrowLeft className="w-4 h-4 rotate-[-135deg]" />
-                    </a>
-                  </div>
-                </div>
               )}
 
               <div className="mt-6 space-y-4">
@@ -1279,13 +1181,6 @@ return (
           <ReviewsList serviceId={service.id} />
         </div>
       )}
-
-    <HelpDialog
-      isOpen={isHelpDialogOpen}
-      onClose={() => setIsHelpDialogOpen(false)}
-      serviceId={service?.id}
-      serviceTitle={service?.title}
-    />
   </DashboardLayout>
 );
 }

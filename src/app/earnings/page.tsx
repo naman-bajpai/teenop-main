@@ -418,19 +418,19 @@ export default function EarningsPage() {
             <div className="space-y-3 text-gray-700">
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">1</div>
-                <p className="flex-1">First, your service must be booked and paid by buyer</p>
+                <p className="flex-1">First, your service must be booked and paid by the buyer.</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">2</div>
-                <p className="flex-1">After the service is completed, the service must be marked as completed (by you or the buyer)</p>
+                <p className="flex-1">After the service is completed, the service must be marked as completed (by you or the buyer). You will see the ability to mark a service as completed if you view Booking Details under your Scheduled services on your Teen Hustle Page.</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">3</div>
-                <p className="flex-1">After service is marked as completed, your earnings will be transferred to your account within 1–3 business days.</p>
+                <p className="flex-1">After service is marked as completed, your earnings will be transferred to your Stripe account within 1-2 business days.</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">4</div>
-                <p className="flex-1">When your earnings are being transferred, the payment will appear in your Earnings dashboard</p>
+                <p className="flex-1">To transfer your earnings from your Stripe account to your bank account, visit your Stripe account and select Balances from the left menu bar. At the top of the page, select Pay out and follow instructions. You can create automatic transfers by clicking Manage Payout.</p>
               </div>
             </div>
           </div>
@@ -613,8 +613,8 @@ export default function EarningsPage() {
         <div className="bg-white rounded-2xl p-8 shadow-lg mt-6">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Withdrawal History</h2>
-              <p className="text-sm text-gray-500">View your past withdrawals and requests</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Transaction History</h2>
+              <p className="text-sm text-gray-500">View your past transactions</p>
             </div>
             <div className="p-3 bg-gradient-to-br from-[#434c9d]/10 to-[#96cbc3]/10 rounded-xl">
               <Building2 className="w-8 h-8 text-[#434c9d]" />

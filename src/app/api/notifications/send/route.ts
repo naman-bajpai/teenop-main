@@ -213,15 +213,16 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'service_provider_24_hour_reminder':
-        if (!provider?.phone) {
+        if (!provider?.email) {
           return NextResponse.json(
-            { success: false, error: "Provider phone not found" },
+            { success: false, error: "Provider email not found" },
             { status: 400 }
           );
         }
 
-        result = await smsService.sendServiceProvider24HourReminder({
-          providerPhone: provider.phone,
+        result = await emailService.sendServiceProvider24HourReminder({
+          providerName: `${provider.first_name} ${provider.last_name}`.trim(),
+          providerEmail: provider.email,
           serviceName: service.title,
           buyerName: `${customer.first_name} ${customer.last_name}`.trim(),
           time: formattedTime,
@@ -231,15 +232,16 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'service_provider_3_hour_reminder':
-        if (!provider?.phone) {
+        if (!provider?.email) {
           return NextResponse.json(
-            { success: false, error: "Provider phone not found" },
+            { success: false, error: "Provider email not found" },
             { status: 400 }
           );
         }
 
-        result = await smsService.sendServiceProvider3HourReminder({
-          providerPhone: provider.phone,
+        result = await emailService.sendServiceProvider3HourReminder({
+          providerName: `${provider.first_name} ${provider.last_name}`.trim(),
+          providerEmail: provider.email,
           serviceName: service.title,
           buyerName: `${customer.first_name} ${customer.last_name}`.trim(),
           time: formattedTime,

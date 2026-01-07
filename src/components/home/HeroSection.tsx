@@ -1,91 +1,148 @@
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Users, Star, TrendingUp } from "lucide-react";
+import { Users, Star, TrendingUp, ArrowRight, Shield, Sparkles } from "lucide-react";
 
 interface User { id: string; name?: string; email?: string; role?: string; }
 interface HeroSectionProps { user: User | null | undefined; }
 
 export default function HeroSection({ user }: HeroSectionProps) {
   return (
-    <section id="hero" className="relative overflow-hidden bg-slate-950 -mt-17 pt-17">
-      {/* Background image */}
+    <section id="hero" className="relative min-h-[90vh] flex items-center overflow-hidden bg-slate-950 -mt-17 pt-17">
+      {/* Background Elements */}
       <div className="absolute inset-0">
+        {/* Background image */}
         <div
           className="h-full w-full bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/images/dog.png')" }}
           aria-hidden
         />
-        {/* Brand color overlay + vignette */}
+        
+        {/* Original brand color overlay + vignette */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#434c9d]/30 via-[#434c9d]/20 to-slate-950/60 mix-blend-multiply" />
         <div className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_50%_-10%,rgba(255,255,255,.25),transparent_60%)]" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-4 py-16 text-center md:py-20">
+      {/* Main Content */}
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
+        <div className="grid lg:grid-cols-[1.8fr_1fr] xl:grid-cols-[2fr_1fr] gap-12 items-center">
+          {/* Left Column - Text Content */}
+          <div className="text-center lg:text-left space-y-8">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/90 text-sm font-medium">
+              <Sparkles className="w-4 h-4 text-[#96cbc3]" />
+              <span>Empowering Young Entrepreneurs</span>
+            </div>
 
-        <h1 className="mx-auto mt-4 max-w-4xl text-balance text-4xl font-extrabold tracking-tight text-white drop-shadow md:text-6xl lg:text-7xl">
-          {user ? `Welcome to TeenOp` : "Find Help in Your Neighborhood"}
-        </h1>
-
-        <p className="mx-auto mt-3 max-w-3xl text-lg leading-relaxed text-white md:text-2xl font-semibold drop-shadow-lg bg-black/20 backdrop-blur-sm px-4 py-2 rounded-lg">
-          {user
-            ? "Ready to discover services by teens near you or start your own teen hustle?"
-            : "Connecting teen businesses to their community."}
-        </p>
-
-        <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <Link href="/neighborhood">
-            <Button className="group relative h-auto px-8 py-6 text-lg bg-white text-[#434c9d] hover:bg-white/95 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl overflow-hidden font-semibold">
-              <span className="relative z-10 flex items-center gap-2">
-                <Users className="w-5 h-5 group-hover:scale-110 transition-transform" aria-hidden />
-                Browse Services
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-[#96cbc3]/0 via-[#96cbc3]/5 to-[#96cbc3]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-            </Button>
-          </Link>
-          {user && user.role === "teen" && (
-            <Link href="/my-teen-hustle">
-              <Button className="group relative h-auto px-8 py-6 text-lg bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 text-white shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl overflow-hidden font-semibold">
-                <span className="relative z-10 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 group-hover:scale-110 transition-transform" aria-hidden />
-                  Start Earning
+            {/* Main Heading */}
+            <div className="space-y-4">
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-tight">
+                <span className="block">Welcome to</span>
+                <span className="block bg-gradient-to-r from-[#96cbc3] via-white to-[#96cbc3] bg-clip-text text-transparent animate-gradient">
+                  {user ? "TeenOp" : "Your Neighborhood"}
                 </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              </Button>
-            </Link>
-          )}
-        </div>
+              </h1>
+              
+              {!user && (
+                <h2 className="text-3xl sm:text-4xl font-bold text-white/90">
+                  Find Help in Your Community
+                </h2>
+              )}
+            </div>
 
-        {/* Highlights */}
-        <div className="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="group relative rounded-3xl bg-white/10 p-8 text-white backdrop-blur-md ring-2 ring-white/20 shadow-xl hover:shadow-2xl hover:ring-white/30 hover:-translate-y-1 transition-all duration-300">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#96cbc3]/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#96cbc3]/30 to-[#434c9d]/30 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <Users className="h-8 w-8 text-[#96cbc3]" aria-hidden />
+            {/* Subtitle */}
+            <p className="text-lg sm:text-xl text-white/80 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+              {user
+                ? "Discover amazing services by talented teens near you, or start your own teen hustle and turn your skills into income."
+                : "Connecting talented teens with their community. Find trusted services or start earning today."}
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
+              <Link href="/neighborhood">
+                <Button 
+                  size="lg"
+                  className="group relative h-14 px-8 text-base bg-white text-[#434c9d] hover:bg-white/95 shadow-2xl hover:shadow-[#96cbc3]/20 hover:scale-105 transition-all duration-300 rounded-xl font-semibold overflow-hidden"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Browse Services
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#96cbc3]/0 via-[#96cbc3]/10 to-[#96cbc3]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                </Button>
+              </Link>
+              
+              {user && user.role === "teen" && (
+                <Link href="/my-teen-hustle">
+                  <Button 
+                    size="lg"
+                    className="group relative h-14 px-8 text-base bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 text-white shadow-2xl hover:shadow-[#ff725a]/30 hover:scale-105 transition-all duration-300 rounded-xl font-semibold overflow-hidden"
+                  >
+                    <span className="relative z-10 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5" />
+                      Start Earning
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                  </Button>
+                </Link>
+              )}
+            </div>
+
+            {/* Trust Indicators */}
+            <div className="flex flex-wrap items-center gap-6 justify-center lg:justify-start pt-4 text-white/70 text-sm">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-[#96cbc3]" />
+                <span>Verified Teens</span>
               </div>
-              <h3 className="mb-2 text-lg font-bold">Trusted Teens</h3>
-              <p className="text-sm text-white/90 leading-relaxed">Verified young entrepreneurs in your community</p>
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-400" />
+                <span>5-Star Rated</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#96cbc3]" />
+                <span>Community Trusted</span>
+              </div>
             </div>
           </div>
-          <div className="group relative rounded-3xl bg-white/10 p-8 text-white backdrop-blur-md ring-2 ring-white/20 shadow-xl hover:shadow-2xl hover:ring-white/30 hover:-translate-y-1 transition-all duration-300">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-400/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400/30 to-amber-500/30 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <Star className="h-8 w-8 text-amber-300" aria-hidden />
+
+          {/* Right Column - Feature Cards */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-1 gap-6 lg:gap-4 max-w-sm lg:ml-auto">
+            {/* Trusted Teens Card */}
+            <div className="group relative rounded-2xl bg-white/10 backdrop-blur-xl p-6 border border-white/20 hover:border-white/40 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#96cbc3]/20 to-[#434c9d]/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-[#96cbc3]/30 to-[#434c9d]/30 mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <Users className="w-7 h-7 text-[#96cbc3]" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Trusted Teens</h3>
+                <p className="text-sm text-white/80 leading-relaxed">Verified young entrepreneurs in your community</p>
               </div>
-              <h3 className="mb-2 text-lg font-bold">Quality Service</h3>
-              <p className="text-sm text-white/90 leading-relaxed">Rated and reviewed by real customers</p>
             </div>
-          </div>
-          <div className="group relative rounded-3xl bg-white/10 p-8 text-white backdrop-blur-md ring-2 ring-white/20 shadow-xl hover:shadow-2xl hover:ring-white/30 hover:-translate-y-1 transition-all duration-300">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#96cbc3]/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#96cbc3]/30 to-[#434c9d]/30 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <TrendingUp className="h-8 w-8 text-[#96cbc3]" aria-hidden />
+
+            {/* Quality Service Card */}
+            <div className="group relative rounded-2xl bg-white/10 backdrop-blur-xl p-6 border border-white/20 hover:border-white/40 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-400/20 to-amber-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400/30 to-amber-500/30 mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <Star className="w-7 h-7 text-amber-300" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Quality Service</h3>
+                <p className="text-sm text-white/80 leading-relaxed">Rated and reviewed by real customers</p>
               </div>
-              <h3 className="mb-2 text-lg font-bold">Fair Prices</h3>
-              <p className="text-sm text-white/90 leading-relaxed">Affordable rates that work for everyone</p>
+            </div>
+
+            {/* Fair Prices Card */}
+            <div className="group relative rounded-2xl bg-white/10 backdrop-blur-xl p-6 border border-white/20 hover:border-white/40 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer sm:col-span-2 lg:col-span-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#96cbc3]/20 to-[#434c9d]/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-[#96cbc3]/30 to-[#434c9d]/30 mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <TrendingUp className="w-7 h-7 text-[#96cbc3]" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Fair Prices</h3>
+                <p className="text-sm text-white/80 leading-relaxed">Affordable rates that work for everyone</p>
+              </div>
             </div>
           </div>
         </div>

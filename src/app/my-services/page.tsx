@@ -32,6 +32,7 @@ import {
   Image as ImageIcon,
   ChevronLeft,
   ChevronRight,
+  AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
@@ -281,6 +282,13 @@ export default function MyServicesPage() {
     }
   }, [user]);
 
+  // Re-check Stripe account status when dialog opens
+  useEffect(() => {
+    if (open && !editingService) {
+      checkStripeAccount();
+    }
+  }, [open, editingService]);
+
   async function fetchServices() {
     try {
       setLoading(true);
@@ -319,11 +327,15 @@ export default function MyServicesPage() {
       const res = await fetch("/api/stripe/connect/setup", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
+        console.log("Stripe account check response:", data);
         setStripeAccountStatus({
-          hasAccount: data.success && !!data.accountStatus?.accountId,
+          hasAccount: data.success === true && data.hasAccount === true,
           accountStatus: data.accountStatus,
           loading: false
         });
+      } else {
+        console.error("Failed to check Stripe account - response not ok:", res.status);
+        setStripeAccountStatus(prev => ({ ...prev, loading: false }));
       }
     } catch (e) {
       console.error("Failed to check Stripe account:", e);
@@ -551,6 +563,31 @@ export default function MyServicesPage() {
   return (
     <DashboardLayout user={user}>
       <div className="p-6">
+        {/* Stripe Account Banner */}
+        {!stripeAccountStatus.loading && !stripeAccountStatus.hasAccount && (
+          <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg shadow-sm">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-900 mb-1">Connect Stripe Account Required</h3>
+                <p className="text-sm text-red-700 mb-3">
+                  You must connect your Stripe account before adding services. This allows you to receive payments from customers.
+                </p>
+                <Button
+                  onClick={() => {
+                    window.location.href = '/my-teen-hustle';
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="border-red-300 text-red-700 hover:bg-red-100"
+                >
+                  Connect Stripe Account
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
             <div>
@@ -563,16 +600,25 @@ export default function MyServicesPage() {
               <Badge variant="secondary">Active: {activeServices.length}</Badge>
               <Badge variant="outline">Paused: {pausedServices.length}</Badge>
               <Button
-                onClick={() => {
-                  if (!stripeAccountStatus.hasAccount) {
+                onClick={async () => {
+                  // Ensure we have the latest Stripe account status
+                  if (stripeAccountStatus.loading) {
+                    await checkStripeAccount();
+                    // Wait a moment for state to update
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                  }
+                  
+                  // Re-check after potential update
+                  const currentStatus = stripeAccountStatus.hasAccount;
+                  if (!currentStatus) {
                     toast({
-                      title: "Payment setup required",
-                      description: "Please set up your payment account before creating your first service.",
+                      title: "Connect Stripe Account Required",
+                      description: "You must connect your Stripe account before adding a service. Please set up your payment account first.",
                       variant: "destructive"
                     });
-                  } else {
-                    setOpen(true);
+                    return;
                   }
+                  setOpen(true);
                 }}
                 className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90"
               >
@@ -606,16 +652,24 @@ export default function MyServicesPage() {
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No active services</h3>
                     <p className="text-gray-600 mb-4">Add a service to get started, or activate a paused service</p>
-                    <Button onClick={() => {
-                      if (!stripeAccountStatus.hasAccount) {
+                    <Button onClick={async () => {
+                      // Ensure we have the latest Stripe account status
+                      if (stripeAccountStatus.loading) {
+                        await checkStripeAccount();
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                      }
+                      
+                      // Re-check after potential update
+                      const currentStatus = stripeAccountStatus.hasAccount;
+                      if (!currentStatus) {
                         toast({
-                          title: "Payment setup required",
-                          description: "Please set up your payment account before creating your first service.",
+                          title: "Connect Stripe Account Required",
+                          description: "You must connect your Stripe account before adding a service. Please set up your payment account first.",
                           variant: "destructive"
                         });
-                      } else {
-                        setOpen(true);
+                        return;
                       }
+                      setOpen(true);
                     }}><Plus className="w-4 h-4 mr-2" />Add Service</Button>
                   </div>
                 )}
@@ -644,30 +698,49 @@ export default function MyServicesPage() {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No services yet</h3>
               <p className="text-gray-600 mb-4">Start your teen hustle by adding your first service</p>
-              <Button onClick={() => {
-                if (!stripeAccountStatus.hasAccount) {
+              <Button onClick={async () => {
+                // Ensure we have the latest Stripe account status
+                if (stripeAccountStatus.loading) {
+                  await checkStripeAccount();
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                // Re-check after potential update
+                const currentStatus = stripeAccountStatus.hasAccount;
+                if (!currentStatus) {
                   toast({
-                    title: "Payment setup required",
-                    description: "Please set up your payment account before creating your first service.",
+                    title: "Connect Stripe Account Required",
+                    description: "You must connect your Stripe account before adding a service. Please set up your payment account first.",
                     variant: "destructive"
                   });
-                } else {
-                  setOpen(true);
+                  return;
                 }
+                setOpen(true);
               }}><Plus className="w-4 h-4 mr-2" />Add Service</Button>
             </div>
           )}
         </div>
 
         {/* Service Dialog - Same as in teen hustle page */}
-        <Dialog open={open} onOpenChange={(newOpen) => {
-          if (newOpen && !editingService && !stripeAccountStatus.loading && !stripeAccountStatus.hasAccount) {
-            toast({
-              title: "Payment Account Required",
-              description: "You must connect your payment account before adding a service. Please set up payments first.",
-              variant: "destructive",
-            });
-            return;
+        <Dialog open={open} onOpenChange={async (newOpen) => {
+          if (newOpen && !editingService) {
+            // Ensure we have the latest Stripe account status before opening
+            if (stripeAccountStatus.loading) {
+              await checkStripeAccount();
+              // Wait a moment for state to update
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            // Check again after potential update
+            if (!stripeAccountStatus.hasAccount) {
+              toast({
+                title: "Connect Stripe Account Required",
+                description: "You must connect your Stripe account before adding a service. Please set up your payment account first.",
+                variant: "destructive",
+              });
+              setOpen(false);
+              return;
+            }
           }
           setOpen(newOpen);
           if (!newOpen) resetForm();
@@ -680,13 +753,37 @@ export default function MyServicesPage() {
               </DialogDescription>
             </DialogHeader>
             
-            {!editingService && !stripeAccountStatus.loading && !stripeAccountStatus.hasAccount && (
-              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  You must connect your payment account before adding a service. Please set up payments on your Teen Hustle page first.
-                </p>
-              </div>
-            )}
+            {!editingService && (() => {
+              // Show alert if we're not loading and don't have an account
+              // Also show if we're still loading (to prevent premature form submission)
+              const shouldShowAlert = !stripeAccountStatus.loading && !stripeAccountStatus.hasAccount;
+              if (!shouldShowAlert) return null;
+              
+              return (
+                <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-red-900 mb-1">Connect Stripe Account Required</h3>
+                      <p className="text-sm text-red-700 mb-3">
+                        You must connect your Stripe account before adding a service. Please set up your payment account on your Teen Hustle page first.
+                      </p>
+                      <Button
+                        onClick={() => {
+                          setOpen(false);
+                          window.location.href = '/my-teen-hustle';
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-red-300 text-red-700 hover:bg-red-100"
+                      >
+                        Go to Teen Hustle Page
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             
             <div className="space-y-8">
               {/* Basic Information Section */}

@@ -58,7 +58,9 @@ export class SMSService {
     timeZone: string;
     location: string;
   }) {
-    const message = `TeenOp: Reminder for tomorrow 🗓️— ${data.serviceName} with ${data.buyerName} at ${data.time} ${data.timeZone} (${data.location}). Review details or message the buyer through TeenOp if you need anything.`;
+    // Format location: show "Online" if location is "Online", otherwise show the location
+    const locationDisplay = data.location === "Online" ? "Online" : data.location;
+    const message = `TeenOp: Reminder for tomorrow 🗓️— ${data.serviceName} with ${data.buyerName} at ${data.time} ${data.timeZone} (${locationDisplay}). Review details or message the buyer through TeenOp if you need anything.`;
     
     return this.sendSMS(data.providerPhone, message);
   }
@@ -71,7 +73,9 @@ export class SMSService {
     time: string;
     location: string;
   }) {
-    const message = `TeenOp: You're up soon 👏${data.serviceName} with ${data.buyerName} at ${data.time} (${data.location}). Bring what you need and message your buyer through TeenOp if plans change.`;
+    // Format location: show "Online" if location is "Online", otherwise show the location
+    const locationDisplay = data.location === "Online" ? "Online" : data.location;
+    const message = `TeenOp: You're up soon 👏${data.serviceName} with ${data.buyerName} at ${data.time} (${locationDisplay}). Bring what you need and message your buyer through TeenOp if plans change.`;
     
     return this.sendSMS(data.providerPhone, message);
   }

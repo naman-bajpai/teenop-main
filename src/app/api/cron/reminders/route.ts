@@ -44,8 +44,12 @@ export async function GET(request: NextRequest) {
     const oneHourEnd = new Date(oneHourFromNow);
     oneHourEnd.setMinutes(oneHourEnd.getMinutes() + 15);
 
-    // Get all confirmed bookings that might need reminders
+    // Get all confirmed and paid bookings that might need reminders
     // We'll filter by date/time in JavaScript since we need to combine date and time
+    // We need to look ahead enough to catch 24-hour reminders (up to 25 hours from now)
+    const maxDate = new Date(now);
+    maxDate.setHours(maxDate.getHours() + 25);
+    
     const { data: allBookings, error: bookingsError } = await supabase
       .from("bookings")
       .select(`
@@ -69,9 +73,9 @@ export async function GET(request: NextRequest) {
           phone
         )
       `)
-      .eq("status", "confirmed")
+      .in("status", ["confirmed", "paid"])
       .gte("requested_date", now.toISOString().split('T')[0])
-      .lte("requested_date", twentyFourHoursEnd.toISOString().split('T')[0]);
+      .lte("requested_date", maxDate.toISOString().split('T')[0]);
 
     if (bookingsError) {
       console.error("Error fetching bookings:", bookingsError);
@@ -81,7 +85,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`Found ${allBookings?.length || 0} confirmed bookings to check for reminders`);
+    console.log(`Found ${allBookings?.length || 0} confirmed/paid bookings to check for reminders`);
 
     // Filter bookings for 24-hour reminders (24 hours ± 1 hour)
     const tomorrowBookings = (allBookings || []).filter((booking: any) => {
@@ -173,8 +177,8 @@ export async function GET(request: NextRequest) {
             }
           }
 
-          // Send service provider 24-hour reminder
-          if (provider?.phone) {
+          // Send service provider 24-hour reminder (email)
+          if (provider?.email) {
             try {
               const providerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
                 method: 'POST',
@@ -190,7 +194,7 @@ export async function GET(request: NextRequest) {
 
               if (providerResponse.ok) {
                 results.tomorrowReminders++;
-                console.log(`Sent 24-hour reminder to provider for booking ${bookingData.id}`);
+                console.log(`Sent 24-hour reminder email to provider for booking ${bookingData.id}`);
               } else {
                 const errorData = await providerResponse.json().catch(() => ({}));
                 results.errors.push(`Provider 24h reminder failed for booking ${bookingData.id}: ${providerResponse.status} - ${errorData.error || 'Unknown error'}`);
@@ -242,8 +246,8 @@ export async function GET(request: NextRequest) {
             }
           }
 
-          // Send service provider 3-hour reminder
-          if (provider?.phone) {
+          // Send service provider 3-hour reminder (email)
+          if (provider?.email) {
             try {
               const providerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
                 method: 'POST',
@@ -259,7 +263,7 @@ export async function GET(request: NextRequest) {
 
               if (providerResponse.ok) {
                 results.threeHourReminders++;
-                console.log(`Sent 3-hour reminder to provider for booking ${bookingData.id}`);
+                console.log(`Sent 3-hour reminder email to provider for booking ${bookingData.id}`);
               } else {
                 const errorData = await providerResponse.json().catch(() => ({}));
                 results.errors.push(`Provider 3h reminder failed for booking ${bookingData.id}: ${providerResponse.status} - ${errorData.error || 'Unknown error'}`);
