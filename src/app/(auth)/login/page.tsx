@@ -35,6 +35,7 @@ function LoginInner() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [lastAttemptTime, setLastAttemptTime] = useState<number | null>(null);
@@ -96,12 +97,64 @@ function LoginInner() {
     return error?.message || "Login failed. Please try again.";
   };
 
+  // Validation functions
+  const validateEmail = (email: string): string | null => {
+    if (!email.trim()) {
+      return "Email is required";
+    }
+    // More comprehensive email validation
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    if (!emailRegex.test(email)) {
+      return "Please enter a valid email address";
+    }
+    if (email.length > 254) {
+      return "Email address is too long";
+    }
+    return null;
+  };
+
+  const validatePassword = (password: string): string | null => {
+    if (!password) {
+      return "Password is required";
+    }
+    if (password.length < 6) {
+      return "Password must be at least 6 characters";
+    }
+    if (password.length > 128) {
+      return "Password is too long";
+    }
+    // Check for potentially dangerous characters
+    if (/[<>]/.test(password)) {
+      return "Password contains invalid characters";
+    }
+    return null;
+  };
+
+  const sanitizeInput = (value: string): string => {
+    // Remove leading/trailing whitespace and prevent XSS
+    return value.trim().replace(/[<>]/g, '');
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+    
+    // Sanitize text inputs
+    const sanitizedValue = type === "checkbox" ? checked : (type === "email" ? sanitizeInput(value) : value);
+    
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? checked : sanitizedValue,
     }));
+    
+    // Real-time validation (only for string inputs)
+    if (name === "email" && type !== "checkbox" && typeof sanitizedValue === "string") {
+      const emailError = validateEmail(sanitizedValue);
+      setFieldErrors(prev => ({ ...prev, email: emailError || undefined }));
+    } else if (name === "password" && type !== "checkbox") {
+      const passwordError = validatePassword(value);
+      setFieldErrors(prev => ({ ...prev, password: passwordError || undefined }));
+    }
+    
     if (error) setError("");
   };
 
@@ -110,6 +163,19 @@ function LoginInner() {
     
     // Prevent rapid-fire submissions
     if (submitLock || isSubmitting) {
+      return;
+    }
+    
+    // Validate form fields
+    const emailError = validateEmail(formData.email);
+    const passwordError = validatePassword(formData.password);
+    
+    if (emailError || passwordError) {
+      setFieldErrors({
+        email: emailError || undefined,
+        password: passwordError || undefined,
+      });
+      setError(emailError || passwordError || "Please fix the errors above");
       return;
     }
     
@@ -137,6 +203,7 @@ function LoginInner() {
     setSubmitLock(true);
     setIsSubmitting(true);
     setError("");
+    setFieldErrors({});
     setLastAttemptTime(Date.now());
 
     try {
@@ -309,10 +376,19 @@ function LoginInner() {
                   required
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full h-12 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  className={`w-full h-12 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400 ${
+                    fieldErrors.email ? 'border-red-300 focus:ring-red-500' : ''
+                  }`}
                   placeholder="Enter your email"
                   disabled={isSubmitting}
+                  maxLength={254}
                 />
+                {fieldErrors.email && (
+                  <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {fieldErrors.email}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -329,9 +405,12 @@ function LoginInner() {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full h-12 px-4 pr-12 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  className={`w-full h-12 px-4 pr-12 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400 ${
+                    fieldErrors.password ? 'border-red-300 focus:ring-red-500' : ''
+                  }`}
                   placeholder="Enter your password"
                   disabled={isSubmitting}
+                  maxLength={128}
                 />
                 <button
                   type="button"
@@ -346,6 +425,12 @@ function LoginInner() {
                     <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                   )}
                 </button>
+                {fieldErrors.password && (
+                  <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {fieldErrors.password}
+                  </p>
+                )}
               </div>
             </div>
 

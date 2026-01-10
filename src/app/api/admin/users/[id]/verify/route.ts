@@ -8,10 +8,10 @@ export async function POST(
 ) {
   try {
     const supabase = await createServerClient();
-    
+
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: "Authentication required" },
@@ -49,11 +49,14 @@ export async function POST(
       );
     }
 
-    // Toggle verification status
+    // Toggle verification status (requires service role to bypass RLS)
+    const { createServiceRoleClient } = await import('@/lib/supabase/server');
+    const supabaseAdmin = createServiceRoleClient();
+
     const newVerificationStatus = !(userProfile as any).is_verified;
 
-    // Update user verification status
-    const { error: updateError } = await (supabase as any)
+    // Update user verification status using service role
+    const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({ is_verified: newVerificationStatus })
       .eq('id', userId);

@@ -443,14 +443,6 @@ function BookingCard({ booking, onStatusUpdate }: {
         )}
         {booking.status === "completed" && (
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => window.location.href = "/earnings"} 
-              className="border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
-            >
-              <DollarSign className="w-4 h-4 mr-1" />Request Withdrawal
-            </Button>
           <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-green-500 text-green-600 hover:bg-green-50">
             <CheckCircle className="w-4 h-4 mr-1" />View Details
           </Button>
@@ -1016,43 +1008,6 @@ export default function TeenHustlePage() {
     } catch (e: any) {
       toast({ 
         title: "Could not update booking", 
-        description: e.message, 
-        variant: "destructive" 
-      });
-    }
-  }
-
-  async function handleRequestWithdrawal() {
-    try {
-      const res = await fetch("/api/withdrawal-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || "Failed to submit withdrawal request");
-      }
-
-      const data = await res.json();
-      if (data.success) {
-        toast({ 
-          title: "Withdrawal request submitted", 
-          description: data.message || "An admin will review and process your request shortly." 
-        });
-        
-        // Refresh earnings stats
-        const earningsRes = await fetch("/api/earnings", { cache: "no-store" });
-        if (earningsRes.ok) {
-          const earningsData = await earningsRes.json();
-          if (earningsData.success) {
-            setEarningsStats(earningsData.stats);
-          }
-        }
-      }
-    } catch (e: any) {
-      toast({ 
-        title: "Could not submit withdrawal request", 
         description: e.message, 
         variant: "destructive" 
       });

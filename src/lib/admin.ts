@@ -23,7 +23,7 @@ export async function checkAdminAccess(): Promise<AdminUser | null> {
   try {
     const supabase = createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       return null;
     }
@@ -70,7 +70,7 @@ export async function checkAdminAccess(): Promise<AdminUser | null> {
 export async function getAllUsers() {
   try {
     const supabase = createClient();
-    
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -90,7 +90,7 @@ export async function getAllUsers() {
 export async function updateUserStatus(userId: string, status: Database["public"]["Enums"]["user_status"]) {
   try {
     const supabase = createClient();
-    
+
     const { error } = await (supabase as any)
       .from('profiles')
       .update({ status } as any)
@@ -110,7 +110,7 @@ export async function updateUserStatus(userId: string, status: Database["public"
 export async function getUserStats() {
   try {
     const supabase = createClient();
-    
+
     // Get total users
     const { count: totalUsers } = await supabase
       .from('profiles')
@@ -150,7 +150,7 @@ export async function getUserStats() {
 export async function getAllServices() {
   try {
     const supabase = createClient();
-    
+
     const { data, error } = await supabase
       .from('services')
       .select(`
@@ -177,7 +177,7 @@ export async function getAllServices() {
 export async function updateServiceStatus(serviceId: string, status: string) {
   try {
     const supabase = createClient();
-    
+
     const { error } = await (supabase as any)
       .from('services')
       .update({ status } as any)
@@ -196,15 +196,13 @@ export async function updateServiceStatus(serviceId: string, status: string) {
 
 export async function deleteService(serviceId: string) {
   try {
-    const supabase = createClient();
-    
-    const { error } = await (supabase as any)
-      .from('services')
-      .delete()
-      .eq('id', serviceId);
+    const response = await fetch(`/api/admin/services/${serviceId}/delete`, {
+      method: "DELETE",
+    });
 
-    if (error) {
-      throw new Error(`Failed to delete service: ${error.message}`);
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Failed to delete service");
     }
 
     return true;
@@ -216,15 +214,13 @@ export async function deleteService(serviceId: string) {
 
 export async function deleteUser(userId: string) {
   try {
-    const supabase = createClient();
-    
-    const { error } = await (supabase as any)
-      .from('profiles')
-      .delete()
-      .eq('id', userId);
+    const response = await fetch(`/api/admin/users/${userId}/delete`, {
+      method: "DELETE",
+    });
 
-    if (error) {
-      throw new Error(`Failed to delete user: ${error.message}`);
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Failed to delete user");
     }
 
     return true;
@@ -237,7 +233,7 @@ export async function deleteUser(userId: string) {
 export async function getServiceStats() {
   try {
     const supabase = createClient();
-    
+
     // Get total services
     const { count: totalServices } = await supabase
       .from('services')

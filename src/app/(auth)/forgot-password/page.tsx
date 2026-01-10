@@ -9,8 +9,37 @@ import { Sparkles, AlertCircle, CheckCircle } from "lucide-react";
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Validation functions
+  const sanitizeInput = (value: string): string => {
+    return value.trim().replace(/[<>]/g, '');
+  };
+
+  const validateEmail = (email: string): string | null => {
+    if (!email.trim()) {
+      return "Email is required";
+    }
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    if (!emailRegex.test(email)) {
+      return "Please enter a valid email address";
+    }
+    if (email.length > 254) {
+      return "Email address is too long";
+    }
+    return null;
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const sanitizedValue = sanitizeInput(e.target.value);
+    setEmail(sanitizedValue);
+    const emailErr = validateEmail(sanitizedValue);
+    setEmailError(emailErr);
+    if (error) setError("");
+    if (success) setSuccess("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,17 +47,15 @@ export default function ForgotPasswordPage() {
     setError("");
     setSuccess("");
 
-    if (!email.trim()) {
-      setError("Email is required");
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      setEmailError(emailErr);
+      setError(emailErr);
       setIsSubmitting(false);
       return;
     }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Please enter a valid email address");
-      setIsSubmitting(false);
-      return;
-    }
+    
+    setEmailError(null);
 
     try {
       const response = await fetch('/api/auth/password-reset', {
@@ -100,11 +127,20 @@ export default function ForgotPasswordPage() {
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full"
+                  onChange={handleEmailChange}
+                  className={`w-full ${
+                    emailError ? 'border-red-300 focus:ring-red-500' : ''
+                  }`}
                   disabled={isSubmitting}
                   placeholder="Enter your email address"
+                  maxLength={254}
                 />
+                {emailError && (
+                  <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {emailError}
+                  </p>
+                )}
               </div>
             </div>
 

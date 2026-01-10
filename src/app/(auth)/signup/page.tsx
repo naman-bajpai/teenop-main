@@ -28,6 +28,16 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    age?: string;
+    password?: string;
+    confirmPassword?: string;
+    parentEmail?: string;
+    parentPhone?: string;
+  }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -55,6 +65,98 @@ export default function SignupPage() {
     return timeSinceLastAttempt < waitTime;
   };
 
+  // Validation functions
+  const sanitizeInput = (value: string): string => {
+    // Remove leading/trailing whitespace and prevent XSS
+    return value.trim().replace(/[<>]/g, '');
+  };
+
+  const validateName = (name: string, fieldName: string): string | null => {
+    if (!name.trim()) {
+      return `${fieldName} is required`;
+    }
+    if (name.length < 2) {
+      return `${fieldName} must be at least 2 characters`;
+    }
+    if (name.length > 50) {
+      return `${fieldName} must be less than 50 characters`;
+    }
+    // Allow letters, spaces, hyphens, and apostrophes
+    if (!/^[a-zA-Z\s'-]+$/.test(name)) {
+      return `${fieldName} can only contain letters, spaces, hyphens, and apostrophes`;
+    }
+    return null;
+  };
+
+  const validateEmail = (email: string, fieldName: string = "Email"): string | null => {
+    if (!email.trim()) {
+      return `${fieldName} is required`;
+    }
+    // More comprehensive email validation
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    if (!emailRegex.test(email)) {
+      return `Please enter a valid ${fieldName.toLowerCase()} address`;
+    }
+    if (email.length > 254) {
+      return `${fieldName} address is too long`;
+    }
+    return null;
+  };
+
+  const validateAge = (age: string): string | null => {
+    if (!age) {
+      return "Age is required for teen accounts";
+    }
+    const ageNum = parseInt(age);
+    if (isNaN(ageNum)) {
+      return "Age must be a valid number";
+    }
+    if (ageNum < 13 || ageNum > 19) {
+      return "Age must be between 13 and 19";
+    }
+    return null;
+  };
+
+  const validatePassword = (password: string): string | null => {
+    if (!password) {
+      return "Password is required";
+    }
+    if (password.length < 8) {
+      return "Password must be at least 8 characters long";
+    }
+    if (password.length > 128) {
+      return "Password is too long (maximum 128 characters)";
+    }
+    // Check for potentially dangerous characters
+    if (/[<>]/.test(password)) {
+      return "Password contains invalid characters";
+    }
+    // Optional: Check for password strength
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    const strengthScore = [hasUpperCase, hasLowerCase, hasNumber, hasSpecialChar].filter(Boolean).length;
+    if (strengthScore < 2) {
+      return "Password should contain at least 2 of: uppercase, lowercase, numbers, or special characters";
+    }
+    return null;
+  };
+
+  const validatePhone = (phone: string): string | null => {
+    if (!phone.trim()) {
+      return null; // Phone is optional
+    }
+    // Remove common phone formatting characters
+    const cleaned = phone.replace(/[\s\-\(\)\+]/g, '');
+    // Check if it's a valid phone number (10-15 digits)
+    if (!/^\d{10,15}$/.test(cleaned)) {
+      return "Please enter a valid phone number (10-15 digits)";
+    }
+    return null;
+  };
+
   // Helper function to get user-friendly error message
   const getErrorMessage = (error: any) => {
     if (error?.message?.includes("rate limit")) {
@@ -74,63 +176,135 @@ export default function SignupPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type, checked } = e.target as HTMLInputElement;
+    
+    // Sanitize text inputs
+    const sanitizedValue = type === "checkbox" ? checked : 
+      (type === "email" || type === "tel" || name.includes("Email") || name.includes("Phone") 
+        ? sanitizeInput(value) 
+        : (name === "firstName" || name === "lastName" 
+          ? sanitizeInput(value) 
+          : value));
+    
     setFormData(prev => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? checked : sanitizedValue,
     }));
+    
+    // Real-time validation (only for string inputs)
+    if (name === "firstName" && typeof sanitizedValue === "string") {
+      const error = validateName(sanitizedValue, "First name");
+      setFieldErrors(prev => ({ ...prev, firstName: error || undefined }));
+    } else if (name === "lastName" && typeof sanitizedValue === "string") {
+      const error = validateName(sanitizedValue, "Last name");
+      setFieldErrors(prev => ({ ...prev, lastName: error || undefined }));
+    } else if (name === "email" && typeof sanitizedValue === "string") {
+      const error = validateEmail(sanitizedValue);
+      setFieldErrors(prev => ({ ...prev, email: error || undefined }));
+    } else if (name === "age") {
+      const error = validateAge(value);
+      setFieldErrors(prev => ({ ...prev, age: error || undefined }));
+    } else if (name === "password") {
+      const error = validatePassword(value);
+      setFieldErrors(prev => ({ ...prev, password: error || undefined }));
+      // Also validate confirm password if it has a value
+      if (formData.confirmPassword) {
+        const confirmError = value !== formData.confirmPassword ? "Passwords do not match" : null;
+        setFieldErrors(prev => ({ ...prev, confirmPassword: confirmError || undefined }));
+      }
+    } else if (name === "confirmPassword") {
+      const error = value !== formData.password ? "Passwords do not match" : null;
+      setFieldErrors(prev => ({ ...prev, confirmPassword: error || undefined }));
+    } else if (name === "parentEmail" && typeof sanitizedValue === "string") {
+      const error = validateEmail(sanitizedValue, "Parent email");
+      setFieldErrors(prev => ({ ...prev, parentEmail: error || undefined }));
+    } else if (name === "parentPhone" && typeof sanitizedValue === "string") {
+      const error = validatePhone(sanitizedValue);
+      setFieldErrors(prev => ({ ...prev, parentPhone: error || undefined }));
+    }
+    
     // Clear errors when user starts typing
     if (error) setError("");
     if (success) setSuccess("");
   };
 
   const validateForm = () => {
-    if (!formData.firstName.trim()) {
-      setError("First name is required");
-      return false;
+    const errors: typeof fieldErrors = {};
+    let hasErrors = false;
+
+    // Validate first name
+    const firstNameError = validateName(formData.firstName, "First name");
+    if (firstNameError) {
+      errors.firstName = firstNameError;
+      hasErrors = true;
     }
-    if (!formData.lastName.trim()) {
-      setError("Last name is required");
-      return false;
+
+    // Validate last name
+    const lastNameError = validateName(formData.lastName, "Last name");
+    if (lastNameError) {
+      errors.lastName = lastNameError;
+      hasErrors = true;
     }
-    if (!formData.email.trim()) {
-      setError("Email is required");
-      return false;
+
+    // Validate email
+    const emailError = validateEmail(formData.email);
+    if (emailError) {
+      errors.email = emailError;
+      hasErrors = true;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError("Please enter a valid email address");
-      return false;
-    }
+
+    // Validate age for teen accounts
     if (formData.role === "teen") {
-      if (!formData.age) {
-        setError("Age is required for teen accounts");
-        return false;
-      }
-      const age = parseInt(formData.age);
-      if (age < 13 || age > 19) {
-        setError("Age must be between 13 and 19");
-        return false;
+      const ageError = validateAge(formData.age);
+      if (ageError) {
+        errors.age = ageError;
+        hasErrors = true;
       }
     }
-    if (!formData.password) {
-      setError("Password is required");
-      return false;
+
+    // Validate password
+    const passwordError = validatePassword(formData.password);
+    if (passwordError) {
+      errors.password = passwordError;
+      hasErrors = true;
     }
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long");
-      return false;
-    }
+
+    // Validate confirm password
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      return false;
+      errors.confirmPassword = "Passwords do not match";
+      hasErrors = true;
     }
+
+    // Validate terms
     if (!formData.terms) {
       setError("You must agree to the Terms of Service and Privacy Policy");
+      hasErrors = true;
+    }
+
+    // Validate parent email for teen accounts
+    if (formData.role === "teen") {
+      const parentEmailError = validateEmail(formData.parentEmail, "Parent email");
+      if (parentEmailError) {
+        errors.parentEmail = parentEmailError;
+        hasErrors = true;
+      }
+    }
+
+    // Validate parent phone if provided
+    if (formData.parentPhone) {
+      const parentPhoneError = validatePhone(formData.parentPhone);
+      if (parentPhoneError) {
+        errors.parentPhone = parentPhoneError;
+        hasErrors = true;
+      }
+    }
+
+    setFieldErrors(errors);
+    
+    if (hasErrors) {
+      setError("Please fix the errors above");
       return false;
     }
-    if (formData.role === "teen" && !formData.parentEmail.trim()) {
-      setError("Parent email is required for teen accounts");
-      return false;
-    }
+
     return true;
   };
 
@@ -149,6 +323,7 @@ export default function SignupPage() {
 
     setError("");
     setSuccess("");
+    setFieldErrors({});
 
     if (!validateForm()) {
       return;
@@ -326,10 +501,19 @@ export default function SignupPage() {
                   required
                   value={formData.firstName}
                   onChange={handleInputChange}
-                  className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  className={`w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400 ${
+                    fieldErrors.firstName ? 'border-red-300 focus:ring-red-500' : ''
+                  }`}
                   placeholder="John"
                   disabled={isSubmitting}
+                  maxLength={50}
                 />
+                {fieldErrors.firstName && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {fieldErrors.firstName}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -344,10 +528,19 @@ export default function SignupPage() {
                   required
                   value={formData.lastName}
                   onChange={handleInputChange}
-                  className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  className={`w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400 ${
+                    fieldErrors.lastName ? 'border-red-300 focus:ring-red-500' : ''
+                  }`}
                   placeholder="Doe"
                   disabled={isSubmitting}
+                  maxLength={50}
                 />
+                {fieldErrors.lastName && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {fieldErrors.lastName}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -363,10 +556,19 @@ export default function SignupPage() {
                 required
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                className={`w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400 ${
+                  fieldErrors.email ? 'border-red-300 focus:ring-red-500' : ''
+                }`}
                 placeholder="john@example.com"
                 disabled={isSubmitting}
+                maxLength={254}
               />
+              {fieldErrors.email && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {fieldErrors.email}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -396,14 +598,22 @@ export default function SignupPage() {
                   name="age"
                   type="number"
                   min="13"
-                  max="22"
+                  max="19"
                   required
                   value={formData.age}
                   onChange={handleInputChange}
-                  className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  className={`w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400 ${
+                    fieldErrors.age ? 'border-red-300 focus:ring-red-500' : ''
+                  }`}
                   placeholder="16"
                   disabled={isSubmitting}
                 />
+                {fieldErrors.age && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {fieldErrors.age}
+                  </p>
+                )}
               </div>
             )}
 
@@ -423,10 +633,19 @@ export default function SignupPage() {
                       required
                       value={formData.parentEmail}
                       onChange={handleInputChange}
-                      className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                      className={`w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400 ${
+                        fieldErrors.parentEmail ? 'border-red-300 focus:ring-red-500' : ''
+                      }`}
                       disabled={isSubmitting}
                       placeholder="parent@example.com"
+                      maxLength={254}
                     />
+                    {fieldErrors.parentEmail && (
+                      <p className="text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {fieldErrors.parentEmail}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -439,10 +658,19 @@ export default function SignupPage() {
                       type="tel"
                       value={formData.parentPhone}
                       onChange={handleInputChange}
-                      className="w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                      className={`w-full h-11 px-4 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#434c9d] focus:border-transparent transition-all duration-200 placeholder:text-gray-400 ${
+                        fieldErrors.parentPhone ? 'border-red-300 focus:ring-red-500' : ''
+                      }`}
                       disabled={isSubmitting}
                       placeholder="+1 (555) 123-4567"
+                      maxLength={20}
                     />
+                    {fieldErrors.parentPhone && (
+                      <p className="text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {fieldErrors.parentPhone}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -461,9 +689,12 @@ export default function SignupPage() {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full h-11 px-4 pr-12 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  className={`w-full h-11 px-4 pr-12 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400 ${
+                    fieldErrors.password ? 'border-red-300 focus:ring-red-500' : ''
+                  }`}
                   placeholder="Create a strong password"
                   disabled={isSubmitting}
+                  maxLength={128}
                 />
                 <button
                   type="button"
@@ -478,6 +709,12 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {fieldErrors.password}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -493,9 +730,12 @@ export default function SignupPage() {
                   required
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  className="w-full h-11 px-4 pr-12 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                  className={`w-full h-11 px-4 pr-12 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400 ${
+                    fieldErrors.confirmPassword ? 'border-red-300 focus:ring-red-500' : ''
+                  }`}
                   placeholder="Confirm your password"
                   disabled={isSubmitting}
+                  maxLength={128}
                 />
                 <button
                   type="button"
@@ -510,6 +750,12 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
+              {fieldErrors.confirmPassword && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {fieldErrors.confirmPassword}
+                </p>
+              )}
             </div>
 
             <div className="flex items-start gap-3 p-4 bg-gray-50/50 rounded-xl border border-gray-200/50">
