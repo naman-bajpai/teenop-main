@@ -9,14 +9,14 @@ export async function GET(
 ) {
   try {
     const supabase = await createServerClient();
-    
+
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     console.log("API Route GET - Auth Error:", authError);
     console.log("API Route GET - User:", user);
     console.log("API Route GET - User ID:", user?.id);
-    
+
     if (authError || !user) {
       console.log("API Route GET - Authentication failed");
       return NextResponse.json(
@@ -30,26 +30,26 @@ export async function GET(
 
     // Get booking with full details including customer and service provider info
     console.log("API Route GET - Querying database for booking:", bookingId);
-    
+
     // First, let's check what bookings this user has access to
     console.log("API Route GET - Checking user's bookings...");
-    
+
     // Check bookings where user is the customer
     const { data: customerBookings, error: customerError } = await supabase
       .from("bookings")
       .select("id, service_id, user_id")
       .eq("user_id" as any, user.id as any);
-    
+
     console.log("API Route GET - Customer bookings:", customerBookings);
-    
+
     // Check bookings where user is the service provider
     const { data: userServices, error: servicesError } = await supabase
       .from("services")
       .select("id")
       .eq("user_id" as any, user.id as any);
-    
+
     console.log("API Route GET - User services:", userServices);
-    
+
     let providerBookings: any[] = [];
     if (userServices && userServices.length > 0) {
       const serviceIds = userServices.map((s: any) => s.id);
@@ -57,17 +57,17 @@ export async function GET(
         .from("bookings")
         .select("id, service_id, user_id")
         .in("service_id" as any, serviceIds);
-      
+
       providerBookings = providerBookingsData || [];
       console.log("API Route GET - Provider bookings:", providerBookings);
     }
-    
+
     // Check if the requested booking ID is in the user's accessible bookings
     const allUserBookings = [...(customerBookings || []), ...providerBookings];
     const hasAccess = allUserBookings.some(b => b.id === bookingId);
     console.log("API Route GET - User has access to booking:", hasAccess);
     console.log("API Route GET - All accessible booking IDs:", allUserBookings.map(b => b.id));
-    
+
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
       .select(`
@@ -166,10 +166,10 @@ export async function PATCH(
 ) {
   try {
     const supabase = await createServerClient();
-    
+
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: "Authentication required" },
@@ -239,7 +239,7 @@ export async function PATCH(
         currentUserId: user.id,
         isProvider: bookingData.services?.user_id === user.id
       });
-      
+
       if (bookingData.services?.user_id !== user.id) {
         return NextResponse.json(
           { success: false, error: "Only service provider can propose alternative times" },
@@ -251,7 +251,7 @@ export async function PATCH(
       const isProvider = bookingData.services?.user_id === user.id;
       const isCustomer = bookingData.user_id === user.id;
       const isAcceptingAlternative = bookingData.status === "alternative_proposed" && requested_date && requested_time;
-      
+
       console.log("Permission check for confirmed:", {
         status,
         bookingServiceUserId: bookingData.services?.user_id,
@@ -266,7 +266,7 @@ export async function PATCH(
         hasRequestedDate: !!requested_date,
         hasRequestedTime: !!requested_time
       });
-      
+
       // Allow if: (1) provider confirming initially, OR (2) customer accepting alternative time
       if (isProvider) {
         // Provider can always confirm
@@ -294,14 +294,14 @@ export async function PATCH(
       // Either customer or provider can cancel (including confirmed and paid bookings)
       const isCustomer = bookingData.user_id === user.id;
       const isProvider = bookingData.services?.user_id === user.id;
-      
+
       if (!isCustomer && !isProvider) {
         return NextResponse.json(
           { success: false, error: "Access denied" },
           { status: 403 }
         );
       }
-      
+
       // Send cancellation email notifications
       try {
         const { data: customerProfile } = await supabase
@@ -309,7 +309,7 @@ export async function PATCH(
           .select("first_name, last_name, email")
           .eq("id", bookingData.user_id)
           .single();
-        
+
         const { data: providerProfile } = await supabase
           .from("profiles")
           .select("first_name, last_name, email")
@@ -319,7 +319,7 @@ export async function PATCH(
         const { emailService } = await import("@/lib/email");
         const serviceTitle = bookingData.services?.title || "Service";
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        
+
         // Notify the other party
         if (isCustomer && providerProfile && (providerProfile as any).email) {
           // Customer cancelled, notify provider
@@ -351,14 +351,17 @@ export async function PATCH(
         // Don't fail the cancellation if email fails
       }
     } else if (status === "completed") {
-      // Only service provider can mark as completed, and only when status is "paid"
-      if (bookingData.services?.user_id !== user.id) {
+      // Service provider OR customer can mark as completed, and only when status is "paid"
+      const isProvider = bookingData.services?.user_id === user.id;
+      const isCustomer = bookingData.user_id === user.id;
+
+      if (!isProvider && !isCustomer) {
         return NextResponse.json(
-          { success: false, error: "Only service provider can mark booking as completed" },
+          { success: false, error: "Only service provider or customer can mark booking as completed" },
           { status: 403 }
         );
       }
-      
+
       // Ensure booking is paid before allowing completion
       if (bookingData.status !== "paid") {
         return NextResponse.json(
@@ -393,7 +396,7 @@ export async function PATCH(
         updatePayload
       });
     }
-    
+
     // Debug: Log the complete update payload
     console.log("Complete update payload before database update:", JSON.stringify(updatePayload, null, 2));
 
@@ -411,7 +414,7 @@ export async function PATCH(
     console.log("Table: bookings");
     console.log("Where: id =", bookingId);
     console.log("Update payload:", updatePayload);
-    
+
     const { data: updatedBooking, error: updateError } = await (supabase as any)
       .from("bookings")
       .update(updatePayload)
@@ -434,7 +437,7 @@ export async function PATCH(
         )
       `)
       .single();
-    
+
     // Debug: Log the raw database response
     console.log("Database update response:", {
       hasData: !!updatedBooking,
@@ -455,7 +458,7 @@ export async function PATCH(
 
     // Type assertion for updated booking data
     const updatedBookingData = updatedBooking as any;
-    
+
     // Debug: Log the updated booking status
     console.log("Booking updated successfully:", {
       bookingId,
@@ -467,7 +470,7 @@ export async function PATCH(
     // If booking is marked as completed, create/update earnings with status "pending" and automatically create withdrawal request
     if (status === "completed") {
       console.log(`[EARNINGS] Processing completed booking ${bookingId}`);
-      
+
       // First, check if earnings exist for this booking
       const { data: existingEarnings, error: checkError } = await (supabase as any)
         .from("earnings")
@@ -484,7 +487,7 @@ export async function PATCH(
         console.log(`[EARNINGS] Existing earnings found for booking ${bookingId}:`, existingEarnings);
         earningsId = existingEarnings.id;
         earningsAmount = existingEarnings.amount;
-        
+
         // Earnings exist, update them to pending if needed
         // If earnings are 'completed', check if they're in an approved withdrawal request
         // If not, they might have been incorrectly marked as completed (e.g., from sync route)
@@ -524,7 +527,7 @@ export async function PATCH(
             console.log(`[EARNINGS] Earnings ${existingEarnings.id} is 'completed' but not in an approved withdrawal request. Updating to 'pending'.`);
             const { error: earningsUpdateError } = await (supabaseService as any)
               .from("earnings")
-              .update({ 
+              .update({
                 status: 'pending', // Make earnings available for withdrawal
                 updated_at: new Date().toISOString()
               })
@@ -541,7 +544,7 @@ export async function PATCH(
           const supabaseService = createServiceRoleClient();
           const { error: earningsUpdateError } = await (supabaseService as any)
             .from("earnings")
-            .update({ 
+            .update({
               status: 'pending', // Make earnings available for withdrawal
               updated_at: new Date().toISOString()
             })
@@ -561,14 +564,14 @@ export async function PATCH(
         const providerId = updatedBookingData.services?.user_id;
         // Use service_price (what provider earns) if available, otherwise use total_price
         earningsAmount = updatedBookingData.service_price || updatedBookingData.total_price;
-        
+
         console.log(`[EARNINGS] Creating new earnings for booking ${bookingId}:`, {
           providerId,
           earningsAmount,
           service_price: updatedBookingData.service_price,
           total_price: updatedBookingData.total_price
         });
-        
+
         if (providerId && earningsAmount) {
           // Use service role client to bypass RLS for automatic earnings creation
           const supabaseService = createServiceRoleClient();
@@ -608,7 +611,7 @@ export async function PATCH(
       // Each completed booking should create its own withdrawal request
       if (earningsId && earningsAmount > 0) {
         const providerId = updatedBookingData.services?.user_id;
-        
+
         if (!providerId) {
           console.warn(`[WITHDRAWAL REQUEST] Cannot create withdrawal request: missing providerId for booking ${bookingId}`);
         } else {
@@ -629,109 +632,109 @@ export async function PATCH(
           } else {
             console.log(`[WITHDRAWAL REQUEST] ✅ Verified earnings ${earningsId} exists with 'pending' status. Proceeding with withdrawal request creation.`);
 
-          // Get user's profile
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('stripe_connect_account_id, first_name, last_name, email')
-            .eq('id', providerId)
-            .maybeSingle();
+            // Get user's profile
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('stripe_connect_account_id, first_name, last_name, email')
+              .eq('id', providerId)
+              .maybeSingle();
 
-          if (profileError) {
-            console.error(`[WITHDRAWAL REQUEST] Error fetching profile for provider ${providerId}:`, profileError);
-          } else if (!profile) {
-            console.warn(`[WITHDRAWAL REQUEST] Profile not found for provider ${providerId}`);
-          } else {
-            // Always create a withdrawal request for each completed booking
-            // This ensures every completed booking shows up in the admin dashboard
-            const platformFee = earningsAmount * 0; // 0% platform fee
-            const payoutAmount = earningsAmount - platformFee;
+            if (profileError) {
+              console.error(`[WITHDRAWAL REQUEST] Error fetching profile for provider ${providerId}:`, profileError);
+            } else if (!profile) {
+              console.warn(`[WITHDRAWAL REQUEST] Profile not found for provider ${providerId}`);
+            } else {
+              // Always create a withdrawal request for each completed booking
+              // This ensures every completed booking shows up in the admin dashboard
+              const platformFee = earningsAmount * 0; // 0% platform fee
+              const payoutAmount = earningsAmount - platformFee;
 
-            // Check if a withdrawal request already exists for this specific booking/earning
-            // Check for both 'processing' and 'pending' statuses (for backward compatibility)
-            const { data: existingRequests, error: existingRequestsError } = await (supabase as any)
-              .from('withdrawal_requests')
-              .select('id, status, notes')
-              .eq('user_id', providerId)
-              .in('status', ['processing', 'pending'])
-              .order('created_at', { ascending: false });
+              // Check if a withdrawal request already exists for this specific booking/earning
+              // Check for both 'processing' and 'pending' statuses (for backward compatibility)
+              const { data: existingRequests, error: existingRequestsError } = await (supabase as any)
+                .from('withdrawal_requests')
+                .select('id, status, notes')
+                .eq('user_id', providerId)
+                .in('status', ['processing', 'pending'])
+                .order('created_at', { ascending: false });
 
-            // Parse notes to check if this earning is already in any processing/pending request
-            let earningAlreadyInRequest = false;
-            if (existingRequests && Array.isArray(existingRequests)) {
-              for (const existingRequest of existingRequests) {
-                if (existingRequest.notes) {
-                  try {
-                    const notes = JSON.parse(existingRequest.notes);
-                    if (notes.earnings_ids && Array.isArray(notes.earnings_ids) && notes.earnings_ids.includes(earningsId)) {
-                      earningAlreadyInRequest = true;
-                      console.log(`[WITHDRAWAL REQUEST] Earning ${earningsId} already included in ${existingRequest.status} withdrawal request ${existingRequest.id}`);
-                      break;
+              // Parse notes to check if this earning is already in any processing/pending request
+              let earningAlreadyInRequest = false;
+              if (existingRequests && Array.isArray(existingRequests)) {
+                for (const existingRequest of existingRequests) {
+                  if (existingRequest.notes) {
+                    try {
+                      const notes = JSON.parse(existingRequest.notes);
+                      if (notes.earnings_ids && Array.isArray(notes.earnings_ids) && notes.earnings_ids.includes(earningsId)) {
+                        earningAlreadyInRequest = true;
+                        console.log(`[WITHDRAWAL REQUEST] Earning ${earningsId} already included in ${existingRequest.status} withdrawal request ${existingRequest.id}`);
+                        break;
+                      }
+                    } catch (e) {
+                      // If notes parsing fails, continue checking other requests
+                      console.warn(`[WITHDRAWAL REQUEST] Error parsing notes for request ${existingRequest.id}:`, e);
                     }
-                  } catch (e) {
-                    // If notes parsing fails, continue checking other requests
-                    console.warn(`[WITHDRAWAL REQUEST] Error parsing notes for request ${existingRequest.id}:`, e);
                   }
                 }
               }
-            }
-            
-            if (existingRequestsError) {
-              console.error('[WITHDRAWAL REQUEST] Error checking for existing withdrawal requests:', existingRequestsError);
-            }
 
-            if (!earningAlreadyInRequest) {
-              const withdrawalRequestData = {
-                user_id: providerId,
-                amount: payoutAmount,
-                platform_fee: platformFee,
-                total_earnings: earningsAmount,
-                status: 'processing',
-                stripe_connect_account_id: (profile as any).stripe_connect_account_id || null,
-                notes: JSON.stringify({ 
-                  earnings_ids: [earningsId],
-                  booking_id: bookingId,
-                  created_from: 'completed_booking'
-                })
-              };
-
-              console.log('[WITHDRAWAL REQUEST] Attempting to create withdrawal request with data:', {
-                user_id: providerId,
-                amount: payoutAmount,
-                platform_fee: platformFee,
-                total_earnings: earningsAmount,
-                status: 'processing',
-                earnings_id: earningsId,
-                booking_id: bookingId
-              });
-
-              // Use service role client to bypass RLS since this is an automatic system action
-              // The current user might be the customer, not the provider
-              // supabaseService already created above for earnings verification
-              const { data: withdrawalRequest, error: requestError } = await (supabaseService as any)
-                .from('withdrawal_requests')
-                .insert(withdrawalRequestData)
-                .select()
-                .single();
-
-              if (requestError) {
-                console.error('[WITHDRAWAL REQUEST] ❌ Error creating automatic withdrawal request:', requestError);
-                console.error('[WITHDRAWAL REQUEST] Error details:', {
-                  code: requestError.code,
-                  message: requestError.message,
-                  details: requestError.details,
-                  hint: requestError.hint
-                });
-                console.error('[WITHDRAWAL REQUEST] Request data that failed:', withdrawalRequestData);
-                // Don't fail the booking update, just log the error
-              } else if (withdrawalRequest) {
-                console.log(`[WITHDRAWAL REQUEST] ✅ Successfully created withdrawal request ${withdrawalRequest.id} for booking ${bookingId} (earning ${earningsId}, amount: $${payoutAmount})`);
-              } else {
-                console.error('[WITHDRAWAL REQUEST] ⚠️ Withdrawal request insert returned no data and no error');
+              if (existingRequestsError) {
+                console.error('[WITHDRAWAL REQUEST] Error checking for existing withdrawal requests:', existingRequestsError);
               }
-            } else {
-              console.log(`[WITHDRAWAL REQUEST] Skipping creation - earning ${earningsId} already in a withdrawal request`);
+
+              if (!earningAlreadyInRequest) {
+                const withdrawalRequestData = {
+                  user_id: providerId,
+                  amount: payoutAmount,
+                  platform_fee: platformFee,
+                  total_earnings: earningsAmount,
+                  status: 'processing',
+                  stripe_connect_account_id: (profile as any).stripe_connect_account_id || null,
+                  notes: JSON.stringify({
+                    earnings_ids: [earningsId],
+                    booking_id: bookingId,
+                    created_from: 'completed_booking'
+                  })
+                };
+
+                console.log('[WITHDRAWAL REQUEST] Attempting to create withdrawal request with data:', {
+                  user_id: providerId,
+                  amount: payoutAmount,
+                  platform_fee: platformFee,
+                  total_earnings: earningsAmount,
+                  status: 'processing',
+                  earnings_id: earningsId,
+                  booking_id: bookingId
+                });
+
+                // Use service role client to bypass RLS since this is an automatic system action
+                // The current user might be the customer, not the provider
+                // supabaseService already created above for earnings verification
+                const { data: withdrawalRequest, error: requestError } = await (supabaseService as any)
+                  .from('withdrawal_requests')
+                  .insert(withdrawalRequestData)
+                  .select()
+                  .single();
+
+                if (requestError) {
+                  console.error('[WITHDRAWAL REQUEST] ❌ Error creating automatic withdrawal request:', requestError);
+                  console.error('[WITHDRAWAL REQUEST] Error details:', {
+                    code: requestError.code,
+                    message: requestError.message,
+                    details: requestError.details,
+                    hint: requestError.hint
+                  });
+                  console.error('[WITHDRAWAL REQUEST] Request data that failed:', withdrawalRequestData);
+                  // Don't fail the booking update, just log the error
+                } else if (withdrawalRequest) {
+                  console.log(`[WITHDRAWAL REQUEST] ✅ Successfully created withdrawal request ${withdrawalRequest.id} for booking ${bookingId} (earning ${earningsId}, amount: $${payoutAmount})`);
+                } else {
+                  console.error('[WITHDRAWAL REQUEST] ⚠️ Withdrawal request insert returned no data and no error');
+                }
+              } else {
+                console.log(`[WITHDRAWAL REQUEST] Skipping creation - earning ${earningsId} already in a withdrawal request`);
+              }
             }
-          }
           } // End of verifiedEarnings check
         }
       } else {
@@ -754,7 +757,7 @@ export async function PATCH(
           const { emailService } = await import("@/lib/email");
           const serviceTitle = updatedBookingData.services?.title || "Service";
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-          
+
           await emailService.sendEmail(
             (customerProfile as any).email,
             "Good News! Your TeenOp Service Is Ready to Be Confirmed",
@@ -825,7 +828,7 @@ export async function PATCH(
           const { emailService } = await import("@/lib/email");
           const serviceTitle = updatedBookingData.services?.title || "Service";
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-          
+
           await emailService.sendEmail(
             (customerProfile as any).email,
             "Service Request Update",
@@ -852,11 +855,11 @@ export async function PATCH(
           const serviceTitle = updatedBookingData.services?.title || "Service";
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
           const formatDate = (dateString: string) => {
-            return new Date(dateString).toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
+            return new Date(dateString).toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
             });
           };
           const formatTime = (timeString: string) => {
@@ -866,7 +869,7 @@ export async function PATCH(
             const displayHour = hour % 12 || 12;
             return `${displayHour}:${minutes} ${ampm}`;
           };
-          
+
           await emailService.sendEmail(
             (customerProfile as any).email,
             "Your Action Needed: New TeenOp Service Time Proposed",
@@ -901,8 +904,8 @@ export async function PATCH(
         created_at: updatedBookingData.created_at,
         updated_at: updatedBookingData.updated_at,
         service: updatedBookingData.services,
-        customer_name: updatedBookingData.profiles ? 
-          [updatedBookingData.profiles.first_name, updatedBookingData.profiles.last_name].filter(Boolean).join(" ").trim() || "Customer" : 
+        customer_name: updatedBookingData.profiles ?
+          [updatedBookingData.profiles.first_name, updatedBookingData.profiles.last_name].filter(Boolean).join(" ").trim() || "Customer" :
           "Customer",
       }
     });

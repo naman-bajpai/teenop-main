@@ -4,10 +4,10 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
+import {
+  Calendar,
+  Clock,
+  MapPin,
   MessageCircle,
   CheckCircle,
   XCircle,
@@ -171,8 +171,7 @@ export default function MyQuoteRequestsPage() {
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(price);
 
-  const pendingRequests = quoteRequests.filter(qr => qr.status === "pending");
-  const quotedRequests = quoteRequests.filter(qr => qr.status === "quoted");
+  const pendingRequests = quoteRequests.filter(qr => qr.status === "pending" || qr.status === "quoted");
   const acceptedRequests = quoteRequests.filter(qr => qr.status === "accepted");
   const otherRequests = quoteRequests.filter(qr => !["pending", "quoted", "accepted"].includes(qr.status));
 
@@ -214,29 +213,23 @@ export default function MyQuoteRequestsPage() {
           <Tabs defaultValue="pending" className="w-full">
             <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 mb-8">
               <TabsList className="inline-flex w-full sm:grid sm:grid-cols-4 bg-gray-100 p-1 rounded-xl h-auto min-w-max sm:min-w-0">
-                <TabsTrigger 
-                  value="pending" 
+                <TabsTrigger
+                  value="pending"
                   className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-3 px-4 text-sm"
                 >
                   Pending ({pendingRequests.length})
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="quoted" 
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-3 px-4 text-sm"
-                >
-                  Quoted ({quotedRequests.length})
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="accepted" 
+                <TabsTrigger
+                  value="accepted"
                   className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-3 px-4 text-sm"
                 >
                   Accepted ({acceptedRequests.length})
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="other" 
+                <TabsTrigger
+                  value="cancelled"
                   className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-3 px-4 text-sm"
                 >
-                  Other ({otherRequests.length})
+                  Cancelled ({otherRequests.length})
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -262,6 +255,8 @@ export default function MyQuoteRequestsPage() {
                         formatPrice={formatPrice}
                         onViewDetails={() => setSelectedQuoteRequest(qr)}
                         onMessage={() => router.push("/messages")}
+                        onAcceptQuote={qr.quotes && qr.quotes.length > 0 ? () => handleAcceptQuote(qr.quotes![0].id) : undefined}
+                        acceptingQuote={acceptingQuote}
                       />
                     );
                   })}
@@ -271,37 +266,6 @@ export default function MyQuoteRequestsPage() {
                   icon={<AlertCircle className="w-16 h-16" />}
                   title="No Pending Requests"
                   description="You don't have any pending quote requests at the moment."
-                />
-              )}
-            </TabsContent>
-
-            {/* Quoted Tab */}
-            <TabsContent value="quoted" className="mt-6">
-              {quotedRequests.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {quotedRequests.map((qr) => {
-                    const statusConfig = getStatusConfig(qr.status);
-                    return (
-                      <QuoteRequestCard
-                        key={qr.id}
-                        quoteRequest={qr}
-                        statusConfig={statusConfig}
-                        formatDate={formatDate}
-                        formatTime={formatTime}
-                        formatPrice={formatPrice}
-                        onViewDetails={() => setSelectedQuoteRequest(qr)}
-                        onMessage={() => router.push("/messages")}
-                        onAcceptQuote={qr.quotes && qr.quotes.length > 0 ? () => handleAcceptQuote(qr.quotes![0].id) : undefined}
-                        acceptingQuote={acceptingQuote}
-                      />
-                    );
-                  })}
-                </div>
-              ) : (
-                <EmptyState
-                  icon={<FileText className="w-16 h-16" />}
-                  title="No Quotes Received"
-                  description="You haven't received any quotes yet."
                 />
               )}
             </TabsContent>
@@ -336,7 +300,7 @@ export default function MyQuoteRequestsPage() {
             </TabsContent>
 
             {/* Other Tab */}
-            <TabsContent value="other" className="mt-6">
+            <TabsContent value="cancelled" className="mt-6">
               {otherRequests.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {otherRequests.map((qr) => {
@@ -412,7 +376,7 @@ function QuoteRequestCard({
   return (
     <div className="group relative bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#434c9d]/30 hover:shadow-xl transition-all duration-300">
       <div className="absolute inset-0 bg-gradient-to-br from-[#434c9d]/5 to-[#96cbc3]/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-      
+
       <div className="relative">
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
@@ -690,7 +654,7 @@ function QuoteRequestDetailsDialog({
                   const response = await fetch(`/api/quotes/request/${quoteRequest.id}/booking`, {
                     cache: "no-store"
                   });
-                  
+
                   if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.booking_id) {

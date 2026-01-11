@@ -98,11 +98,11 @@ export async function GET(request: Request) {
     );
 
     // Fetch profiles only if we have user IDs
-    let profileMap = new Map<string, string>();
+    let profileMap = new Map<string, { name: string, city: string | null, state: string | null }>();
     if (userIds.length > 0) {
       const { data: profiles, error: profErr } = await (supabase as any)
         .from("profiles")
-        .select("id, first_name, last_name")
+        .select("id, first_name, last_name, city, state")
         .in("id", userIds);
 
       if (profErr) {
@@ -114,14 +114,18 @@ export async function GET(request: Request) {
             .filter(Boolean)
             .join(" ")
             .trim();
-          profileMap.set(p.id, fullName || "");
+          profileMap.set(p.id, {
+            name: fullName || "",
+            city: p.city || null,
+            state: p.state || null
+          });
         }
       }
     }
 
     // Get service IDs to fetch images
     const serviceIds = svc.map((s) => s.id);
-    
+
     // Fetch service images
     const { data: serviceImages } = await (supabase as any)
       .from("service_images")
@@ -140,27 +144,32 @@ export async function GET(request: Request) {
     });
 
     // Transform
-    const transformedServices = svc.map((service) => ({
-      id: service.id,
-      user_id: service.user_id,
-      title: service.title,
-      description: service.description ?? "",
-      price: service.price ?? 0,
-      location: service.location ?? "",
-      category: service.category,
-      status: service.status,
-      duration: service.duration ?? 60,
-      education: service.education ?? null,
-      qualifications: service.qualifications ?? null,
-      address: service.address ?? null,
-      pricing_model: (service.pricing_model as "per_hour" | "per_service") ?? "per_hour",
-      banner_url: service.banner_url ?? null,
-      created_at: service.created_at,
-      rating: service.rating ?? null,
-      total_bookings: service.total_bookings ?? 0,
-      provider_name: profileMap.get(service.user_id) || null,
-      images: imagesMap.get(service.id) || []
-    }));
+    const transformedServices = svc.map((service) => {
+      const providerInfo = profileMap.get(service.user_id);
+      return {
+        id: service.id,
+        user_id: service.user_id,
+        title: service.title,
+        description: service.description ?? "",
+        price: service.price ?? 0,
+        location: service.location ?? "",
+        category: service.category,
+        status: service.status,
+        duration: service.duration ?? 60,
+        education: service.education ?? null,
+        qualifications: service.qualifications ?? null,
+        address: service.address ?? null,
+        pricing_model: (service.pricing_model as "per_hour" | "per_service") ?? "per_hour",
+        banner_url: service.banner_url ?? null,
+        created_at: service.created_at,
+        rating: service.rating ?? null,
+        total_bookings: service.total_bookings ?? 0,
+        provider_name: providerInfo?.name || null,
+        provider_city: providerInfo?.city || null,
+        provider_state: providerInfo?.state || null,
+        images: imagesMap.get(service.id) || []
+      };
+    });
 
     return NextResponse.json({
       services: transformedServices,

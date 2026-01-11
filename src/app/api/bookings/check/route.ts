@@ -5,10 +5,10 @@ import { createServerClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient();
-    
+
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     // If no user, return hasBooking: false (not an error for public pages)
     if (authError || !user) {
       return NextResponse.json({
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       .select("id, status")
       .eq("user_id", user.id)
       .eq("service_id", serviceId)
-      .in("status", ["pending", "confirmed", "completed", "paid"]);
+      .order("created_at", { ascending: false });
 
     if (bookingsError) {
       console.error("Error checking bookings:", bookingsError);
@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       hasBooking,
+      bookingId: bookings?.[0]?.id || null,
       bookingCount: bookings?.length || 0
     });
 

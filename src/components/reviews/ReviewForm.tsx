@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Rating } from "@/components/ui/rating";
-import { Star, DollarSign, CheckCircle } from "lucide-react";
+import { Star, DollarSign, CheckCircle, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { TipPaymentModal } from "@/components/payments/TipPaymentModal";
 
@@ -25,6 +25,7 @@ export default function ReviewForm({ bookingId, serviceTitle, onSuccess, onCance
   const [paidTipAmount, setPaidTipAmount] = useState<number>(0);
   const [isTipPaymentModalOpen, setIsTipPaymentModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showTipSection, setShowTipSection] = useState(true);
   const { toast } = useToast();
 
   const handleTipPaymentSuccess = (amount: number) => {
@@ -78,7 +79,7 @@ export default function ReviewForm({ bookingId, serviceTitle, onSuccess, onCance
 
       toast({
         title: "Review Submitted",
-        description: tipPaid 
+        description: tipPaid
           ? `Thank you for your feedback and tip of $${paidTipAmount.toFixed(2)}!`
           : "Thank you for your feedback!",
       });
@@ -142,54 +143,79 @@ export default function ReviewForm({ bookingId, serviceTitle, onSuccess, onCance
       </div>
 
       <div>
-        <Label htmlFor="tip-amount" className="text-sm font-medium text-gray-700 mb-2 block">
-          <div className="flex items-center gap-2">
+        {!showTipSection ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setShowTipSection(true)}
+            className="flex items-center gap-2 text-gray-500 hover:text-[#434c9d] pl-0"
+          >
             <DollarSign className="w-4 h-4" />
-            <span>Tip Amount (Optional)</span>
-            {tipPaid && (
-              <CheckCircle className="w-4 h-4 text-green-600" />
-            )}
-          </div>
-        </Label>
-        <div className="space-y-2">
-          <Input
-            id="tip-amount"
-            type="number"
-            min="0"
-            step="0.01"
-            value={tipAmount}
-            onChange={(e) => {
-              setTipAmount(e.target.value);
-              if (tipPaid && parseFloat(e.target.value) !== paidTipAmount) {
-                setTipPaid(false);
-              }
-            }}
-            placeholder="0.00"
-            className="w-full"
-            disabled={tipPaid}
-          />
-          {tipPaid && (
-            <p className="text-xs text-green-600 font-medium">
-              ✓ Tip of ${paidTipAmount.toFixed(2)} paid successfully
-            </p>
-          )}
-          {!tipPaid && tipAmount && parseFloat(tipAmount) > 0 && (
-            <Button
+            Add a Tip (Optional)
+          </Button>
+        ) : (
+          <div className="relative border border-gray-200 rounded-xl p-4 bg-gray-50/50">
+            <button
               type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsTipPaymentModalOpen(true)}
-              className="w-full"
+              onClick={() => {
+                setShowTipSection(false);
+                setTipAmount("");
+              }}
+              className="absolute right-2 top-2 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Remove tip"
             >
-              Pay Tip
-            </Button>
-          )}
-          {!tipPaid && (
-            <p className="text-xs text-gray-500">
-              Show your appreciation with a tip (optional)
-            </p>
-          )}
-        </div>
+              <X className="w-4 h-4" />
+            </button>
+            <Label htmlFor="tip-amount" className="text-sm font-medium text-gray-700 mb-2 block">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                <span>Tip Amount (Optional)</span>
+                {tipPaid && (
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                )}
+              </div>
+            </Label>
+            <div className="space-y-2">
+              <Input
+                id="tip-amount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={tipAmount}
+                onChange={(e) => {
+                  setTipAmount(e.target.value);
+                  if (tipPaid && parseFloat(e.target.value) !== paidTipAmount) {
+                    setTipPaid(false);
+                  }
+                }}
+                placeholder="0.00"
+                className="w-full bg-white"
+                disabled={tipPaid}
+              />
+              {tipPaid && (
+                <p className="text-xs text-green-600 font-medium">
+                  ✓ Tip of ${paidTipAmount.toFixed(2)} paid successfully
+                </p>
+              )}
+              {!tipPaid && tipAmount && parseFloat(tipAmount) > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsTipPaymentModalOpen(true)}
+                  className="w-full"
+                >
+                  Pay Tip
+                </Button>
+              )}
+              {!tipPaid && (
+                <p className="text-xs text-gray-500">
+                  Show your appreciation with a tip (optional)
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3 pt-4">

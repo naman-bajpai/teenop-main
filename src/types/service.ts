@@ -28,10 +28,12 @@ export interface Service {
   rating?: number | null;
   total_bookings: number;
   provider_name?: string | null;
+  provider_city?: string | null;
+  provider_state?: string | null;
   images?: ServiceImage[];
 }
 
-export type ServiceCategory = 
+export type ServiceCategory =
   | "pet_care"
   | "lawn_care"
   | "tutoring"

@@ -4,10 +4,10 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
+import {
+  Calendar,
+  Clock,
+  MapPin,
   MessageCircle,
   CheckCircle,
   XCircle,
@@ -148,22 +148,22 @@ export default function MyRequestsPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch("/api/bookings");
       const result = await response.json();
-      
+
       if (!response.ok || !result.success) {
         throw new Error(result.error || "Failed to fetch bookings");
       }
-      
+
       let requestedBookings = result.myRequests || [];
-      
+
       // Debug: Log alternative_proposed bookings
       const altProposed = requestedBookings.filter((b: Booking) => b.status === "alternative_proposed");
       if (altProposed.length > 0) {
         console.log("Alternative proposed bookings found:", altProposed);
       }
-      
+
       // Filter out expired bookings (only for pending/confirmed/alternative_proposed)
       requestedBookings = requestedBookings.filter((booking: Booking) => {
         if (booking.status === "pending" || booking.status === "confirmed" || booking.status === "alternative_proposed") {
@@ -171,14 +171,14 @@ export default function MyRequestsPage() {
         }
         return true; // Keep paid, completed, cancelled, rejected regardless of date
       });
-      
+
       setBookings(requestedBookings);
 
       // Fetch completed bookings that need reviews (only when teen has marked as completed)
-      const completedForReview = requestedBookings.filter((booking: Booking) => 
+      const completedForReview = requestedBookings.filter((booking: Booking) =>
         booking.status === "completed"
       );
-      
+
       // Check which ones already have reviews
       const bookingsWithReviewStatus = await Promise.all(
         completedForReview.map(async (booking: Booking) => {
@@ -197,7 +197,7 @@ export default function MyRequestsPage() {
           }
         })
       );
-      
+
       // Only show bookings that don't have reviews yet
       setCompletedBookingsForReview(bookingsWithReviewStatus.filter((b: any) => !b.hasReview));
 
@@ -224,14 +224,14 @@ export default function MyRequestsPage() {
   const handleAcceptAlternative = async (bookingId: string, alternativeDate: string, alternativeTime: string) => {
     try {
       setUpdating(bookingId);
-      
+
       // Update booking with alternative date/time and set status to confirmed
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: "confirmed",
           requested_date: alternativeDate,
           requested_time: alternativeTime
@@ -276,7 +276,7 @@ export default function MyRequestsPage() {
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     try {
       setUpdating(bookingId);
-      
+
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: "PATCH",
         headers: {
@@ -291,9 +291,9 @@ export default function MyRequestsPage() {
         throw new Error(result.error || "Failed to update booking");
       }
 
-      setBookings(prev => 
-        prev.map(booking => 
-          booking.id === bookingId 
+      setBookings(prev =>
+        prev.map(booking =>
+          booking.id === bookingId
             ? { ...booking, status: newStatus as any, updated_at: new Date().toISOString() }
             : booking
         )
@@ -330,7 +330,7 @@ export default function MyRequestsPage() {
       // Navigate to messages page with booking_id to automatically open the conversation
       // The messages page will handle finding or creating the conversation based on the booking
       router.push(`/messages?booking_id=${booking.id}`);
-      
+
       toast({
         title: "Opening Messages",
         description: "Your conversation with the service provider will appear in the messages page.",
@@ -368,9 +368,9 @@ export default function MyRequestsPage() {
   // Filter bookings by status
   const allBookings = bookings;
   // Pending: service is accepted and waiting for payment (pending, alternative_proposed, confirmed)
-  const pendingBookings = bookings.filter(booking => 
-    booking.status === "pending" || 
-    booking.status === "alternative_proposed" || 
+  const pendingBookings = bookings.filter(booking =>
+    booking.status === "pending" ||
+    booking.status === "alternative_proposed" ||
     booking.status === "confirmed"
   );
   // Scheduled: once it is paid
@@ -378,12 +378,12 @@ export default function MyRequestsPage() {
   // Completed: once the service is completed
   const completedBookings = bookings.filter(booking => booking.status === "completed");
   // Cancelled: cancelled or rejected requests
-  const cancelledBookings = bookings.filter(booking => 
+  const cancelledBookings = bookings.filter(booking =>
     booking.status === "cancelled" || booking.status === "rejected"
   );
-  
+
   // Filter quote requests by status (only show in pending tab)
-  const pendingQuoteRequests = quoteRequests.filter((qr: any) => 
+  const pendingQuoteRequests = quoteRequests.filter((qr: any) =>
     qr.status === "pending" || qr.status === "quoted"
   );
 
@@ -435,7 +435,7 @@ export default function MyRequestsPage() {
             <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
               <div className="flex items-center justify-between">
                 <p className="text-red-700 font-medium">{error}</p>
-                <Button 
+                <Button
                   onClick={fetchBookings}
                   variant="outline"
                   size="sm"
@@ -534,25 +534,25 @@ export default function MyRequestsPage() {
           <Tabs defaultValue="pending" className="w-full">
             <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
               <TabsList className="inline-flex w-full sm:grid sm:grid-cols-4 bg-gray-100 p-1 rounded-xl h-auto min-w-max sm:min-w-0">
-            <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap relative">
-              Pending ({pendingBookings.length + pendingQuoteRequests.length})
-              {pendingBookings.some(b => b.status === "confirmed") && (
-                <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[18px] h-4.5 flex items-center justify-center rounded-full px-1 animate-pulse">
-                  !
-                </Badge>
-              )}
-              </TabsTrigger>
+                <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap relative">
+                  Pending ({pendingBookings.length + pendingQuoteRequests.length})
+                  {pendingBookings.some(b => b.status === "confirmed") && (
+                    <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[18px] h-4.5 flex items-center justify-center rounded-full px-1 animate-pulse">
+                      !
+                    </Badge>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="scheduled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                Scheduled ({scheduledBookings.length})
-              </TabsTrigger>
+                  Scheduled ({scheduledBookings.length})
+                </TabsTrigger>
                 <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                Completed ({completedBookings.length})
-              </TabsTrigger>
+                  Completed ({completedBookings.length})
+                </TabsTrigger>
                 <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                Cancelled ({cancelledBookings.length})
-              </TabsTrigger>
-            </TabsList>
-                </div>
+                  Cancelled ({cancelledBookings.length})
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Status-specific tabs */}
             {[
@@ -578,6 +578,7 @@ export default function MyRequestsPage() {
                             setSelectedBooking(booking);
                             setPaymentModalOpen(true);
                           }}
+                          onComplete={() => updateBookingStatus(booking.id, "completed")}
                           onAcceptAlternative={(bookingId, altDate, altTime) => handleAcceptAlternative(bookingId, altDate, altTime)}
                           onMessage={() => handleMessageUser(booking)}
                           formatPrice={formatPrice}
@@ -713,6 +714,7 @@ function BookingCard({
   updating,
   onCancel,
   onPay,
+  onComplete,
   onAcceptAlternative,
   onMessage,
   formatPrice,
@@ -725,6 +727,7 @@ function BookingCard({
   updating: boolean;
   onCancel: () => void;
   onPay: () => void;
+  onComplete?: () => void;
   onAcceptAlternative?: (bookingId: string, alternativeDate: string, alternativeTime: string) => void;
   onMessage: () => void;
   formatPrice: (price: number) => string;
@@ -737,7 +740,7 @@ function BookingCard({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
         <div className="flex-1 min-w-0">
-          <Link 
+          <Link
             href={`/services/${booking.service_id}`}
             className="text-lg sm:text-xl font-bold text-gray-900 hover:text-[#434c9d] transition-colors block mb-2 line-clamp-2"
           >
@@ -953,16 +956,24 @@ function BookingCard({
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-                <Button
+              <Button
+                onClick={onComplete}
+                size="sm"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-md text-xs sm:text-sm"
+              >
+                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                Mark as Completed
+              </Button>
+              <Button
                 onClick={onCancel}
-                  variant="outline"
-                  size="sm"
+                variant="outline"
+                size="sm"
                 disabled={updating}
                 className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
-                >
+              >
                 {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
                 {updating ? "Cancelling..." : "Cancel Service"}
-                </Button>
+              </Button>
               <Button
                 onClick={onMessage}
                 variant="outline"

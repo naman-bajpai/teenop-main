@@ -29,11 +29,11 @@ const formatDate = (dateString?: string) => {
   });
 };
 
-export default function ServiceCard({ 
-  service, 
-  showImageUpload = false, 
-  onImageUploaded, 
-  onImageRemoved 
+export default function ServiceCard({
+  service,
+  showImageUpload = false,
+  onImageUploaded,
+  onImageRemoved
 }: ServiceCardProps) {
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -78,15 +78,14 @@ export default function ServiceCard({
   return (
     <div className="group bg-white rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
       {/* Header with gradient background or image - Square */}
-      <div className={`relative w-full aspect-square overflow-hidden ${
-        (service.images && service.images.length > 0) || service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient}`
-      }`}>
+      <div className={`relative w-full aspect-square overflow-hidden ${(service.images && service.images.length > 0) || service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient}`
+        }`}>
         {(() => {
           // Check for primary image first, then first image, then banner_url
           const primaryImage = service.images?.find(img => img.is_primary);
           const firstImage = service.images?.[0];
           const displayImage = primaryImage || firstImage || service.banner_url;
-          
+
           if (displayImage) {
             return (
               <img
@@ -105,16 +104,15 @@ export default function ServiceCard({
             </>
           );
         })()}
-        
+
         {/* Status indicator */}
         <div className="absolute top-3 right-3">
-          <Badge 
-            variant={service.status === 'active' ? 'default' : 'secondary'} 
-            className={`text-xs px-2 py-1 ${
-              service.status === 'active' 
-                ? 'bg-green-100 text-green-700 border-green-200' 
+          <Badge
+            variant={service.status === 'active' ? 'default' : 'secondary'}
+            className={`text-xs px-2 py-1 ${service.status === 'active'
+                ? 'bg-green-100 text-green-700 border-green-200'
                 : 'bg-gray-100 text-gray-600 border-gray-200'
-            }`}
+              }`}
           >
             {service.status === 'active' ? 'Available' : 'Paused'}
           </Badge>
@@ -154,10 +152,14 @@ export default function ServiceCard({
 
         {/* Location, date, and schedule */}
         <div className="flex items-center gap-4 text-sm text-gray-500 mb-5 flex-wrap">
-          {service.location && (
+          {(service.location || service.provider_city) && (
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <MapPin className="w-4 h-4 shrink-0 text-gray-400" />
-              <span className="truncate font-medium">{service.location}</span>
+              <span className="truncate font-medium">
+                {service.provider_city
+                  ? `${service.provider_city}${service.provider_state ? ', ' + service.provider_state : ''}`
+                  : service.location}
+              </span>
             </div>
           )}
           {service.created_at && (

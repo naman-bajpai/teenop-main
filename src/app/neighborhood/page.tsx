@@ -38,24 +38,24 @@ export default function NeighborhoodPage() {
       try {
         setLoading(true);
         setLoadError(null);
-  
+
         // Load services and stats in parallel
         const [servicesRes, statsRes] = await Promise.all([
           fetch("/api/services/public"),
           fetch("/api/neighborhood/stats")
         ]);
-        
+
         if (!servicesRes.ok) throw new Error("Failed to fetch services");
         if (!statsRes.ok) throw new Error("Failed to fetch statistics");
-  
+
         const [servicesJson, statsJson] = await Promise.all([
           servicesRes.json(),
           statsRes.json()
         ]);
-        
+
         const list = (servicesJson?.services ?? []) as Service[];
         setServices(list);
-        
+
         if (statsJson.success) {
           setStats(statsJson.stats);
         }
@@ -80,7 +80,9 @@ export default function NeighborhoodPage() {
         (s) =>
           s.title?.toLowerCase().includes(q) ||
           s.description?.toLowerCase().includes(q) ||
-          (s.location ?? "").toLowerCase().includes(q)
+          (s.location ?? "").toLowerCase().includes(q) ||
+          (s.provider_city ?? "").toLowerCase().includes(q) ||
+          (s.provider_state ?? "").toLowerCase().includes(q)
       );
     }
 

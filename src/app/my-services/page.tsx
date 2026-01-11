@@ -11,11 +11,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; 
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast"; 
+import { useToast } from "@/components/ui/use-toast";
 import MultiImageUpload, { ServiceImage } from "@/components/ui/multi-image-upload";
 import { RatingDisplay } from "@/components/ui/rating";
 import ServiceAvailabilityCalendar from "@/components/availability/ServiceAvailabilityCalendar";
@@ -72,9 +72,9 @@ const getStatusColor = (status: string) => {
   }
 };
 
-function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: (service: Service) => void; onDelete: (serviceId: string) => void }) {
+function ServiceCard({ service, onEdit, onDelete, onToggleStatus }: { service: Service; onEdit: (service: Service) => void; onDelete: (serviceId: string) => void; onToggleStatus: (service: Service) => void }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  
+
   // Get all available images (banner + service images)
   const allImages: string[] = [];
   if (service.banner_url) allImages.push(service.banner_url);
@@ -85,15 +85,15 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
       }
     });
   }
-  
+
   const hasImages = allImages.length > 0;
   const hasMultipleImages = allImages.length > 1;
-  
+
   const nextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
   };
-  
+
   const prevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
@@ -130,9 +130,8 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
                   {allImages.map((_, idx) => (
                     <div
                       key={idx}
-                      className={`h-1.5 rounded-full transition-all ${
-                        idx === currentImageIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
-                      }`}
+                      className={`h-1.5 rounded-full transition-all ${idx === currentImageIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
+                        }`}
                     />
                   ))}
                 </div>
@@ -181,17 +180,17 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
               )}
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 p-2.5 bg-blue-50 rounded-lg border border-blue-100">
             <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
             <span className="text-sm font-medium text-blue-900 truncate">{service.location}</span>
           </div>
-          
+
           <div className="flex items-center gap-2 p-2.5 bg-purple-50 rounded-lg border border-purple-100">
             <Clock className="w-4 h-4 text-purple-600 flex-shrink-0" />
             <span className="text-sm font-medium text-purple-900">{service.duration || 60} min</span>
           </div>
-          
+
           <div className="flex items-center gap-2 p-2.5 bg-amber-50 rounded-lg border border-amber-100">
             <RatingDisplay rating={service.rating || 0} size="sm" showCount={false} />
             <span className="text-sm font-medium text-amber-900">{service.rating ? `${service.rating}/5` : "No ratings"}</span>
@@ -208,29 +207,37 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
 
         {/* Action Buttons */}
         <div className="flex gap-2 pt-3 border-t border-gray-200">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="flex-1 border-gray-300 hover:border-[#434c9d] hover:text-[#434c9d] hover:bg-[#434c9d]/5"
             onClick={() => window.location.href = `/services/${service.id}`}
           >
             <Eye className="w-4 h-4 mr-1" />View
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="flex-1 border-gray-300 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50"
             onClick={() => onEdit(service)}
           >
             <Edit className="w-4 h-4 mr-1" />Edit
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
+            className={`flex-1 border-gray-300 ${service.status === 'active' ? 'hover:border-yellow-500 hover:text-yellow-600 hover:bg-yellow-50' : 'hover:border-green-500 hover:text-green-600 hover:bg-green-50'}`}
+            onClick={() => onToggleStatus(service)}
+          >
+            {service.status === 'active' ? 'Pause' : 'Resume'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             className="flex-1 text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50"
             onClick={() => onDelete(service.id)}
           >
-            <Trash2 className="w-4 h-4 mr-1" />Delete
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       </div>
@@ -407,42 +414,42 @@ export default function MyServicesPage() {
       }
       const url = "/api/services";
       const method = isEditing ? "PUT" : "POST";
-      const body = isEditing 
-        ? { 
-            id: editingService.id, 
-            title, 
-            description, 
-            price: Number(price), 
-            location, 
-            category, 
-            status,
-            duration: Number(duration) * 60,
-            education: education.trim() || null,
-            qualifications: qualifications.trim() || null,
-            address: address.trim() || null,
-            pricing_model: isQuoteBased ? "quote" : pricingModel,
-            delivery_method: deliveryMethod,
-            location_type: locationType,
-            banner_url: bannerUrl,
-            availability: Object.keys(serviceAvailability).length > 0 ? serviceAvailability : null
-          }
-        : { 
-            title, 
-            description, 
-            price: Number(price), 
-            location, 
-            category, 
-            status,
-            duration: Number(duration) * 60,
-            education: education.trim() || null,
-            qualifications: qualifications.trim() || null,
-            address: address.trim() || null,
-            pricing_model: isQuoteBased ? "quote" : pricingModel,
-            delivery_method: deliveryMethod,
-            location_type: locationType,
-            banner_url: bannerUrl,
-            availability: Object.keys(serviceAvailability).length > 0 ? serviceAvailability : null
-          };
+      const body = isEditing
+        ? {
+          id: editingService.id,
+          title,
+          description,
+          price: Number(price),
+          location,
+          category,
+          status,
+          duration: Number(duration) * 60,
+          education: education.trim() || null,
+          qualifications: qualifications.trim() || null,
+          address: address.trim() || null,
+          pricing_model: isQuoteBased ? "quote" : pricingModel,
+          delivery_method: deliveryMethod,
+          location_type: locationType,
+          banner_url: bannerUrl,
+          availability: Object.keys(serviceAvailability).length > 0 ? serviceAvailability : null
+        }
+        : {
+          title,
+          description,
+          price: Number(price),
+          location,
+          category,
+          status,
+          duration: Number(duration) * 60,
+          education: education.trim() || null,
+          qualifications: qualifications.trim() || null,
+          address: address.trim() || null,
+          pricing_model: isQuoteBased ? "quote" : pricingModel,
+          delivery_method: deliveryMethod,
+          location_type: locationType,
+          banner_url: bannerUrl,
+          availability: Object.keys(serviceAvailability).length > 0 ? serviceAvailability : null
+        };
 
       const res = await fetch(url, {
         method,
@@ -456,15 +463,15 @@ export default function MyServicesPage() {
       }
 
       const { service } = await res.json();
-      
+
       if (serviceImages.length > 0) {
         try {
           const imagesToUpload = serviceImages.filter(img => !img.id);
-          
+
           if (imagesToUpload.length > 0) {
             const formData = new FormData();
             formData.append('service_id', service.id);
-            
+
             for (const image of imagesToUpload) {
               if (image.url.startsWith('blob:')) {
                 const response = await fetch(image.url);
@@ -473,13 +480,13 @@ export default function MyServicesPage() {
                 formData.append('images', file);
               }
             }
-            
+
             if (formData.has('images')) {
               const imagesRes = await fetch('/api/services/images', {
                 method: 'POST',
                 body: formData,
               });
-              
+
               if (imagesRes.ok) {
                 const imagesData = await imagesRes.json();
                 service.images = imagesData.images || [];
@@ -490,14 +497,14 @@ export default function MyServicesPage() {
           }
         } catch (imgError: any) {
           console.error('Error uploading images:', imgError);
-          toast({ 
-            title: "Service saved", 
+          toast({
+            title: "Service saved",
             description: `"${service.title}" was saved, but some images may not have uploaded.`,
             variant: "default"
           });
         }
       }
-      
+
       if (isEditing) {
         setServices((prev) => prev.map(s => s.id === service.id ? { ...service, images: service.images || [] } : s));
         toast({ title: "Service updated", description: `"${service.title}" has been updated.` });
@@ -505,7 +512,7 @@ export default function MyServicesPage() {
         setServices((prev) => [{ ...service, images: service.images || [] }, ...prev]);
         toast({ title: "Service added", description: `"${service.title}" is now ${service.status}.` });
       }
-      
+
       setOpen(false);
       resetForm();
       fetchServices();
@@ -516,7 +523,7 @@ export default function MyServicesPage() {
 
   async function handleDeleteService(serviceId: string) {
     if (!confirm("Are you sure you want to delete this service?")) return;
-    
+
     try {
       const res = await fetch("/api/services", {
         method: "DELETE",
@@ -533,6 +540,26 @@ export default function MyServicesPage() {
       toast({ title: "Service deleted", description: "The service has been removed." });
     } catch (e: any) {
       toast({ title: "Could not delete service", description: e.message, variant: "destructive" });
+    }
+  }
+
+  async function handleToggleStatus(service: Service) {
+    const newStatus = service.status === 'active' ? 'paused' : 'active';
+    try {
+      const res = await fetch("/api/services", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: service.id, status: newStatus }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to update status");
+      }
+
+      setServices((prev) => prev.map(s => s.id === service.id ? { ...s, status: newStatus } : s));
+      toast({ title: "Status updated", description: `Service is now ${newStatus}.` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
     }
   }
 
@@ -607,7 +634,7 @@ export default function MyServicesPage() {
                     // Wait a moment for state to update
                     await new Promise(resolve => setTimeout(resolve, 100));
                   }
-                  
+
                   // Re-check after potential update
                   const currentStatus = stripeAccountStatus.hasAccount;
                   if (!currentStatus) {
@@ -643,7 +670,7 @@ export default function MyServicesPage() {
               <TabsContent value="active" className="mt-6">
                 {activeServices.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {activeServices.map((s) => <ServiceCard key={s.id} service={s} onEdit={openEditDialog} onDelete={handleDeleteService} />)}  
+                    {activeServices.map((s) => <ServiceCard key={s.id} service={s} onEdit={openEditDialog} onDelete={handleDeleteService} onToggleStatus={handleToggleStatus} />)}
                   </div>
                 ) : (
                   <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
@@ -658,7 +685,7 @@ export default function MyServicesPage() {
                         await checkStripeAccount();
                         await new Promise(resolve => setTimeout(resolve, 100));
                       }
-                      
+
                       // Re-check after potential update
                       const currentStatus = stripeAccountStatus.hasAccount;
                       if (!currentStatus) {
@@ -678,7 +705,7 @@ export default function MyServicesPage() {
               <TabsContent value="paused" className="mt-6">
                 {pausedServices.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {pausedServices.map((s) => <ServiceCard key={s.id} service={s} onEdit={openEditDialog} onDelete={handleDeleteService} />)}  
+                    {pausedServices.map((s) => <ServiceCard key={s.id} service={s} onEdit={openEditDialog} onDelete={handleDeleteService} onToggleStatus={handleToggleStatus} />)}
                   </div>
                 ) : (
                   <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
@@ -704,7 +731,7 @@ export default function MyServicesPage() {
                   await checkStripeAccount();
                   await new Promise(resolve => setTimeout(resolve, 100));
                 }
-                
+
                 // Re-check after potential update
                 const currentStatus = stripeAccountStatus.hasAccount;
                 if (!currentStatus) {
@@ -730,7 +757,7 @@ export default function MyServicesPage() {
               // Wait a moment for state to update
               await new Promise(resolve => setTimeout(resolve, 200));
             }
-            
+
             // Check again after potential update
             if (!stripeAccountStatus.hasAccount) {
               toast({
@@ -752,13 +779,13 @@ export default function MyServicesPage() {
                 Fill in the details below to {editingService ? 'update your service' : 'create your new service'}
               </DialogDescription>
             </DialogHeader>
-            
+
             {!editingService && (() => {
               // Show alert if we're not loading and don't have an account
               // Also show if we're still loading (to prevent premature form submission)
               const shouldShowAlert = !stripeAccountStatus.loading && !stripeAccountStatus.hasAccount;
               if (!shouldShowAlert) return null;
-              
+
               return (
                 <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
                   <div className="flex items-start gap-3">
@@ -784,7 +811,7 @@ export default function MyServicesPage() {
                 </div>
               );
             })()}
-            
+
             <div className="space-y-8">
               {/* Basic Information Section */}
               <div className="space-y-4">
@@ -795,17 +822,17 @@ export default function MyServicesPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="title" className="text-sm font-medium">Service Title *</Label>
-                    <Input 
-                      id="title" 
-                      value={title} 
-                      onChange={(e) => setTitle(e.target.value)} 
-                      placeholder="e.g., Math Tutoring" 
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g., Math Tutoring"
                       className="w-full"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Category *</Label>
-                    <Select value={category} onValueChange={(v : any ) => setCategory(v)}>
+                    <Select value={category} onValueChange={(v: any) => setCategory(v)}>
                       <SelectTrigger className="w-full"><SelectValue placeholder="Select a category" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="tutoring">Tutoring</SelectItem>
@@ -823,14 +850,14 @@ export default function MyServicesPage() {
                     </Select>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
-                  <Textarea 
-                    id="description" 
-                    value={description} 
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} 
-                    placeholder="Describe what you offer, what your service includes, or what makes your service unique!" 
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
+                    placeholder="Describe what you offer, what your service includes, or what makes your service unique!"
                     rows={3}
                     className="w-full resize-none"
                   />
@@ -881,40 +908,40 @@ export default function MyServicesPage() {
                     <span className="text-xs text-gray-500">(Customers will request quotes and you'll discuss pricing through messages)</span>
                   </div>
                   {!isQuoteBased && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price" className="text-sm font-medium">Price (USD) *</Label>
-                    <Input 
-                      id="price" 
-                      type="number" 
-                      min={0} 
-                      value={price} 
-                      onChange={(e) => setPrice(Number(e.target.value))} 
-                      placeholder="25"
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Pricing Model *</Label>
-                    <Select value={pricingModel} onValueChange={(v: any) => setPricingModel(v)}>
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="per_hour">Per Hour</SelectItem>
-                        <SelectItem value="per_job">Per Job</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="price" className="text-sm font-medium">Price (USD) *</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          min={0}
+                          value={price}
+                          onChange={(e) => setPrice(Number(e.target.value))}
+                          placeholder="25"
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Pricing Model *</Label>
+                        <Select value={pricingModel} onValueChange={(v: any) => setPricingModel(v)}>
+                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="per_hour">Per Hour</SelectItem>
+                            <SelectItem value="per_job">Per Job</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   )}
                   <div className="space-y-2">
                     <Label htmlFor="duration" className="text-sm font-medium">Duration (hours) *</Label>
-                    <Input 
-                      id="duration" 
-                      type="number" 
-                      min={0.5} 
+                    <Input
+                      id="duration"
+                      type="number"
+                      min={0.5}
                       step={0.5}
-                      value={duration} 
-                      onChange={(e) => setDuration(Number(e.target.value))} 
+                      value={duration}
+                      onChange={(e) => setDuration(Number(e.target.value))}
                       placeholder="1"
                       className="w-full"
                     />
@@ -931,26 +958,26 @@ export default function MyServicesPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
-                    <Input 
-                      id="location" 
-                      value={location} 
-                      onChange={(e) => setLocation(e.target.value)} 
-                      placeholder="Online / Local Area / Address" 
+                    <Input
+                      id="location"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Online / Local Area / Address"
                       className="w-full"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="address" className="text-sm font-medium">Specific Address (Optional)</Label>
-                    <Input 
-                      id="address" 
-                      value={address} 
-                      onChange={(e) => setAddress(e.target.value)} 
-                      placeholder="123 Main St, City, State" 
+                    <Input
+                      id="address"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="123 Main St, City, State"
                       className="w-full"
                     />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Delivery Method *</Label>
@@ -973,7 +1000,7 @@ export default function MyServicesPage() {
                     </Select>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Status *</Label>
                   <Select value={status} onValueChange={(v: any) => setStatus(v)}>
@@ -1017,22 +1044,22 @@ export default function MyServicesPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="education" className="text-sm font-medium">Education/Background (Optional)</Label>
-                    <Textarea 
-                      id="education" 
-                      value={education} 
-                      onChange={(e) => setEducation(e.target.value)} 
-                      placeholder="High school student, college courses, certifications..." 
+                    <Textarea
+                      id="education"
+                      value={education}
+                      onChange={(e) => setEducation(e.target.value)}
+                      placeholder="High school student, college courses, certifications..."
                       rows={3}
                       className="w-full resize-none"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="qualifications" className="text-sm font-medium">Qualifications/Skills (Optional)</Label>
-                    <Textarea 
-                      id="qualifications" 
-                      value={qualifications} 
-                      onChange={(e) => setQualifications(e.target.value)} 
-                      placeholder="Years of experience, special skills, certifications..." 
+                    <Textarea
+                      id="qualifications"
+                      value={qualifications}
+                      onChange={(e) => setQualifications(e.target.value)}
+                      placeholder="Years of experience, special skills, certifications..."
                       rows={3}
                       className="w-full resize-none"
                     />
