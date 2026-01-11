@@ -90,12 +90,16 @@ function MessagesPageContent() {
   const [deleting, setDeleting] = useState(false);
 
   const addMessageSafely = (newMessage: Message) => {
+    console.log("Adding message safely:", newMessage.id);
     setMessages(prev => {
       const messageExists = prev.some(msg => msg.id === newMessage.id);
       if (messageExists) {
+        console.log("Message already exists, skipping:", newMessage.id);
         return prev;
       }
-      return [...prev, newMessage];
+      const updated = [...prev, newMessage];
+      console.log("Message added. New count:", updated.length);
+      return updated;
     });
   };
 
@@ -133,20 +137,41 @@ function MessagesPageContent() {
     }
   }, [user, fetchConversations]);
 
+  // Ref to track which booking ID is currently being fetched or has been processed
+  const processingBookingId = useRef<string | null>(null);
+
   useEffect(() => {
     const bookingId = searchParams.get('booking_id');
-    if (bookingId) {
+
+    // Reset processing ref if bookingId changes or is removed
+    if (processingBookingId.current !== bookingId) {
+      processingBookingId.current = null;
+    }
+
+    if (bookingId && user && !loading) {
+      // Prevent redundant processing
+      if (processingBookingId.current === bookingId) {
+        return;
+      }
+
       // First, try to find in existing conversations
       if (conversations.length > 0) {
         const conversation = conversations.find(conv => conv.booking_id === bookingId);
-        if (conversation && (!selectedConversation || selectedConversation.id !== conversation.id)) {
-          setSelectedConversation(conversation);
+        if (conversation) {
+          if (!selectedConversation || selectedConversation.id !== conversation.id) {
+            setSelectedConversation(conversation);
+          }
+          // Mark as processed since we found it
+          processingBookingId.current = bookingId;
           return;
         }
       }
 
       // If not found in conversations, fetch booking details and create conversation entry
       const fetchBookingConversation = async () => {
+        // Mark as processing immediately to prevent race conditions
+        processingBookingId.current = bookingId;
+
         try {
           const response = await fetch(`/api/bookings/${bookingId}`, { cache: "no-store" });
           if (response.ok) {
@@ -225,6 +250,8 @@ function MessagesPageContent() {
           }
         } catch (error) {
           console.error("Error fetching booking conversation:", error);
+          // Reset on error so we can try again if needed
+          processingBookingId.current = null;
         }
       };
 
@@ -234,30 +261,7 @@ function MessagesPageContent() {
     }
   }, [searchParams, conversations, selectedConversation, user, loading]);
 
-  useEffect(() => {
-    const handleMessageSent = (event: CustomEvent) => {
-      const { bookingId, message } = event.detail;
 
-      if (selectedConversation && selectedConversation.booking_id === bookingId) {
-        addMessageSafely(message);
-        setConversations(prev =>
-          prev.map(conv =>
-            conv.id === selectedConversation.id
-              ? { ...conv, last_message: message }
-              : conv
-          )
-        );
-      } else {
-        fetchConversations();
-      }
-    };
-
-    window.addEventListener('messageSent', handleMessageSent as EventListener);
-
-    return () => {
-      window.removeEventListener('messageSent', handleMessageSent as EventListener);
-    };
-  }, [selectedConversation, fetchConversations]);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -274,7 +278,14 @@ function MessagesPageContent() {
             const uniqueMessages = (data.messages || []).filter((message: Message, index: number, self: Message[]) =>
               index === self.findIndex(m => m.id === message.id)
             );
-            setMessages(uniqueMessages);
+            setMessages(prev => {
+              // Deep comparison to prevent unnecessary updates and scrolling
+              if (prev.length === uniqueMessages.length &&
+                prev.every((msg, i) => msg.id === uniqueMessages[i].id)) {
+                return prev;
+              }
+              return uniqueMessages;
+            });
           }
         }
       } catch (error) {
@@ -316,7 +327,9 @@ function MessagesPageContent() {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    }
   }, [messages]);
 
   useEffect(() => {

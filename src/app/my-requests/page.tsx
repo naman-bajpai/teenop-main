@@ -590,25 +590,27 @@ export default function MyRequestsPage() {
                     })}
                     {/* Quote Requests (only in pending tab) */}
                     {value === "pending" && tabQuoteRequests.map((qr: any) => (
-                      <div key={qr.id} className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-purple-300 hover:shadow-xl transition-all">
+                      <div key={qr.id} className="bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge className="bg-purple-100 text-purple-700">Quote Request</Badge>
-                              <h3 className="text-xl font-bold text-gray-900">{qr.services?.title || 'Service'}</h3>
+                              <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{qr.services?.title || 'Service'}</h3>
                             </div>
                             <p className="text-sm text-gray-600">Quote request for your service</p>
                           </div>
-                          <Badge className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1">
+                          <Badge className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 flex-shrink-0">
                             {qr.status === "quoted" ? "Quoted" : "Pending"}
                           </Badge>
                         </div>
                         {qr.requested_date && qr.requested_time && (
-                          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-2 text-sm">
-                              <Calendar className="w-4 h-4 text-blue-600" />
+                          <div className="mb-4 p-3 bg-gray-50/50 rounded-xl border border-gray-100 text-sm text-gray-600">
+                            <div className="flex items-center gap-3 mb-1">
+                              <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
                               <span className="font-medium">{formatDate(qr.requested_date)}</span>
-                              <Clock className="w-4 h-4 text-purple-600 ml-2" />
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Clock className="w-4 h-4 text-purple-600 flex-shrink-0" />
                               <span className="font-medium">{formatTime(qr.requested_time)}</span>
                             </div>
                           </div>
@@ -622,11 +624,11 @@ export default function MyRequestsPage() {
                             )}
                           </div>
                         )}
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-100">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+                            className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white h-10"
                             onClick={() => router.push(`/my-quote-requests`)}
                           >
                             <FileText className="w-4 h-4 mr-2" />
@@ -635,7 +637,7 @@ export default function MyRequestsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+                            className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white h-10"
                             onClick={() => router.push(`/messages`)}
                           >
                             <MessageCircle className="w-4 h-4 mr-2" />
@@ -736,7 +738,7 @@ function BookingCard({
   toast: ReturnType<typeof useToast>['toast'];
 }) {
   return (
-    <div className="bg-white rounded-xl md:rounded-2xl border-2 border-gray-200 p-4 md:p-6 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+    <div className="bg-white rounded-xl md:rounded-2xl border border-gray-100 p-4 md:p-6 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
         <div className="flex-1 min-w-0">
@@ -759,17 +761,17 @@ function BookingCard({
       </div>
 
       {/* Details */}
-      <div className="space-y-3 mb-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Calendar className="w-4 h-4 text-blue-600" />
+      <div className="space-y-3 mb-4 text-sm text-gray-600 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+        <div className="flex items-center gap-3">
+          <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
           <span className="font-medium">{formatDate(booking.requested_date)}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Clock className="w-4 h-4 text-purple-600" />
+        <div className="flex items-center gap-3">
+          <Clock className="w-4 h-4 text-purple-600 flex-shrink-0" />
           <span className="font-medium">{formatTime(booking.requested_time)}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <MapPin className="w-4 h-4 text-red-600" />
+        <div className="flex items-center gap-3">
+          <MapPin className="w-4 h-4 text-red-600 flex-shrink-0" />
           <span className="font-medium truncate">{booking.service?.location}</span>
         </div>
       </div>
@@ -778,8 +780,8 @@ function BookingCard({
       {booking.status === "alternative_proposed" && booking.alternative_date && booking.alternative_time && (
         <div className="mb-4 p-4 bg-orange-50 border-l-4 border-orange-400 rounded-r-lg">
           <div className="flex items-start gap-2">
-            <Clock className="w-5 h-5 text-orange-600 mt-0.5" />
-            <div className="flex-1">
+            <Clock className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-orange-900 mb-2">Alternative Time Proposed</p>
               <div className="space-y-1 text-sm text-orange-800">
                 <p><strong>Original:</strong> {formatDate(booking.requested_date)} at {formatTime(booking.requested_time)}</p>
@@ -793,14 +795,14 @@ function BookingCard({
       {/* Special Instructions */}
       {booking.special_instructions && (
         <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-gray-700 break-words">
             <strong className="text-blue-700">Note:</strong> {booking.special_instructions}
           </p>
         </div>
       )}
 
       {/* Actions */}
-      <div className="space-y-2">
+      <div className="space-y-3 pt-2 border-t border-gray-100">
         {booking.status === "alternative_proposed" && (
           <div className="space-y-2">
             <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-center">
@@ -818,7 +820,7 @@ function BookingCard({
                 }}
                 size="sm"
                 disabled={updating || !onAcceptAlternative || !booking.alternative_date || !booking.alternative_time}
-                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md text-xs sm:text-sm"
+                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md text-xs sm:text-sm h-10"
               >
                 {updating ? (
                   <>
@@ -837,7 +839,7 @@ function BookingCard({
                 variant="outline"
                 size="sm"
                 disabled={updating}
-                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
+                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm h-10"
               >
                 {updating ? (
                   <>
@@ -856,13 +858,14 @@ function BookingCard({
               onClick={onMessage}
               variant="outline"
               size="sm"
-              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
+              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm h-10"
             >
               <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
               Message Provider
             </Button>
           </div>
         )}
+
         {booking.status === "pending" && (
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
@@ -870,7 +873,7 @@ function BookingCard({
               variant="outline"
               size="sm"
               disabled={updating}
-              className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
+              className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm h-10"
             >
               {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
               {updating ? "Cancelling..." : "Cancel"}
@@ -879,7 +882,7 @@ function BookingCard({
               onClick={onMessage}
               variant="outline"
               size="sm"
-              className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
+              className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm h-10"
             >
               <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
               Message
@@ -892,14 +895,14 @@ function BookingCard({
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
               <div className="flex items-center justify-center text-blue-700 gap-2">
                 <CheckCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">Confirmed by Provider - Payment Required</span>
+                <span className="text-sm font-medium">Confirmed - Payment Required</span>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 onClick={onPay}
                 size="sm"
-                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md text-xs sm:text-sm"
+                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md text-xs sm:text-sm h-10"
               >
                 <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                 Confirm and Pay
@@ -909,17 +912,17 @@ function BookingCard({
                 variant="outline"
                 size="sm"
                 disabled={updating}
-                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
+                className="w-full sm:w-auto border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm h-10 px-4"
               >
-                {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
-                {updating ? "Cancelling..." : "Cancel"}
+                {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />}
+                <span className="ml-2 sm:hidden">Cancel</span>
               </Button>
             </div>
             <Button
               onClick={onMessage}
               variant="outline"
               size="sm"
-              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
+              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm h-10"
             >
               <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
               Message Provider
@@ -939,7 +942,7 @@ function BookingCard({
               onClick={onMessage}
               variant="outline"
               size="sm"
-              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
+              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm h-10"
             >
               <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
               Message Provider
@@ -959,7 +962,7 @@ function BookingCard({
               <Button
                 onClick={onComplete}
                 size="sm"
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-md text-xs sm:text-sm"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-md text-xs sm:text-sm h-10"
               >
                 <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                 Mark as Completed
@@ -969,21 +972,21 @@ function BookingCard({
                 variant="outline"
                 size="sm"
                 disabled={updating}
-                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
+                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm h-10"
               >
                 {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
                 {updating ? "Cancelling..." : "Cancel Service"}
               </Button>
-              <Button
-                onClick={onMessage}
-                variant="outline"
-                size="sm"
-                className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
-              >
-                <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                Message
-              </Button>
             </div>
+            <Button
+              onClick={onMessage}
+              variant="outline"
+              size="sm"
+              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm h-10"
+            >
+              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+              Message Provider
+            </Button>
           </div>
         )}
 
@@ -1001,7 +1004,7 @@ function BookingCard({
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 h-10"
               >
                 <ArrowRight className="w-4 h-4 mr-2" />
                 View Service Again
