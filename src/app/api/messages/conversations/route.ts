@@ -5,10 +5,10 @@ import { createServerClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient();
-    
+
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: "Authentication required" },
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log("Fetching conversations for user:", user.id);
-    
+
     // Get bookings where the user is the customer
     const { data: customerBookings, error: customerError } = await supabase
       .from("bookings")
@@ -70,16 +70,16 @@ export async function GET(request: NextRequest) {
 
     // Combine both arrays and remove duplicates
     const allBookings = [...(customerBookings || []), ...(providerBookings || [])];
-    const uniqueBookings = allBookings.filter((booking: any, index: number, self: any[]) => 
-      index === self.findIndex(b => b.id === booking.id) 
+    const uniqueBookings = allBookings.filter((booking: any, index: number, self: any[]) =>
+      index === self.findIndex(b => b.id === booking.id)
     );
 
     // Get the latest message for each booking
     const conversations = await Promise.all(
       (uniqueBookings || []).map(async (booking: any) => {
         // Get the other person's information
-        const otherPersonId = booking.user_id === user.id 
-          ? booking.services.user_id 
+        const otherPersonId = booking.user_id === user.id
+          ? booking.services.user_id
           : booking.user_id;
 
         // Get other person's profile
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         // Get the latest message for this booking
         let lastMessage = null;
         let unreadCount = 0;
-        
+
         try {
           const { data: messageData, error: messageError } = await supabase
             .from("messages")
@@ -117,8 +117,8 @@ export async function GET(request: NextRequest) {
 
             lastMessage = {
               ...(messageData as any),
-              sender_name: senderProfile ? 
-                [(senderProfile as any).first_name, (senderProfile as any).last_name].filter(Boolean).join(" ").trim() || "User" : 
+              sender_name: senderProfile ?
+                [(senderProfile as any).first_name, (senderProfile as any).last_name].filter(Boolean).join(" ").trim() || "User" :
                 "User"
             };
           }
@@ -151,8 +151,8 @@ export async function GET(request: NextRequest) {
             image_url: (lastMessage as any).image_url,
             created_at: (lastMessage as any).created_at,
             sender_id: (lastMessage as any).sender_id,
-            sender_name: (lastMessage as any).sender ? 
-              [(lastMessage as any).sender.first_name, (lastMessage as any).sender.last_name].filter(Boolean).join(" ").trim() || "User" : 
+            sender_name: (lastMessage as any).sender ?
+              [(lastMessage as any).sender.first_name, (lastMessage as any).sender.last_name].filter(Boolean).join(" ").trim() || "User" :
               "User"
           } : null,
           unread_count: unreadCount,
@@ -170,13 +170,12 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // Filter out null results and sort by last message time
+    // Filter out null results and conversations with no messages (deleted or empty)
+    // and sort by last message time
     const validConversations = conversations
-      .filter(conv => conv !== null)
+      .filter(conv => conv !== null && conv.last_message !== null)
       .sort((a, b) => {
-        if (!a?.last_message && !b?.last_message) return 0;
-        if (!a?.last_message) return 1;
-        if (!b?.last_message) return -1;
+        if (!a?.last_message || !b?.last_message) return 0;
         return new Date(b.last_message.created_at).getTime() - new Date(a.last_message.created_at).getTime();
       });
 
@@ -198,10 +197,10 @@ export async function GET(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createServerClient();
-    
+
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: "Authentication required" },

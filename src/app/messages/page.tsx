@@ -72,7 +72,7 @@ function MessagesPageContent() {
   const { user, loading: userLoading, error: userError } = useUser();
   const { toast } = useToast();
   const searchParams = useSearchParams();
-  
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -105,11 +105,11 @@ function MessagesPageContent() {
       const response = await fetch("/api/messages/conversations", {
         cache: "no-store"
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch conversations");
       }
-      
+
       const data = await response.json();
       if (data.success) {
         setConversations(data.conversations || []);
@@ -138,13 +138,13 @@ function MessagesPageContent() {
     if (bookingId) {
       // First, try to find in existing conversations
       if (conversations.length > 0) {
-      const conversation = conversations.find(conv => conv.booking_id === bookingId);
-      if (conversation && (!selectedConversation || selectedConversation.id !== conversation.id)) {
-        setSelectedConversation(conversation);
+        const conversation = conversations.find(conv => conv.booking_id === bookingId);
+        if (conversation && (!selectedConversation || selectedConversation.id !== conversation.id)) {
+          setSelectedConversation(conversation);
           return;
         }
       }
-      
+
       // If not found in conversations, fetch booking details and create conversation entry
       const fetchBookingConversation = async () => {
         try {
@@ -154,7 +154,7 @@ function MessagesPageContent() {
             if (data.success && data.booking) {
               const booking = data.booking;
               const service = booking.service || booking.services;
-              
+
               // Determine the other person - booking includes both customer and provider profiles
               let otherPerson;
               if (booking.user_id === user?.id) {
@@ -174,7 +174,7 @@ function MessagesPageContent() {
                   avatar_url: booking.profiles.avatar_url
                 } : null;
               }
-              
+
               if (otherPerson && otherPerson.id) {
                 // Create a conversation entry for this booking
                 const newConversation: Conversation = {
@@ -199,7 +199,7 @@ function MessagesPageContent() {
                     requested_time: booking.requested_time
                   }
                 };
-                
+
                 // Add to conversations if not already there
                 setConversations(prev => {
                   const exists = prev.some(conv => conv.booking_id === bookingId);
@@ -208,10 +208,10 @@ function MessagesPageContent() {
                   }
                   return prev;
                 });
-                
+
                 // Select this conversation
                 setSelectedConversation(newConversation);
-                
+
                 // Fetch messages for this booking
                 const messagesResponse = await fetch(`/api/messages?booking_id=${bookingId}`, { cache: "no-store" });
                 if (messagesResponse.ok) {
@@ -227,7 +227,7 @@ function MessagesPageContent() {
           console.error("Error fetching booking conversation:", error);
         }
       };
-      
+
       if (user && !loading) {
         fetchBookingConversation();
       }
@@ -237,12 +237,12 @@ function MessagesPageContent() {
   useEffect(() => {
     const handleMessageSent = (event: CustomEvent) => {
       const { bookingId, message } = event.detail;
-      
+
       if (selectedConversation && selectedConversation.booking_id === bookingId) {
         addMessageSafely(message);
-        setConversations(prev => 
-          prev.map(conv => 
-            conv.id === selectedConversation.id 
+        setConversations(prev =>
+          prev.map(conv =>
+            conv.id === selectedConversation.id
               ? { ...conv, last_message: message }
               : conv
           )
@@ -253,7 +253,7 @@ function MessagesPageContent() {
     };
 
     window.addEventListener('messageSent', handleMessageSent as EventListener);
-    
+
     return () => {
       window.removeEventListener('messageSent', handleMessageSent as EventListener);
     };
@@ -262,16 +262,16 @@ function MessagesPageContent() {
   useEffect(() => {
     const fetchMessages = async () => {
       if (!selectedConversation) return;
-      
+
       try {
         const response = await fetch(`/api/messages?booking_id=${selectedConversation.booking_id}`, {
           cache: "no-store"
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            const uniqueMessages = (data.messages || []).filter((message: Message, index: number, self: Message[]) => 
+            const uniqueMessages = (data.messages || []).filter((message: Message, index: number, self: Message[]) =>
               index === self.findIndex(m => m.id === message.id)
             );
             setMessages(uniqueMessages);
@@ -284,7 +284,7 @@ function MessagesPageContent() {
 
     const markMessagesAsRead = async () => {
       if (!selectedConversation) return;
-      
+
       try {
         const response = await fetch("/api/messages/mark-read", {
           method: "POST",
@@ -295,11 +295,11 @@ function MessagesPageContent() {
             booking_id: selectedConversation.booking_id,
           }),
         });
-        
+
         if (response.ok) {
-          setConversations(prev => 
-            prev.map(conv => 
-              conv.id === selectedConversation.id 
+          setConversations(prev =>
+            prev.map(conv =>
+              conv.id === selectedConversation.id
                 ? { ...conv, unread_count: 0 }
                 : conv
             )
@@ -415,10 +415,10 @@ function MessagesPageContent() {
         addMessageSafely(data.message);
         setNewMessage("");
         removeImage();
-        
-        setConversations(prev => 
-          prev.map(conv => 
-            conv.id === selectedConversation.id 
+
+        setConversations(prev =>
+          prev.map(conv =>
+            conv.id === selectedConversation.id
               ? { ...conv, last_message: data.message }
               : conv
           )
@@ -474,10 +474,11 @@ function MessagesPageContent() {
 
       const data = await response.json();
       if (data.success) {
-        setConversations(prev => 
+        // Remove locally
+        setConversations(prev =>
           prev.filter(conv => conv.id !== conversationToDelete.id)
         );
-        
+
         if (selectedConversation?.id === conversationToDelete.id) {
           setSelectedConversation(null);
           setMessages([]);
@@ -487,9 +488,12 @@ function MessagesPageContent() {
           title: "Conversation deleted",
           description: "The conversation has been permanently deleted.",
         });
-        
+
         setDeleteDialogOpen(false);
         setConversationToDelete(null);
+
+        // Fetch latest state from server to ensure it's gone
+        fetchConversations();
       }
     } catch (error: any) {
       toast({
@@ -518,7 +522,7 @@ function MessagesPageContent() {
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 24) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } else if (diffInHours < 168) {
@@ -550,12 +554,12 @@ function MessagesPageContent() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">
-            {userError === 'Profile not found. Please complete your profile setup.' 
+            {userError === 'Profile not found. Please complete your profile setup.'
               ? 'Please complete your profile setup to continue.'
               : 'Unable to load user data. Please try logging in again.'}
           </p>
-          <Button 
-            onClick={() => window.location.href = userError === 'Profile not found. Please complete your profile setup.' ? '/profile' : '/login'} 
+          <Button
+            onClick={() => window.location.href = userError === 'Profile not found. Please complete your profile setup.' ? '/profile' : '/login'}
             className="mt-4"
           >
             {userError === 'Profile not found. Please complete your profile setup.' ? 'Complete Profile' : 'Go to Login'}
@@ -631,7 +635,7 @@ function MessagesPageContent() {
                           <User className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
                         )}
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1 gap-2">
                           <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
@@ -653,16 +657,16 @@ function MessagesPageContent() {
                             </Button>
                           </div>
                         </div>
-                        
+
                         <p className="text-xs sm:text-sm text-gray-600 truncate mb-1">
                           {conversation.booking.service.title}
                         </p>
-                        
+
                         {conversation.last_message && (
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-xs sm:text-sm text-gray-500 truncate flex-1 min-w-0">
-                              {conversation.last_message.image_url 
-                                ? "📷 Image" 
+                              {conversation.last_message.image_url
+                                ? "📷 Image"
                                 : conversation.last_message.content}
                             </p>
                             <span className="text-xs text-gray-400 flex-shrink-0">
@@ -710,7 +714,7 @@ function MessagesPageContent() {
                         <User className="w-6 h-6 text-white" />
                       )}
                     </div>
-                    
+
                     <div className="min-w-0 flex-1">
                       <h2 className="font-bold text-gray-900 text-base sm:text-lg truncate">
                         {selectedConversation.other_person.first_name} {selectedConversation.other_person.last_name}
@@ -720,9 +724,9 @@ function MessagesPageContent() {
                       </p>
                     </div>
                   </div>
-                  
-                  <Button 
-                    variant="ghost" 
+
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => handleDeleteClick(selectedConversation)}
                     className="text-gray-400 hover:text-red-600 hover:bg-red-50"
@@ -730,7 +734,7 @@ function MessagesPageContent() {
                     <Trash2 className="w-5 h-5" />
                   </Button>
                 </div>
-                
+
                 {/* Booking Info */}
                 <div className="mt-4 p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200">
                   <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-700">
@@ -912,7 +916,7 @@ function MessagesPageContent() {
               Are you sure you want to delete the conversation with{" "}
               <span className="font-semibold text-gray-900">
                 {conversationToDelete?.other_person.first_name} {conversationToDelete?.other_person.last_name}
-              </span>? 
+              </span>?
               <br /><br />
               This action cannot be undone. All messages in this conversation will be permanently deleted.
             </DialogDescription>
