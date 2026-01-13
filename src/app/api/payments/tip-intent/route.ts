@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     // Create payment intent for tip
     // If provider has Stripe Connect, we'll transfer to them with platform fee
     // Otherwise, we'll charge directly (provider can set up Connect later)
-    const platformFeePercent = 0.10; // 10% platform fee on tips
+    const platformFeePercent = 0.0; // 10% platform fee on tips
     const platformFee = Math.round(tipAmount * platformFeePercent * 100); // in cents
     const tipAmountCents = Math.round(tipAmount * 100);
 

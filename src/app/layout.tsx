@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TeenOps - Teen Services Platform",
+  title: "TeenOp - Teen Services Platform",
   description: "A platform connecting teens with local services and opportunities",
 };
 
