@@ -18,10 +18,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; 
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast"; 
+import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import MultiImageUpload, { ServiceImage } from "@/components/ui/multi-image-upload";
 import { RatingDisplay, RatingForm } from "@/components/ui/rating";
@@ -124,7 +124,7 @@ const getStatusColor = (status: string) => {
   }
 };
 
-function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: (service: Service) => void; onDelete: (serviceId: string) => void }) {
+function ServiceCard({ service, onEdit, onDelete, onToggleStatus }: { service: Service; onEdit: (service: Service) => void; onDelete: (serviceId: string) => void; onToggleStatus: (service: Service) => void }) {
   return (
     <div className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-gray-200 hover:border-[#434c9d] hover:shadow-xl transition-all transform hover:-translate-y-1">
       <div className="flex flex-col sm:flex-row gap-4">
@@ -156,8 +156,8 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
                 <span className="font-bold text-gray-900">Quote Based</span>
               ) : (
                 <>
-              <span className="font-bold text-gray-900">${service.price}</span>
-              <span className="text-xs text-gray-500">/{service.pricing_model === 'per_hour' ? 'hr' : 'job'}</span>
+                  <span className="font-bold text-gray-900">${service.price}</span>
+                  <span className="text-xs text-gray-500">/{service.pricing_model === 'per_hour' ? 'hr' : 'job'}</span>
                 </>
               )}
             </div>
@@ -179,9 +179,9 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="border-gray-300 hover:border-[#434c9d] hover:text-[#434c9d] text-xs sm:text-sm"
               onClick={() => window.location.href = `/services/${service.id}`}
             >
@@ -189,6 +189,14 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
             </Button>
             <Button variant="outline" size="sm" onClick={() => onEdit(service)} className="border-gray-300 hover:border-blue-500 hover:text-blue-600 text-xs sm:text-sm">
               <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`border-gray-300 ${service.status === 'active' ? 'hover:border-yellow-500 hover:text-yellow-600 hover:bg-yellow-50' : 'hover:border-green-500 hover:text-green-600 hover:bg-green-50'} text-xs sm:text-sm`}
+              onClick={() => onToggleStatus(service)}
+            >
+              {service.status === 'active' ? 'Pause' : 'Resume'}
             </Button>
             <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 text-xs sm:text-sm" onClick={() => onDelete(service.id)}>
               <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />Delete
@@ -200,8 +208,8 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
   );
 }
 
-function BookingCard({ booking, onStatusUpdate }: { 
-  booking: Booking; 
+function BookingCard({ booking, onStatusUpdate }: {
+  booking: Booking;
   onStatusUpdate: (bookingId: string, status: string, alternativeDate?: string, alternativeTime?: string) => Promise<void>;
 }) {
   const [showAlternativeDialog, setShowAlternativeDialog] = useState(false);
@@ -264,7 +272,7 @@ function BookingCard({ booking, onStatusUpdate }: {
   const handleRejectWithoutAlternative = async () => {
     setIsSubmitting(true);
     try {
-    await onStatusUpdate(booking.id, "rejected");
+      await onStatusUpdate(booking.id, "rejected");
       setShowAlternativeDialog(false);
     } catch (error) {
       toast({
@@ -293,7 +301,7 @@ function BookingCard({ booking, onStatusUpdate }: {
               booking.customer_id ? (
                 <>
                   Requested by{' '}
-                  <Link 
+                  <Link
                     href={`/profile/${booking.customer_id}`}
                     className="text-[#434c9d] hover:underline font-medium"
                   >
@@ -369,7 +377,7 @@ function BookingCard({ booking, onStatusUpdate }: {
             </Button>
           </>
         )}
-        
+
         {/* Alternative Time Proposal Dialog */}
         <Dialog open={showAlternativeDialog} onOpenChange={setShowAlternativeDialog}>
           <DialogContent>
@@ -428,9 +436,9 @@ function BookingCard({ booking, onStatusUpdate }: {
         )}
         {booking.status === "paid" && (
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => onStatusUpdate(booking.id, "completed")}
               className="border-green-500 text-green-600 hover:bg-green-50"
             >
@@ -443,9 +451,9 @@ function BookingCard({ booking, onStatusUpdate }: {
         )}
         {booking.status === "completed" && (
           <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-green-500 text-green-600 hover:bg-green-50">
-            <CheckCircle className="w-4 h-4 mr-1" />View Details
-          </Button>
+            <Button variant="outline" size="sm" onClick={handleViewDetails} className="border-green-500 text-green-600 hover:bg-green-50">
+              <CheckCircle className="w-4 h-4 mr-1" />View Details
+            </Button>
           </div>
         )}
         {booking.status === "rejected" && (
@@ -506,7 +514,7 @@ export default function TeenHustlePage() {
     const urlParams = new URLSearchParams(window.location.search);
     const stripeSuccess = urlParams.get('stripe_success');
     const stripeError = urlParams.get('stripe_error');
-    
+
     if (stripeSuccess === 'true') {
       toast({
         title: "Payment account connected!",
@@ -529,7 +537,7 @@ export default function TeenHustlePage() {
     const init = async () => {
       try {
         setLoading(true);
-        
+
         // Fetch services via API
         const servicesRes = await fetch("/api/services", { cache: "no-store" });
         if (!servicesRes.ok) throw new Error("Failed to load services");
@@ -540,7 +548,7 @@ export default function TeenHustlePage() {
         const bookingsRes = await fetch("/api/bookings", { cache: "no-store" });
         if (!bookingsRes.ok) throw new Error("Failed to load bookings");
         const bookingsData = await bookingsRes.json();
-        
+
         if (bookingsData.success) {
           // This will be handled by the separate useEffect for bookings
         } else {
@@ -600,7 +608,7 @@ export default function TeenHustlePage() {
 
   const activeServices = services.filter((s) => s.status === "active");
   const pausedServices = services.filter((s) => s.status === "paused");
-  
+
   // Separate bookings by type
   const [pendingBookings, setPendingBookings] = useState<Booking[]>([]);
   const [scheduledBookings, setScheduledBookings] = useState<Booking[]>([]);
@@ -608,7 +616,7 @@ export default function TeenHustlePage() {
   const [cancelledBookings, setCancelledBookings] = useState<Booking[]>([]);
   const [quoteRequests, setQuoteRequests] = useState<any[]>([]);
   const [servicesNeedingCompletion, setServicesNeedingCompletion] = useState<number>(0);
-  
+
   // Helper function to check if booking is expired
   const isBookingExpired = (booking: Booking): boolean => {
     try {
@@ -619,7 +627,7 @@ export default function TeenHustlePage() {
       return false;
     }
   };
-  
+
   // Update booking arrays when bookings change
   useEffect(() => {
     const fetchBookings = async () => {
@@ -630,7 +638,7 @@ export default function TeenHustlePage() {
           if (bookingsData.success) {
             // For My Teen Hustle page, only show incoming bookings (where user is provider)
             const allIncoming = bookingsData.incoming || [];
-            
+
             // Filter out expired bookings (only for pending/confirmed/alternative_proposed)
             const activeIncoming = allIncoming.filter((booking: Booking) => {
               if (booking.status === "pending" || booking.status === "confirmed" || booking.status === "alternative_proposed") {
@@ -638,19 +646,19 @@ export default function TeenHustlePage() {
               }
               return true; // Keep paid, completed, cancelled, rejected regardless of date
             });
-            
+
             // Pending: pending, confirmed, alternative_proposed (not expired)
-            const pending = activeIncoming.filter((booking: Booking) => 
-              booking.status === "pending" || 
-              booking.status === "confirmed" || 
+            const pending = activeIncoming.filter((booking: Booking) =>
+              booking.status === "pending" ||
+              booking.status === "confirmed" ||
               booking.status === "alternative_proposed"
             );
             setPendingBookings(pending);
-            
+
             // Scheduled: paid bookings
             const scheduled = allIncoming.filter((booking: Booking) => booking.status === "paid");
             setScheduledBookings(scheduled);
-            
+
             // Calculate services that need completion (paid bookings past their scheduled time)
             const now = new Date();
             const needsCompletion = scheduled.filter((booking: Booking) => {
@@ -665,13 +673,13 @@ export default function TeenHustlePage() {
               }
             });
             setServicesNeedingCompletion(needsCompletion.length);
-            
+
             // Completed: completed bookings
             const completed = allIncoming.filter((booking: Booking) => booking.status === "completed");
             setCompletedBookings(completed);
-            
+
             // Cancelled: cancelled or rejected
-            const cancelled = allIncoming.filter((booking: Booking) => 
+            const cancelled = allIncoming.filter((booking: Booking) =>
               booking.status === "cancelled" || booking.status === "rejected"
             );
             setCancelledBookings(cancelled);
@@ -681,7 +689,7 @@ export default function TeenHustlePage() {
         console.error("Failed to fetch bookings:", e);
       }
     };
-    
+
     if (user) {
       fetchBookings();
     }
@@ -704,7 +712,7 @@ export default function TeenHustlePage() {
         console.error("Failed to fetch quote requests:", e);
       }
     };
-    
+
     if (user) {
       fetchQuoteRequests();
     }
@@ -728,12 +736,12 @@ export default function TeenHustlePage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">
-            {userError === 'Profile not found. Please complete your profile setup.' 
+            {userError === 'Profile not found. Please complete your profile setup.'
               ? 'Please complete your profile setup to continue.'
               : 'Unable to load user data. Please try logging in again.'}
           </p>
-          <Button 
-            onClick={() => window.location.href = userError === 'Profile not found. Please complete your profile setup.' ? '/profile' : '/login'} 
+          <Button
+            onClick={() => window.location.href = userError === 'Profile not found. Please complete your profile setup.' ? '/profile' : '/login'}
             className="mt-4"
           >
             {userError === 'Profile not found. Please complete your profile setup.' ? 'Complete Profile' : 'Go to Login'}
@@ -809,42 +817,42 @@ export default function TeenHustlePage() {
       }
       const url = "/api/services";
       const method = isEditing ? "PUT" : "POST";
-      const body = isEditing 
-        ? { 
-            id: editingService.id, 
-            title, 
-            description, 
-            price: Number(price), 
-            location, 
-            category, 
-            status,
-            duration: Number(duration) * 60, // Convert hours to minutes
-            education: education.trim() || null,
-            qualifications: qualifications.trim() || null,
-            address: address.trim() || null,
-            pricing_model: isQuoteBased ? "quote" : pricingModel,
-            delivery_method: deliveryMethod,
-            location_type: locationType,
-            banner_url: bannerUrl,
-            availability: Object.keys(serviceAvailability).length > 0 ? serviceAvailability : null
-          }
-        : { 
-            title, 
-            description, 
-            price: Number(price), 
-            location, 
-            category, 
-            status,
-            duration: Number(duration) * 60, // Convert hours to minutes
-            education: education.trim() || null,
-            qualifications: qualifications.trim() || null,
-            address: address.trim() || null,
-            pricing_model: isQuoteBased ? "quote" : pricingModel,
-            delivery_method: deliveryMethod,
-            location_type: locationType,
-            banner_url: bannerUrl,
-            availability: Object.keys(serviceAvailability).length > 0 ? serviceAvailability : null
-          };
+      const body = isEditing
+        ? {
+          id: editingService.id,
+          title,
+          description,
+          price: Number(price),
+          location,
+          category,
+          status,
+          duration: Number(duration) * 60, // Convert hours to minutes
+          education: education.trim() || null,
+          qualifications: qualifications.trim() || null,
+          address: address.trim() || null,
+          pricing_model: isQuoteBased ? "quote" : pricingModel,
+          delivery_method: deliveryMethod,
+          location_type: locationType,
+          banner_url: bannerUrl,
+          availability: Object.keys(serviceAvailability).length > 0 ? serviceAvailability : null
+        }
+        : {
+          title,
+          description,
+          price: Number(price),
+          location,
+          category,
+          status,
+          duration: Number(duration) * 60, // Convert hours to minutes
+          education: education.trim() || null,
+          qualifications: qualifications.trim() || null,
+          address: address.trim() || null,
+          pricing_model: isQuoteBased ? "quote" : pricingModel,
+          delivery_method: deliveryMethod,
+          location_type: locationType,
+          banner_url: bannerUrl,
+          availability: Object.keys(serviceAvailability).length > 0 ? serviceAvailability : null
+        };
 
       // Persist service via API (server validates & RLS protects)
       const res = await fetch(url, {
@@ -859,18 +867,18 @@ export default function TeenHustlePage() {
       }
 
       const { service } = await res.json();
-      
+
       // Upload images if there are any (for new services or when images were added)
       if (serviceImages.length > 0) {
         try {
           // Filter out images that already have IDs (already uploaded)
           const imagesToUpload = serviceImages.filter(img => !img.id);
-          
+
           if (imagesToUpload.length > 0) {
             // Convert blob URLs to files if needed
             const formData = new FormData();
             formData.append('service_id', service.id);
-            
+
             for (const image of imagesToUpload) {
               if (image.url.startsWith('blob:')) {
                 // Fetch blob and convert to file
@@ -880,13 +888,13 @@ export default function TeenHustlePage() {
                 formData.append('images', file);
               }
             }
-            
+
             if (formData.has('images')) {
               const imagesRes = await fetch('/api/services/images', {
                 method: 'POST',
                 body: formData,
               });
-              
+
               if (imagesRes.ok) {
                 const imagesData = await imagesRes.json();
                 service.images = imagesData.images || [];
@@ -899,14 +907,14 @@ export default function TeenHustlePage() {
         } catch (imgError: any) {
           console.error('Error uploading images:', imgError);
           // Don't fail the whole operation if image upload fails
-          toast({ 
-            title: "Service saved", 
+          toast({
+            title: "Service saved",
             description: `"${service.title}" was saved, but some images may not have uploaded.`,
             variant: "default"
           });
         }
       }
-      
+
       if (isEditing) {
         setServices((prev) => prev.map(s => s.id === service.id ? { ...service, images: service.images || [] } : s));
         toast({ title: "Service updated", description: `"${service.title}" has been updated.` });
@@ -914,7 +922,7 @@ export default function TeenHustlePage() {
         setServices((prev) => [{ ...service, images: service.images || [] }, ...prev]);
         toast({ title: "Service added", description: `"${service.title}" is now ${service.status}.` });
       }
-      
+
       setOpen(false);
       resetForm();
     } catch (e: any) {
@@ -924,7 +932,7 @@ export default function TeenHustlePage() {
 
   async function handleDeleteService(serviceId: string) {
     if (!confirm("Are you sure you want to delete this service?")) return;
-    
+
     try {
       const res = await fetch("/api/services", {
         method: "DELETE",
@@ -967,7 +975,7 @@ export default function TeenHustlePage() {
 
       const data = await res.json();
       console.log("Booking update response:", data);
-      
+
       if (data.success) {
         // Refetch bookings to update all tabs
         const bookingsRes = await fetch("/api/bookings", { cache: "no-store" });
@@ -975,41 +983,41 @@ export default function TeenHustlePage() {
           const bookingsData = await bookingsRes.json();
           if (bookingsData.success) {
             const allIncoming = bookingsData.incoming || [];
-            
-            console.log("Refetched bookings - alternative_proposed:", 
+
+            console.log("Refetched bookings - alternative_proposed:",
               allIncoming.filter((b: Booking) => b.status === "alternative_proposed")
             );
-            
-            const pending = allIncoming.filter((booking: Booking) => 
-              booking.status === "pending" || 
-              booking.status === "confirmed" || 
+
+            const pending = allIncoming.filter((booking: Booking) =>
+              booking.status === "pending" ||
+              booking.status === "confirmed" ||
               booking.status === "alternative_proposed"
             );
             setPendingBookings(pending);
-            
+
             const scheduled = allIncoming.filter((booking: Booking) => booking.status === "paid");
             setScheduledBookings(scheduled);
-            
+
             const completed = allIncoming.filter((booking: Booking) => booking.status === "completed");
             setCompletedBookings(completed);
-            
-            const cancelled = allIncoming.filter((booking: Booking) => 
+
+            const cancelled = allIncoming.filter((booking: Booking) =>
               booking.status === "cancelled" || booking.status === "rejected"
             );
             setCancelledBookings(cancelled);
           }
         }
-        
-        toast({ 
-          title: "Booking updated", 
-          description: `Booking ${newStatus} successfully.` 
+
+        toast({
+          title: "Booking updated",
+          description: `Booking ${newStatus} successfully.`
         });
       }
     } catch (e: any) {
-      toast({ 
-        title: "Could not update booking", 
-        description: e.message, 
-        variant: "destructive" 
+      toast({
+        title: "Could not update booking",
+        description: e.message,
+        variant: "destructive"
       });
     }
   }
@@ -1040,12 +1048,12 @@ export default function TeenHustlePage() {
             responseText: responseText || "Empty response"
           };
         }
-        
+
         console.error("Stripe Connect setup error:", err);
-        
+
         // Build detailed error message
         let errorMessage = err.error || "Failed to create payment account";
-        
+
         // If there are details/instructions, include them
         if (err.details) {
           if (err.details.instructions && Array.isArray(err.details.instructions)) {
@@ -1058,17 +1066,17 @@ export default function TeenHustlePage() {
             errorMessage += `\nOriginal URL: ${err.details.originalUrl}`;
           }
         }
-        
+
         // If account already exists, show different message
         if (err.error === "Stripe Connect account already exists" && err.accountId) {
           errorMessage = `You already have a Stripe Connect account linked. Account ID: ${err.accountId}`;
         }
-        
+
         // If there are debug instructions, include them
         if (err.debug && err.debug.instructions) {
           errorMessage += "\n\n" + err.debug.instructions.join("\n");
         }
-        
+
         throw new Error(errorMessage);
       }
 
@@ -1081,8 +1089,8 @@ export default function TeenHustlePage() {
       }
     } catch (e: any) {
       console.error("Stripe Connect setup exception:", e);
-      toast({ 
-        title: "Could not set up payment account", 
+      toast({
+        title: "Could not set up payment account",
         description: e.message || "An unexpected error occurred",
         variant: "destructive",
         duration: 10000, // Show for 10 seconds to read longer messages
@@ -1100,10 +1108,10 @@ export default function TeenHustlePage() {
         }
       }
     } catch (e: any) {
-      toast({ 
-        title: "Could not access payment account", 
-        description: e.message, 
-        variant: "destructive" 
+      toast({
+        title: "Could not access payment account",
+        description: e.message,
+        variant: "destructive"
       });
     }
   }
@@ -1138,313 +1146,313 @@ export default function TeenHustlePage() {
                 </Button>
               </Link>
               <Dialog open={open} onOpenChange={(newOpen) => {
-                  // Prevent opening dialog if payments aren't connected (only for new services)
-                  if (newOpen && !editingService && !stripeAccountStatus.loading && !stripeAccountStatus.hasAccount) {
-                    toast({
-                      title: "Payment Account Required",
-                      description: "You must connect your payment account before adding a service. Please set up payments first.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  setOpen(newOpen);
-                }}>
+                // Prevent opening dialog if payments aren't connected (only for new services)
+                if (newOpen && !editingService && !stripeAccountStatus.loading && !stripeAccountStatus.hasAccount) {
+                  toast({
+                    title: "Payment Account Required",
+                    description: "You must connect your payment account before adding a service. Please set up payments first.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                setOpen(newOpen);
+              }}>
                 <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto mx-auto p-8">
-                <DialogHeader className="text-center pb-6">
-                  <DialogTitle className="text-2xl font-bold text-gray-800">{editingService ? 'Edit Service' : 'Add a Service'}</DialogTitle>
-                  <DialogDescription className="text-sm text-gray-600 mt-2">
-                    Fill in the details below to {editingService ? 'update your service' : 'create your new service'}
-                  </DialogDescription>
-                </DialogHeader>
-                
-                {!editingService && !stripeAccountStatus.loading && !stripeAccountStatus.hasAccount && (
-                  <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <Wallet className="w-5 h-5 text-yellow-600 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-yellow-800 mb-1">
-                          Payment Account Required
-                        </p>
-                        <p className="text-sm text-yellow-700 mb-3">
-                          You must connect your payment account before adding a service. This allows you to receive payments from clients.
-                        </p>
-                        <Button
-                          onClick={handleStripeConnectSetup}
-                          size="sm"
-                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                        >
-                          <Wallet className="w-4 h-4 mr-2" />
-                          Set Up Payments
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="space-y-8">
-                  {/* Basic Information Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      Basic Information
-                    </h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="title" className="text-sm font-medium">Service Title *</Label>
-                        <Input 
-                          id="title" 
-                          value={title} 
-                          onChange={(e) => setTitle(e.target.value)} 
-                          placeholder="e.g., Math Tutoring" 
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Category *</Label>
-                        <Select value={category} onValueChange={(v : any ) => setCategory(v)}>
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Select a category" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="tutoring">Tutoring</SelectItem>
-                            <SelectItem value="pet_care">Pet Care</SelectItem>
-                            <SelectItem value="lawn_care">Lawn Care</SelectItem>
-                            <SelectItem value="cleaning">Cleaning</SelectItem>
-                            <SelectItem value="tech_support">Tech Support</SelectItem>
-                            <SelectItem value="delivery">Delivery</SelectItem>
-                            <SelectItem value="art_commissions">Art Commissions</SelectItem>
-                            <SelectItem value="beauty">Beauty</SelectItem>
-                            <SelectItem value="photography">Photography</SelectItem>
-                            <SelectItem value="graphic_design">Graphic Design</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
-                      <Textarea 
-                        id="description" 
-                        value={description} 
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} 
-                        placeholder="Describe what you offer, what your service includes, or what makes your service unique!" 
-                        rows={3}
-                        className="w-full resize-none"
-                      />
-                    </div>
-                  </div>
+                  <DialogHeader className="text-center pb-6">
+                    <DialogTitle className="text-2xl font-bold text-gray-800">{editingService ? 'Edit Service' : 'Add a Service'}</DialogTitle>
+                    <DialogDescription className="text-sm text-gray-600 mt-2">
+                      Fill in the details below to {editingService ? 'update your service' : 'create your new service'}
+                    </DialogDescription>
+                  </DialogHeader>
 
-                  {/* Service Images Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                      Service Images
-                    </h3>
-                    <div>
-                      <Label className="text-sm font-medium">Upload Multiple Images (Optional)</Label>
-                      <p className="text-xs text-gray-500 mb-3">Upload up to 10 images to showcase your service. The first image will be set as primary.</p>
-                      <MultiImageUpload
-                        serviceId={editingService?.id || "new"}
-                        currentImages={serviceImages}
-                        onImagesChange={setServiceImages}
-                        maxImages={10}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Pricing & Duration Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      Pricing & Duration
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-2 p-4 border-2 border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <input
-                          type="checkbox"
-                          id="quote-based"
-                          checked={isQuoteBased}
-                          onChange={(e) => {
-                            setIsQuoteBased(e.target.checked);
-                            if (e.target.checked) {
-                              setPrice(0);
-                            }
-                          }}
-                          className="w-5 h-5 text-[#434c9d] border-gray-300 rounded focus:ring-[#434c9d] cursor-pointer"
-                        />
-                        <Label htmlFor="quote-based" className="text-sm font-semibold cursor-pointer flex-1 text-gray-900">
-                          Quote Based Service
-                        </Label>
-                        <span className="text-xs text-gray-500">(Customers will request quotes and you'll discuss pricing through messages)</span>
-                      </div>
-                      {!isQuoteBased && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="price" className="text-sm font-medium">Price (USD) *</Label>
-                        <Input 
-                          id="price" 
-                          type="number" 
-                          min={0} 
-                          value={price} 
-                          onChange={(e) => setPrice(Number(e.target.value))} 
-                          placeholder="25"
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Pricing Model *</Label>
-                        <Select value={pricingModel} onValueChange={(v: any) => setPricingModel(v)}>
-                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="per_hour">Per Hour</SelectItem>
-                            <SelectItem value="per_job">Per Job</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                  {!editingService && !stripeAccountStatus.loading && !stripeAccountStatus.hasAccount && (
+                    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <Wallet className="w-5 h-5 text-yellow-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-yellow-800 mb-1">
+                            Payment Account Required
+                          </p>
+                          <p className="text-sm text-yellow-700 mb-3">
+                            You must connect your payment account before adding a service. This allows you to receive payments from clients.
+                          </p>
+                          <Button
+                            onClick={handleStripeConnectSetup}
+                            size="sm"
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                          >
+                            <Wallet className="w-4 h-4 mr-2" />
+                            Set Up Payments
+                          </Button>
                         </div>
-                      )}
-                      <div className="space-y-2">
-                        <Label htmlFor="duration" className="text-sm font-medium">Duration (hours) *</Label>
-                        <Input 
-                          id="duration" 
-                          type="number" 
-                          min={0.5} 
-                          step={0.5}
-                          value={duration} 
-                          onChange={(e) => setDuration(Number(e.target.value))} 
-                          placeholder="1"
-                          className="w-full"
-                        />
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Location & Status Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      Location & Status
-                    </h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
-                        <Input 
-                          id="location" 
-                          value={location} 
-                          onChange={(e) => setLocation(e.target.value)} 
-                          placeholder="Online / Local Area / Address" 
-                          className="w-full"
-                        />
+                  <div className="space-y-8">
+                    {/* Basic Information Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        Basic Information
+                      </h3>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="title" className="text-sm font-medium">Service Title *</Label>
+                          <Input
+                            id="title"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="e.g., Math Tutoring"
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Category *</Label>
+                          <Select value={category} onValueChange={(v: any) => setCategory(v)}>
+                            <SelectTrigger className="w-full"><SelectValue placeholder="Select a category" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="tutoring">Tutoring</SelectItem>
+                              <SelectItem value="pet_care">Pet Care</SelectItem>
+                              <SelectItem value="lawn_care">Lawn Care</SelectItem>
+                              <SelectItem value="cleaning">Cleaning</SelectItem>
+                              <SelectItem value="tech_support">Tech Support</SelectItem>
+                              <SelectItem value="delivery">Delivery</SelectItem>
+                              <SelectItem value="art_commissions">Art Commissions</SelectItem>
+                              <SelectItem value="beauty">Beauty</SelectItem>
+                              <SelectItem value="photography">Photography</SelectItem>
+                              <SelectItem value="graphic_design">Graphic Design</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="address" className="text-sm font-medium">Specific Address (Optional)</Label>
-                        <Input 
-                          id="address" 
-                          value={address} 
-                          onChange={(e) => setAddress(e.target.value)} 
-                          placeholder="123 Main St, City, State" 
-                          className="w-full"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Delivery Method *</Label>
-                        <Select value={deliveryMethod} onValueChange={(v: any) => setDeliveryMethod(v)}>
-                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="in_person">In Person</SelectItem>
-                            <SelectItem value="online">Online</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Location Type *</Label>
-                        <Select value={locationType} onValueChange={(v: any) => setLocationType(v)}>
-                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="public_address">Public Address</SelectItem>
-                            <SelectItem value="client_location">Client's Location</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Status *</Label>
-                      <Select value={status} onValueChange={(v: any) => setStatus(v)}>
-                        <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="paused">Paused</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
 
-                  {/* Service Availability Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                      Service Availability
-                    </h3>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Service Availability</Label>
-                      <p className="text-xs text-gray-500 mb-4">
-                        Select the times you're typically available to provide this service. Customers will see your availability, send a booking request, and you can confirm it or suggest an alternative time if needed.
-                      </p>
-                      <ServiceAvailabilityCalendar
-                        serviceId={editingService?.id}
-                        initialAvailability={serviceAvailability}
-                        readOnly={false}
-                        onSave={(avail) => {
-                          setServiceAvailability(avail);
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Background & Qualifications Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      Background & Qualifications
-                    </h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="education" className="text-sm font-medium">Education/Background (Optional)</Label>
-                        <Textarea 
-                          id="education" 
-                          value={education} 
-                          onChange={(e) => setEducation(e.target.value)} 
-                          placeholder="High school student, college courses, certifications..." 
-                          rows={3}
-                          className="w-full resize-none"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="qualifications" className="text-sm font-medium">Qualifications/Skills (Optional)</Label>
-                        <Textarea 
-                          id="qualifications" 
-                          value={qualifications} 
-                          onChange={(e) => setQualifications(e.target.value)} 
-                          placeholder="Years of experience, special skills, certifications..." 
+                        <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
+                        <Textarea
+                          id="description"
+                          value={description}
+                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
+                          placeholder="Describe what you offer, what your service includes, or what makes your service unique!"
                           rows={3}
                           className="w-full resize-none"
                         />
                       </div>
                     </div>
+
+                    {/* Service Images Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                        Service Images
+                      </h3>
+                      <div>
+                        <Label className="text-sm font-medium">Upload Multiple Images (Optional)</Label>
+                        <p className="text-xs text-gray-500 mb-3">Upload up to 10 images to showcase your service. The first image will be set as primary.</p>
+                        <MultiImageUpload
+                          serviceId={editingService?.id || "new"}
+                          currentImages={serviceImages}
+                          onImagesChange={setServiceImages}
+                          maxImages={10}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Pricing & Duration Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        Pricing & Duration
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-2 p-4 border-2 border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                          <input
+                            type="checkbox"
+                            id="quote-based"
+                            checked={isQuoteBased}
+                            onChange={(e) => {
+                              setIsQuoteBased(e.target.checked);
+                              if (e.target.checked) {
+                                setPrice(0);
+                              }
+                            }}
+                            className="w-5 h-5 text-[#434c9d] border-gray-300 rounded focus:ring-[#434c9d] cursor-pointer"
+                          />
+                          <Label htmlFor="quote-based" className="text-sm font-semibold cursor-pointer flex-1 text-gray-900">
+                            Quote Based Service
+                          </Label>
+                          <span className="text-xs text-gray-500">(Customers will request quotes and you'll discuss pricing through messages)</span>
+                        </div>
+                        {!isQuoteBased && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="price" className="text-sm font-medium">Price (USD) *</Label>
+                              <Input
+                                id="price"
+                                type="number"
+                                min={0}
+                                value={price}
+                                onChange={(e) => setPrice(Number(e.target.value))}
+                                placeholder="25"
+                                className="w-full"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Pricing Model *</Label>
+                              <Select value={pricingModel} onValueChange={(v: any) => setPricingModel(v)}>
+                                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="per_hour">Per Hour</SelectItem>
+                                  <SelectItem value="per_job">Per Job</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        )}
+                        <div className="space-y-2">
+                          <Label htmlFor="duration" className="text-sm font-medium">Duration (hours) *</Label>
+                          <Input
+                            id="duration"
+                            type="number"
+                            min={0.5}
+                            step={0.5}
+                            value={duration}
+                            onChange={(e) => setDuration(Number(e.target.value))}
+                            placeholder="1"
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Location & Status Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                        Location & Status
+                      </h3>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
+                          <Input
+                            id="location"
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                            placeholder="Online / Local Area / Address"
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="address" className="text-sm font-medium">Specific Address (Optional)</Label>
+                          <Input
+                            id="address"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            placeholder="123 Main St, City, State"
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Delivery Method *</Label>
+                          <Select value={deliveryMethod} onValueChange={(v: any) => setDeliveryMethod(v)}>
+                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="in_person">In Person</SelectItem>
+                              <SelectItem value="online">Online</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Location Type *</Label>
+                          <Select value={locationType} onValueChange={(v: any) => setLocationType(v)}>
+                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="public_address">Public Address</SelectItem>
+                              <SelectItem value="client_location">Client's Location</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Status *</Label>
+                        <Select value={status} onValueChange={(v: any) => setStatus(v)}>
+                          <SelectTrigger className="w-full max-w-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="paused">Paused</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Service Availability Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+                        Service Availability
+                      </h3>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Service Availability</Label>
+                        <p className="text-xs text-gray-500 mb-4">
+                          Select the times you're typically available to provide this service. Customers will see your availability, send a booking request, and you can confirm it or suggest an alternative time if needed.
+                        </p>
+                        <ServiceAvailabilityCalendar
+                          serviceId={editingService?.id}
+                          initialAvailability={serviceAvailability}
+                          readOnly={false}
+                          onSave={(avail) => {
+                            setServiceAvailability(avail);
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Background & Qualifications Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        Background & Qualifications
+                      </h3>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="education" className="text-sm font-medium">Education/Background (Optional)</Label>
+                          <Textarea
+                            id="education"
+                            value={education}
+                            onChange={(e) => setEducation(e.target.value)}
+                            placeholder="High school student, college courses, certifications..."
+                            rows={3}
+                            className="w-full resize-none"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="qualifications" className="text-sm font-medium">Qualifications/Skills (Optional)</Label>
+                          <Textarea
+                            id="qualifications"
+                            value={qualifications}
+                            onChange={(e) => setQualifications(e.target.value)}
+                            placeholder="Years of experience, special skills, certifications..."
+                            rows={3}
+                            className="w-full resize-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-                  <Button variant="outline" onClick={() => { setOpen(false); resetForm(); }} className="px-6">
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreateService} variant="orange" className="px-6">
-                    {editingService ? 'Update Service' : 'Save Service'}
-                  </Button>
-                </div>
-              </DialogContent>
+                  <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                    <Button variant="outline" onClick={() => { setOpen(false); resetForm(); }} className="px-6">
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateService} variant="orange" className="px-6">
+                      {editingService ? 'Update Service' : 'Save Service'}
+                    </Button>
+                  </div>
+                </DialogContent>
               </Dialog>
             </div>
           </div>
@@ -1465,7 +1473,7 @@ export default function TeenHustlePage() {
                       <p className="text-blue-100 text-sm sm:text-base md:text-lg">Connect your bank account to receive payments for your services</p>
                     </div>
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleStripeConnectSetup}
                     className="bg-white text-blue-600 hover:bg-blue-50 px-4 sm:px-6 md:px-8 py-2 sm:py-3 text-sm sm:text-base md:text-lg font-semibold shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
                   >
@@ -1486,7 +1494,7 @@ export default function TeenHustlePage() {
                       <p className="text-yellow-100 text-sm sm:text-base md:text-lg">Your payment account is being verified. Complete the setup to receive payments.</p>
                     </div>
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleStripeConnectLogin}
                     className="bg-white text-orange-600 hover:bg-orange-50 px-4 sm:px-6 md:px-8 py-2 sm:py-3 text-sm sm:text-base md:text-lg font-semibold shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
                   >
@@ -1508,7 +1516,7 @@ export default function TeenHustlePage() {
                     </div>
                   </div>
                   <Link href="/earnings" className="w-full sm:w-auto">
-                    <Button 
+                    <Button
                       variant="outline"
                       className="bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-4 sm:px-6 md:px-8 py-2 sm:py-3 text-sm sm:text-base font-semibold shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
                     >
@@ -1559,7 +1567,7 @@ export default function TeenHustlePage() {
                 <div className="space-y-4">
                   {/* Regular Bookings */}
                   {pendingBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}
-                  
+
                   {/* Quote Requests */}
                   {quoteRequests.map((qr: any) => (
                     <div key={qr.id} className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-gray-200 hover:border-[#434c9d] hover:shadow-xl transition-all">

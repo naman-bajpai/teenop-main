@@ -124,6 +124,13 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
 
   // Secondary navigation items (in "More" menu)
   const secondaryNavItems = [
+    ...(user?.role === "teen" ? [
+      {
+        name: "My Teen Hustle",
+        href: "/my-teen-hustle",
+        icon: Briefcase,
+      },
+    ] : []),
     {
       name: "My Requests",
       href: "/my-requests",
@@ -134,11 +141,6 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
         name: "My Services",
         href: "/my-services",
         icon: Sparkles,
-      },
-      {
-        name: "My Teen Hustle",
-        href: "/my-teen-hustle",
-        icon: Briefcase,
       },
       {
         name: "Earnings",
@@ -154,7 +156,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
   const isActive = (href: string) => pathname === href;
 
   return (
-    <header 
+    <header
       className={clsx(
         "sticky top-0 z-50 transition-all duration-300",
         overHero
@@ -321,7 +323,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                     "text-sm font-medium transition-colors",
                     overHero ? "text-white" : "text-[#434c9d]"
                   )}>
-                    {user.first_name && user.last_name 
+                    {user.first_name && user.last_name
                       ? `${user.first_name} ${user.last_name}`
                       : user.name || "User"
                     }
@@ -453,11 +455,10 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                   >
                     <Button
                       variant={isActive(item.href) ? "default" : "ghost"}
-                      className={`w-full justify-start gap-3 py-2.5 transition-all relative ${
-                        isActive(item.href)
-                          ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
-                          : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
-                      }`}
+                      className={`w-full justify-start gap-3 py-2.5 transition-all relative ${isActive(item.href)
+                        ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
+                        : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
+                        }`}
                     >
                       <Icon className={clsx("h-4 w-4 transition-transform", isActive(item.href) && "scale-110")} />
                       {item.name}
@@ -484,11 +485,10 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                   >
                     <Button
                       variant={isActive(item.href) ? "default" : "ghost"}
-                      className={`w-full justify-start gap-3 py-2.5 transition-all ${
-                        isActive(item.href)
-                          ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
-                          : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
-                      }`}
+                      className={`w-full justify-start gap-3 py-2.5 transition-all ${isActive(item.href)
+                        ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
+                        : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
+                        }`}
                     >
                       <Icon className={clsx("h-4 w-4 transition-transform", isActive(item.href) && "scale-110")} />
                       {item.name}
@@ -506,11 +506,10 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                 >
                   <Button
                     variant={isActive("/profile") ? "default" : "ghost"}
-                    className={`w-full justify-start gap-3 py-2.5 transition-all ${
-                      isActive("/profile")
-                        ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
-                        : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
-                    }`}
+                    className={`w-full justify-start gap-3 py-2.5 transition-all ${isActive("/profile")
+                      ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
+                      : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
+                      }`}
                   >
                     <User className={clsx("h-4 w-4 transition-transform", isActive("/profile") && "scale-110")} />
                     Profile

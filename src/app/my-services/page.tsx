@@ -905,7 +905,7 @@ export default function MyServicesPage() {
                     <Label htmlFor="quote-based" className="text-sm font-semibold cursor-pointer flex-1 text-gray-900">
                       Quote Based Service
                     </Label>
-                    <span className="text-xs text-gray-500">(Customers will request quotes and you'll discuss pricing through messages)</span>
+
                   </div>
                   {!isQuoteBased && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
