@@ -85,6 +85,7 @@ export default function MyQuoteRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedQuoteRequest, setSelectedQuoteRequest] = useState<QuoteRequest | null>(null);
   const [acceptingQuote, setAcceptingQuote] = useState<string | null>(null);
+  const [rejectingQuote, setRejectingQuote] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -148,6 +149,39 @@ export default function MyQuoteRequestsPage() {
       });
     } finally {
       setAcceptingQuote(null);
+    }
+  };
+
+  const handleRejectQuote = async (quoteId: string) => {
+    try {
+      setRejectingQuote(quoteId);
+      const response = await fetch(`/api/quotes/${quoteId}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to decline quote");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: "Quote Declined",
+          description: "The quote has been declined.",
+        });
+        fetchQuoteRequests();
+        setSelectedQuoteRequest(null);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to decline quote",
+        variant: "destructive",
+      });
+    } finally {
+      setRejectingQuote(null);
     }
   };
 
@@ -256,7 +290,9 @@ export default function MyQuoteRequestsPage() {
                         onViewDetails={() => setSelectedQuoteRequest(qr)}
                         onMessage={() => router.push("/messages")}
                         onAcceptQuote={qr.quotes && qr.quotes.length > 0 ? () => handleAcceptQuote(qr.quotes![0].id) : undefined}
+                        onRejectQuote={qr.quotes && qr.quotes.length > 0 ? () => handleRejectQuote(qr.quotes![0].id) : undefined}
                         acceptingQuote={acceptingQuote}
+                        rejectingQuote={rejectingQuote}
                       />
                     );
                   })}
@@ -286,6 +322,8 @@ export default function MyQuoteRequestsPage() {
                         formatPrice={formatPrice}
                         onViewDetails={() => setSelectedQuoteRequest(qr)}
                         onMessage={() => router.push("/messages")}
+                        onRejectQuote={qr.quotes && qr.quotes.length > 0 ? () => handleRejectQuote(qr.quotes![0].id) : undefined}
+                        rejectingQuote={rejectingQuote}
                       />
                     );
                   })}
@@ -315,6 +353,8 @@ export default function MyQuoteRequestsPage() {
                         formatPrice={formatPrice}
                         onViewDetails={() => setSelectedQuoteRequest(qr)}
                         onMessage={() => router.push("/messages")}
+                        onRejectQuote={qr.quotes && qr.quotes.length > 0 ? () => handleRejectQuote(qr.quotes![0].id) : undefined}
+                        rejectingQuote={rejectingQuote}
                       />
                     );
                   })}
@@ -337,7 +377,9 @@ export default function MyQuoteRequestsPage() {
             isOpen={!!selectedQuoteRequest}
             onClose={() => setSelectedQuoteRequest(null)}
             onAcceptQuote={selectedQuoteRequest.quotes && selectedQuoteRequest.quotes.length > 0 ? () => handleAcceptQuote(selectedQuoteRequest.quotes![0].id) : undefined}
+            onRejectQuote={selectedQuoteRequest.quotes && selectedQuoteRequest.quotes.length > 0 ? () => handleRejectQuote(selectedQuoteRequest.quotes![0].id) : undefined}
             acceptingQuote={acceptingQuote}
+            rejectingQuote={rejectingQuote}
             formatDate={formatDate}
             formatTime={formatTime}
             formatPrice={formatPrice}
@@ -358,7 +400,9 @@ function QuoteRequestCard({
   onViewDetails,
   onMessage,
   onAcceptQuote,
-  acceptingQuote
+  onRejectQuote,
+  acceptingQuote,
+  rejectingQuote
 }: {
   quoteRequest: QuoteRequest;
   statusConfig: ReturnType<typeof getStatusConfig>;
@@ -368,10 +412,13 @@ function QuoteRequestCard({
   onViewDetails: () => void;
   onMessage: () => void;
   onAcceptQuote?: () => void;
+  onRejectQuote?: () => void;
   acceptingQuote?: string | null;
+  rejectingQuote?: string | null;
 }) {
   const hasQuote = quoteRequest.quotes && quoteRequest.quotes.length > 0;
   const quote = hasQuote ? quoteRequest.quotes![0] : null;
+  const canRespondToQuote = !!quote && quote.status === "pending";
 
   return (
     <div className="group relative bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#434c9d]/30 hover:shadow-xl transition-all duration-300">
@@ -447,7 +494,7 @@ function QuoteRequestCard({
             <Button
               size="sm"
               onClick={onAcceptQuote}
-              disabled={acceptingQuote === quote!.id}
+              disabled={acceptingQuote === quote!.id || rejectingQuote === quote!.id || !canRespondToQuote}
               className="flex-1 min-w-[100px] bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white text-xs sm:text-sm"
             >
               {acceptingQuote === quote!.id ? (
@@ -460,6 +507,28 @@ function QuoteRequestCard({
                 <>
                   <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                   Accept
+                </>
+              )}
+            </Button>
+          )}
+          {hasQuote && onRejectQuote && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onRejectQuote}
+              disabled={rejectingQuote === quote!.id || acceptingQuote === quote!.id || !canRespondToQuote}
+              className="flex-1 min-w-[100px] border-2 border-red-500 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
+            >
+              {rejectingQuote === quote!.id ? (
+                <>
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin" />
+                  <span className="hidden sm:inline">Declining...</span>
+                  <span className="sm:hidden">...</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  Decline
                 </>
               )}
             </Button>
@@ -485,7 +554,9 @@ function QuoteRequestDetailsDialog({
   isOpen,
   onClose,
   onAcceptQuote,
+  onRejectQuote,
   acceptingQuote,
+  rejectingQuote,
   formatDate,
   formatTime,
   formatPrice
@@ -494,7 +565,9 @@ function QuoteRequestDetailsDialog({
   isOpen: boolean;
   onClose: () => void;
   onAcceptQuote?: () => void;
+  onRejectQuote?: () => void;
   acceptingQuote?: string | null;
+  rejectingQuote?: string | null;
   formatDate: (date: string) => string;
   formatTime: (time: string) => string;
   formatPrice: (price: number) => string;
@@ -502,6 +575,7 @@ function QuoteRequestDetailsDialog({
   const [loadingMessage, setLoadingMessage] = useState(false);
   const hasQuote = quoteRequest.quotes && quoteRequest.quotes.length > 0;
   const quote = hasQuote ? quoteRequest.quotes![0] : null;
+  const canRespondToQuote = !!quote && quote.status === "pending";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -584,24 +658,48 @@ function QuoteRequestDetailsDialog({
                   </div>
                 )}
               </div>
-              {onAcceptQuote && (
-                <Button
-                  onClick={onAcceptQuote}
-                  disabled={acceptingQuote === quote.id}
-                  className="w-full mt-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white h-12 font-semibold"
-                >
-                  {acceptingQuote === quote.id ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Accepting Quote...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-5 h-5 mr-2" />
-                      Accept Quote & Create Booking
-                    </>
+              {(onAcceptQuote || onRejectQuote) && (
+                <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                  {onAcceptQuote && (
+                    <Button
+                      onClick={onAcceptQuote}
+                      disabled={acceptingQuote === quote.id || rejectingQuote === quote.id || !canRespondToQuote}
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white h-12 font-semibold"
+                    >
+                      {acceptingQuote === quote.id ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Accepting Quote...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-5 h-5 mr-2" />
+                          Accept Quote & Create Booking
+                        </>
+                      )}
+                    </Button>
                   )}
-                </Button>
+                  {onRejectQuote && (
+                    <Button
+                      variant="outline"
+                      onClick={onRejectQuote}
+                      disabled={rejectingQuote === quote.id || acceptingQuote === quote.id || !canRespondToQuote}
+                      className="w-full border-2 border-red-500 text-red-600 hover:bg-red-50 h-12 font-semibold"
+                    >
+                      {rejectingQuote === quote.id ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Declining Quote...
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-5 h-5 mr-2" />
+                          Decline Quote
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           )}

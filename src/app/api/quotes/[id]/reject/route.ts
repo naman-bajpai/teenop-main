@@ -92,10 +92,10 @@ export async function POST(
       .eq("quote_request_id" as any, quoteRequest.id as any)
       .eq("status" as any, "pending" as any);
 
-    // If no more pending quotes, update quote request status back to pending
+    // If no more pending quotes, mark the quote request as cancelled
     if (!otherQuotes || otherQuotes.length === 0) {
       const quoteRequestUpdatePayload: QuoteRequestsUpdate = {
-        status: "pending",
+        status: "cancelled",
         updated_at: new Date().toISOString()
       };
       const quoteRequestQuery = supabase.from("quote_requests");
