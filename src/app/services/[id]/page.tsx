@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, DollarSign, FileText, Loader2, MessageCircle, ChevronRight, Info, Sparkles } from "lucide-react";
+import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, DollarSign, FileText, Loader2, ChevronRight, Info, Sparkles } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ServiceAvailabilityCalendar from "@/components/availability/ServiceAvailabilityCalendar";
 import ReviewsList from "@/components/reviews/ReviewsList";
@@ -765,7 +765,7 @@ export default function ServiceDetailsPage() {
                   <div className="p-8 space-y-8">
                     {/* Price Display */}
                     <div className="space-y-2">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Investment</p>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Price</p>
                       {service.pricing_model === "quote" ? (
                         <div className="space-y-1">
                           <h2 className="text-3xl font-black text-gray-900">Custom Quote</h2>
@@ -979,26 +979,6 @@ export default function ServiceDetailsPage() {
                             </div>
                           </DialogContent>
                         </Dialog>
-                      )}
-
-                      {service.user_id && user && user.id !== service.user_id && (
-                        <Button
-                          variant="ghost"
-                          className="w-full h-14 rounded-2xl text-[#434c9d] font-bold hover:bg-[#434c9d]/5 group transition-all"
-                          onClick={() => {
-                            if (existingBookingId) {
-                              router.push(`/messages?booking_id=${existingBookingId}`);
-                            } else {
-                              toast({
-                                title: "Chat Unavailable",
-                                description: "Please request a quote or service first to start a conversation.",
-                              });
-                            }
-                          }}
-                        >
-                          <MessageCircle className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-                          Chat with Provider
-                        </Button>
                       )}
                     </div>
                   </div>

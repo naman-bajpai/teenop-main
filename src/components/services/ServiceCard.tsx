@@ -161,7 +161,7 @@ export default function ServiceCard({
         <div className="mt-8 pt-6 border-t border-gray-50 space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Investment</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Price</p>
               {service.pricing_model === 'quote' ? (
                 <p className="text-lg font-black text-gray-900">Get Quote</p>
               ) : (
