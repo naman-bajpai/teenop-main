@@ -172,7 +172,7 @@ export default function MyBookingsPage() {
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-600">{error}</p>
               <Button 
-                onClick={fetchBookings}
+                onClick={() => fetchBookings(true)}
                 variant="outline"
                 size="sm"
                 className="mt-2 border-red-200 text-red-600 hover:bg-red-50"

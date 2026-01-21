@@ -157,7 +157,7 @@ export default function HomePage() {
                   <p className="text-sm text-red-600 font-medium">{error}</p>
                 </div>
               </div>
-              <Button onClick={fetchServices} variant="outline" className="rounded-xl font-bold border-red-100 text-red-600 hover:bg-red-50">Retry</Button>
+              <Button onClick={() => fetchServices(true)} variant="outline" className="rounded-xl font-bold border-red-100 text-red-600 hover:bg-red-50">Retry</Button>
             </div>
           )}
 
