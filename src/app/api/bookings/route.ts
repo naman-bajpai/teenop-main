@@ -291,56 +291,41 @@ export async function GET(request: NextRequest) {
     }
 
     // Get bookings where user is the service provider
-    // First get services owned by the user
-    const { data: userServices, error: servicesError } = await supabase
-      .from("services")
-      .select("id")
-      .eq("user_id" as any, user.id as any);
-
-    if (servicesError) {
-      console.error("Error fetching user services:", servicesError);
-      return NextResponse.json(
-        { success: false, error: "Failed to fetch bookings" },
-        { status: 500 }
-      );
-    }
-
-    const serviceIds = (userServices as any)?.map((s: any) => s.id) || [];
+    // Optimize: Use a single query with a join instead of two separate queries
+    // This uses Supabase's ability to filter by related table fields
     let incomingBookings: any[] = [];
+    
+    // Get bookings for services owned by the user in a single query
+    const { data: incomingBookingsData, error: incomingError } = await supabase
+      .from("bookings")
+      .select(`
+        *,
+        services!inner (
+          id,
+          title,
+          description,
+          price,
+          pricing_model,
+          location,
+          category,
+          user_id
+        ),
+        profiles!bookings_user_id_fkey (
+          first_name,
+          last_name,
+          email,
+          phone
+        )
+      `)
+      .eq("services.user_id" as any, user.id as any)
+      .order("created_at", { ascending: false });
 
-    if (serviceIds.length > 0) {
-      const { data: incoming, error: incomingError } = await supabase
-        .from("bookings")
-        .select(`
-          *,
-          services (
-            title,
-            description,
-            price,
-            pricing_model,
-            location,
-            category,
-            user_id
-          ),
-          profiles!bookings_user_id_fkey (
-            first_name,
-            last_name,
-            email,
-            phone
-          )
-        `)
-        .in("service_id" as any, serviceIds)
-        .order("created_at", { ascending: false });
-
-      if (incomingError) {
-        console.error("Error fetching incoming bookings:", incomingError);
-        return NextResponse.json(
-          { success: false, error: "Failed to fetch bookings" },
-          { status: 500 }
-        );
-      }
-
-      incomingBookings = incoming as any;
+    if (incomingError) {
+      // If error, it might be because user has no services - that's okay
+      console.warn("Error fetching incoming bookings (user may have no services):", incomingError);
+      incomingBookings = [];
+    } else {
+      incomingBookings = (incomingBookingsData as any) || [];
     }
 
     // Combine all bookings
@@ -418,10 +403,15 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Add cache headers to reduce server load
     return NextResponse.json({
       success: true,
       incoming,
       myRequests
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30'
+      }
     });
 
   } catch (error) {

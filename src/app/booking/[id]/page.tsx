@@ -127,57 +127,55 @@ export default function BookingDetailsPage() {
 
   const bookingId = params.id as string;
 
-  useEffect(() => {
-    const fetchBookingDetails = async () => {
-      try {
-        setLoading(true);
-        console.log("Fetching booking details for ID:", bookingId);
-        console.log("User:", user);
-        console.log("User ID:", user?.id);
-        
-        const response = await fetch(`/api/bookings/${bookingId}`, {
-          cache: "no-store",
-          credentials: "include" // Ensure cookies are sent
-        });
-        
-        console.log("Response status:", response.status);
-        console.log("Response headers:", Object.fromEntries(response.headers.entries()));
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-          console.error("API Error:", errorData);
-          throw new Error(errorData.error || `Failed to fetch booking details (${response.status})`);
-        }
-        
-        const data = await response.json();
-        console.log("Booking data:", data);
-        
-        if (data.success) {
-          setBooking(data.booking);
-        } else {
-          throw new Error(data.error || "Failed to load booking");
-        }
-      } catch (error: any) {
-        console.error("Error fetching booking details:", error);
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive"
-        });
-        // Don't redirect immediately, let user see the error
-        // router.push("/my-teen-hustle");
-      } finally {
-        setLoading(false);
+  const fetchBookingDetails = async (forceRefresh = false) => {
+    try {
+      setLoading(true);
+      console.log("Fetching booking details for ID:", bookingId);
+      console.log("User:", user);
+      console.log("User ID:", user?.id);
+      
+      const fetchOptions = forceRefresh ? { credentials: "include" as RequestCredentials, cache: 'no-store' as RequestCache } : { credentials: "include" as RequestCredentials };
+      const response = await fetch(`/api/bookings/${bookingId}`, fetchOptions);
+      
+      console.log("Response status:", response.status);
+      console.log("Response headers:", Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("API Error:", errorData);
+        throw new Error(errorData.error || `Failed to fetch booking details (${response.status})`);
       }
-    };
+      
+      const data = await response.json();
+      console.log("Booking data:", data);
+      
+      if (data.success) {
+        setBooking(data.booking);
+      } else {
+        throw new Error(data.error || "Failed to load booking");
+      }
+    } catch (error: any) {
+      console.error("Error fetching booking details:", error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+      // Don't redirect immediately, let user see the error
+      // router.push("/my-teen-hustle");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (bookingId && user) {
       console.log("Starting fetch with bookingId:", bookingId, "and user:", user.id);
       fetchBookingDetails();
     } else {
       console.log("Not fetching - bookingId:", bookingId, "user:", user);
     }
-  }, [bookingId, user, toast, router]);
+  }, [bookingId, user]);
 
   const handleStatusUpdate = async (newStatus: string) => {
     try {
@@ -202,10 +200,10 @@ export default function BookingDetailsPage() {
           title: "Success",
           description: `Booking marked as ${newStatus} successfully. ${newStatus === "completed" ? "Earnings are now available for withdrawal." : ""}`,
         });
-        // If marked as completed, refresh the page to show updated status
+        // If marked as completed, refetch with cache bypass instead of full page reload
         if (newStatus === "completed") {
-          setTimeout(() => {
-            window.location.reload();
+          setTimeout(async () => {
+            await fetchBookingDetails(true);
           }, 1000);
         }
       }

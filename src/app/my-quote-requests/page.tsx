@@ -93,10 +93,11 @@ export default function MyQuoteRequestsPage() {
     }
   }, [user]);
 
-  const fetchQuoteRequests = async () => {
+  const fetchQuoteRequests = async (forceRefresh = false) => {
     try {
       setLoading(true);
-      const response = await fetch("/api/quotes/request?role=customer", { cache: "no-store" });
+      const fetchOptions = forceRefresh ? { cache: 'no-store' as RequestCache } : {};
+      const response = await fetch("/api/quotes/request?role=customer", fetchOptions);
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -134,7 +135,7 @@ export default function MyQuoteRequestsPage() {
           title: "Quote Accepted!",
           description: "Your booking has been created. Please proceed to payment.",
         });
-        fetchQuoteRequests();
+        fetchQuoteRequests(true);
         setSelectedQuoteRequest(null);
         // Redirect to booking page or payment
         if (data.booking) {
@@ -171,7 +172,7 @@ export default function MyQuoteRequestsPage() {
           title: "Quote Declined",
           description: "The quote has been declined.",
         });
-        fetchQuoteRequests();
+        fetchQuoteRequests(true);
         setSelectedQuoteRequest(null);
       }
     } catch (error: any) {

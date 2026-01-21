@@ -144,12 +144,14 @@ export default function MyRequestsPage() {
     }
   };
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch("/api/bookings");
+      // Use cache: 'no-store' when forceRefresh is true to bypass browser cache
+      const fetchOptions = forceRefresh ? { cache: 'no-store' as RequestCache } : {};
+      const response = await fetch("/api/bookings", fetchOptions);
       const result = await response.json();
 
       if (!response.ok || !result.success) {
@@ -183,7 +185,7 @@ export default function MyRequestsPage() {
       const bookingsWithReviewStatus = await Promise.all(
         completedForReview.map(async (booking: Booking) => {
           try {
-            const reviewRes = await fetch(`/api/reviews?booking_id=${booking.id}`);
+            const reviewRes = await fetch(`/api/reviews?booking_id=${booking.id}`, fetchOptions);
             if (reviewRes.ok) {
               const reviewData = await reviewRes.json();
               return {
@@ -198,12 +200,11 @@ export default function MyRequestsPage() {
         })
       );
 
-      // Only show bookings that don't have reviews yet
       setCompletedBookingsForReview(bookingsWithReviewStatus.filter((b: any) => !b.hasReview));
 
       // Fetch quote requests for this customer
       try {
-        const quoteRes = await fetch("/api/quotes/request?role=customer", { cache: "no-store" });
+        const quoteRes = await fetch("/api/quotes/request?role=customer", fetchOptions);
         if (quoteRes.ok) {
           const quoteData = await quoteRes.json();
           if (quoteData.success) {
@@ -244,8 +245,8 @@ export default function MyRequestsPage() {
         throw new Error(result.error || "Failed to accept alternative time");
       }
 
-      // Fetch the updated booking
-      const bookingResponse = await fetch(`/api/bookings/${bookingId}`);
+      // Fetch the updated booking with cache bypass
+      const bookingResponse = await fetch(`/api/bookings/${bookingId}`, { cache: 'no-store' as RequestCache });
       if (bookingResponse.ok) {
         const bookingResult = await bookingResponse.json();
         if (bookingResult.success && bookingResult.booking) {
@@ -254,8 +255,8 @@ export default function MyRequestsPage() {
         }
       }
 
-      // Refresh bookings list
-      await fetchBookings();
+      // Refresh bookings list with cache bypass
+      await fetchBookings(true);
 
       toast({
         title: "Alternative Time Accepted",
@@ -274,6 +275,15 @@ export default function MyRequestsPage() {
   };
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+    // Optimistic UI update
+    setBookings(prev =>
+      prev.map(booking =>
+        booking.id === bookingId
+          ? { ...booking, status: newStatus as any, updated_at: new Date().toISOString() }
+          : booking
+      )
+    );
+
     try {
       setUpdating(bookingId);
 
@@ -288,16 +298,13 @@ export default function MyRequestsPage() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
+        // Revert optimistic update on failure
+        await fetchBookings(true);
         throw new Error(result.error || "Failed to update booking");
       }
 
-      setBookings(prev =>
-        prev.map(booking =>
-          booking.id === bookingId
-            ? { ...booking, status: newStatus as any, updated_at: new Date().toISOString() }
-            : booking
-        )
-      );
+      // Fetch fresh data to ensure consistency
+      await fetchBookings(true);
 
       toast({
         title: "Success",
@@ -436,7 +443,7 @@ export default function MyRequestsPage() {
               <div className="flex items-center justify-between">
                 <p className="text-red-700 font-medium">{error}</p>
                 <Button
-                  onClick={fetchBookings}
+                  onClick={() => fetchBookings(true)}
                   variant="outline"
                   size="sm"
                   className="border-red-300 text-red-700 hover:bg-red-100"
@@ -672,7 +679,7 @@ export default function MyRequestsPage() {
           amount={selectedBooking.total_price}
           serviceTitle={selectedBooking.service?.title || 'Service'}
           onPaymentSuccess={() => {
-            fetchBookings();
+            fetchBookings(true);
             setPaymentModalOpen(false);
             setSelectedBooking(null);
           }}

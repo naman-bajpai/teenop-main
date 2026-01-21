@@ -36,12 +36,14 @@ export default function MyBookingsPage() {
     }
   }, [user]);
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch("/api/bookings");
+      // Use cache: 'no-store' when forceRefresh is true to bypass browser cache
+      const fetchOptions = forceRefresh ? { cache: 'no-store' as RequestCache } : {};
+      const response = await fetch("/api/bookings", fetchOptions);
       const result = await response.json();
       
       if (!response.ok || !result.success) {
@@ -58,6 +60,15 @@ export default function MyBookingsPage() {
   };
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+    // Optimistic UI update
+    setBookings(prev => 
+      prev.map(booking => 
+        booking.id === bookingId 
+          ? { ...booking, status: newStatus as any, updated_at: new Date().toISOString() }
+          : booking
+      )
+    );
+
     try {
       setUpdating(bookingId);
       
@@ -72,17 +83,13 @@ export default function MyBookingsPage() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
+        // Revert optimistic update on failure
+        await fetchBookings(true);
         throw new Error(result.error || "Failed to update booking");
       }
 
-      // Update the local state
-      setBookings(prev => 
-        prev.map(booking => 
-          booking.id === bookingId 
-            ? { ...booking, status: newStatus as any, updated_at: new Date().toISOString() }
-            : booking
-        )
-      );
+      // Fetch fresh data to ensure consistency
+      await fetchBookings(true);
     } catch (err: any) {
       console.error("Error updating booking:", err);
       alert(err.message || "Failed to update booking");
@@ -416,8 +423,8 @@ export default function MyBookingsPage() {
           amount={selectedBooking.total_price}
           serviceTitle={selectedBooking.service?.title || 'Service'}
           onPaymentSuccess={() => {
-            // Refresh the bookings data after successful payment
-            fetchBookings();
+            // Refresh the bookings data after successful payment with cache bypass
+            fetchBookings(true);
             setPaymentModalOpen(false);
             setSelectedBooking(null);
           }}

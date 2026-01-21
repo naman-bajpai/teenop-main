@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Menu, X, MessageCircle, User, Home, Briefcase, Calendar, Wallet, ChevronDown, MoreVertical, Sparkles, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -79,7 +79,10 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
 
     const fetchUnreadCount = async () => {
       try {
-        const res = await fetch("/api/messages/conversations", { cache: "no-store" });
+        // Use revalidate: 10 for short-term caching (10 seconds)
+        const res = await fetch("/api/messages/conversations", { 
+          next: { revalidate: 10 } 
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.conversations) {
@@ -93,8 +96,8 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
     };
 
     fetchUnreadCount();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchUnreadCount, 30000);
+    // Refresh every 60 seconds (reduced from 30 to reduce load)
+    const interval = setInterval(fetchUnreadCount, 60000);
     return () => clearInterval(interval);
   }, [user]);
 
@@ -157,52 +160,61 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
 
   return (
     <header
-      className={clsx(
+      className={cn(
         "sticky top-0 z-50 transition-all duration-300",
         overHero
-          ? "bg-transparent backdrop-blur-0 border-b border-transparent"
-          : "bg-white/98 backdrop-blur-md border-b border-slate-200 shadow-sm"
+          ? "bg-transparent border-b border-transparent"
+          : "bg-white/80 backdrop-blur-xl border-b border-gray-100/80 shadow-[0_2px_20px_-10px_rgba(0,0,0,0.05)]"
       )}
     >
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 sm:px-8 lg:px-10">
         {/* Brand */}
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#434c9d] transition-transform hover:scale-105 duration-200"
+          className="flex items-center gap-2 group transition-all duration-300 hover:scale-[1.02]"
         >
-          <Image
-            src="/images/newlogo.png"
-            alt="TeenOp Logo"
-            width={250}
-            height={250}
-            className="h-20 w-20 transition-all"
-          />
+          <div className="relative">
+            <Image
+              src="/images/newlogo.png"
+              alt="TeenOp Logo"
+              width={180}
+              height={180}
+              className={cn(
+                "h-14 w-14 object-contain transition-all duration-300",
+                !overHero && "brightness-105"
+              )}
+            />
+            <div className="absolute inset-0 bg-white/20 blur-xl rounded-full -z-10 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden items-center gap-1 lg:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           {/* Primary items */}
           {primaryNavItems.map((item) => {
             const Icon = item.icon;
             const isMessages = item.name === "Messages";
+            const active = isActive(item.href);
             return (
               <Link key={item.name} href={item.href}>
                 <Button
-                  variant={isActive(item.href) ? "default" : "ghost"}
+                  variant="ghost"
                   size="sm"
-                  className={clsx(
-                    "flex items-center gap-2 transition-colors px-3 relative",
-                    isActive(item.href)
-                      ? "bg-[#ff725a] text-white hover:bg-[#ff725a]/90"
+                  className={cn(
+                    "flex items-center gap-2 transition-all duration-300 px-4 h-10 rounded-xl font-bold text-sm relative",
+                    active
+                      ? overHero
+                        ? "bg-white/20 text-white"
+                        : "bg-[#434c9d]/10 text-[#434c9d]"
                       : overHero
-                        ? "text-white/90 hover:text-white hover:bg-white/10"
-                        : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-[#96cbc3]/20"
+                        ? "text-white/80 hover:text-white hover:bg-white/10"
+                        : "text-gray-500 hover:text-[#434c9d] hover:bg-gray-50"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden xl:inline">{item.name}</span>
+                  <Icon className={cn("h-4 w-4 transition-transform", active && "scale-110")} />
+                  <span>{item.name}</span>
                   {isMessages && unreadMessageCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[18px] h-4.5 flex items-center justify-center rounded-full px-1 font-semibold">
+                    <span className="absolute -top-1 -right-1 bg-[#ff725a] text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-lg border-2 border-white animate-in zoom-in duration-300">
                       {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
                     </span>
                   )}
@@ -215,29 +227,31 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
           {secondaryNavItems.length > 0 && (
             <div className="relative" ref={moreMenuRef}>
               <Button
-                variant={isMoreMenuOpen ? "default" : "ghost"}
+                variant="ghost"
                 size="sm"
                 onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                className={clsx(
-                  "flex items-center gap-1 px-3 transition-colors",
+                className={cn(
+                  "flex items-center gap-1 px-4 h-10 transition-all duration-300 rounded-xl font-bold text-sm",
                   isMoreMenuOpen
-                    ? "bg-[#ff725a] text-white hover:bg-[#ff725a]/90"
+                    ? overHero
+                      ? "bg-white/20 text-white"
+                      : "bg-[#434c9d]/10 text-[#434c9d]"
                     : overHero
-                      ? "text-white/90 hover:text-white hover:bg-white/10"
-                      : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-[#96cbc3]/20"
+                      ? "text-white/80 hover:text-white hover:bg-white/10"
+                      : "text-gray-500 hover:text-[#434c9d] hover:bg-gray-50"
                 )}
               >
                 <MoreVertical className="h-4 w-4" />
-                <span className="hidden xl:inline">{user?.role === "parent" ? "Service Requests" : "More"}</span>
-                <ChevronDown className={clsx("h-3 w-3 transition-transform", isMoreMenuOpen && "rotate-180")} />
+                <span>{user?.role === "parent" ? "Service Requests" : "More"}</span>
+                <ChevronDown className={cn("h-3 w-3 transition-transform duration-300", isMoreMenuOpen && "rotate-180")} />
               </Button>
 
               {isMoreMenuOpen && (
-                <div className={clsx(
-                  "absolute right-0 top-full mt-2 w-56 rounded-xl border bg-white shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200",
-                  overHero ? "border-white/20 bg-white/95 backdrop-blur-md" : "border-gray-200"
+                <div className={cn(
+                  "absolute right-0 top-full mt-3 w-64 rounded-[24px] border bg-white/95 backdrop-blur-xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-4 duration-300",
+                  overHero ? "border-white/20" : "border-gray-100"
                 )}>
-                  <div className="py-1.5">
+                  <div className="space-y-1">
                     {secondaryNavItems.map((item, idx) => {
                       const Icon = item.icon;
                       const active = isActive(item.href);
@@ -248,18 +262,22 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                           onClick={() => setIsMoreMenuOpen(false)}
                         >
                           <div
-                            className={clsx(
-                              "flex items-center gap-3 px-4 py-2.5 text-sm transition-all cursor-pointer mx-1 rounded-lg",
+                            className={cn(
+                              "flex items-center gap-3 px-4 py-3 text-sm transition-all cursor-pointer rounded-xl group",
                               active
-                                ? "bg-gradient-to-r from-[#ff725a]/10 to-[#ff725a]/5 text-[#ff725a] font-semibold shadow-sm"
-                                : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100"
+                                ? "bg-[#434c9d]/5 text-[#434c9d] font-bold"
+                                : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                             )}
-                            style={{ animationDelay: `${idx * 30}ms` }}
                           >
-                            <Icon className={clsx("h-4 w-4 transition-transform", active && "scale-110")} />
-                            <span>{item.name}</span>
+                            <div className={cn(
+                              "p-2 rounded-lg transition-colors",
+                              active ? "bg-[#434c9d]/10" : "bg-gray-100 group-hover:bg-white"
+                            )}>
+                              <Icon className={cn("h-4 w-4 transition-transform", active && "scale-110")} />
+                            </div>
+                            <span className="flex-1">{item.name}</span>
                             {active && (
-                              <div className="ml-auto w-2 h-2 rounded-full bg-[#ff725a] animate-pulse" />
+                              <div className="w-1.5 h-1.5 rounded-full bg-[#434c9d]" />
                             )}
                           </div>
                         </Link>
@@ -273,110 +291,100 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
         </div>
 
         {/* User Menu & Logout */}
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden items-center gap-4 lg:flex">
           {user && (
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className={clsx(
-                  "flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors",
+                className={cn(
+                  "flex items-center gap-3 rounded-2xl p-1.5 pr-4 transition-all duration-300",
                   isUserMenuOpen
                     ? overHero
                       ? "bg-white/20"
-                      : "bg-[#96cbc3]/20"
+                      : "bg-[#434c9d]/10"
                     : overHero
                       ? "hover:bg-white/10"
-                      : "hover:bg-[#96cbc3]/10"
+                      : "hover:bg-gray-50"
                 )}
               >
-                {user.avatar_url ? (
-                  <div className="relative">
+                <div className="relative group">
+                  {user.avatar_url ? (
                     <img
                       src={user.avatar_url}
-                      alt={user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.name || "User"}
-                      className="w-9 h-9 rounded-full object-cover border-2 transition-all hover:scale-105"
-                      style={{ borderColor: overHero ? 'rgba(255,255,255,0.3)' : '#96cbc3' }}
+                      alt={user.name || 'User'}
+                      className={cn(
+                        "w-9 h-9 rounded-xl object-cover ring-2 transition-all duration-300 group-hover:scale-105",
+                        overHero ? "ring-white/30" : "ring-[#434c9d]/20"
+                      )}
                     />
-                    {user.is_verified && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
-                        <CheckCircle2 className="w-2.5 h-2.5 text-white" />
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className={clsx(
-                    "w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105 relative",
-                    overHero ? "bg-white/20 border-2 border-white/30" : "bg-gradient-to-br from-[#434c9d] to-[#96cbc3] border-2 border-transparent"
-                  )}>
-                    <span className="text-white font-semibold text-sm">
-                      {(user.first_name?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase()}
-                    </span>
-                    {user.is_verified && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
-                        <CheckCircle2 className="w-2.5 h-2.5 text-white" />
-                      </div>
-                    )}
-                  </div>
-                )}
+                  ) : (
+                    <div className={cn(
+                      "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-105",
+                      overHero ? "bg-white/20" : "bg-gradient-to-br from-[#434c9d] to-[#96cbc3]"
+                    )}>
+                      <span className="text-white font-bold text-sm">
+                        {(user.first_name?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  {user.is_verified && (
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#96cbc3] rounded-full border-2 border-white flex items-center justify-center shadow-sm">
+                      <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                    </div>
+                  )}
+                </div>
+                
                 <div className="text-left hidden xl:block">
-                  <p className={clsx(
-                    "text-sm font-medium transition-colors",
-                    overHero ? "text-white" : "text-[#434c9d]"
+                  <p className={cn(
+                    "text-sm font-bold leading-tight transition-colors duration-300",
+                    overHero ? "text-white" : "text-gray-900"
                   )}>
-                    {user.first_name && user.last_name
-                      ? `${user.first_name} ${user.last_name}`
-                      : user.name || "User"
-                    }
+                    {user.first_name || user.name || "User"}
                   </p>
-                  <p className={clsx(
-                    "text-xs transition-colors",
-                    overHero ? "text-white/70" : "text-slate-500"
+                  <p className={cn(
+                    "text-[10px] font-black uppercase tracking-widest transition-colors duration-300",
+                    overHero ? "text-white/60" : "text-gray-400"
                   )}>
-                    {user.role || "Customer & Provider"}
+                    {user.role === 'teen' ? 'Hustler' : user.role || 'Member'}
                   </p>
                 </div>
-                <ChevronDown className={clsx(
-                  "h-3 w-3 transition-transform",
+                <ChevronDown className={cn(
+                  "h-3.5 w-3.5 transition-transform duration-300",
                   isUserMenuOpen && "rotate-180",
-                  overHero ? "text-white/70" : "text-[#434c9d]"
+                  overHero ? "text-white/60" : "text-gray-400"
                 )} />
               </button>
 
               {isUserMenuOpen && (
-                <div className={clsx(
-                  "absolute right-0 top-full mt-2 w-56 rounded-xl border shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200",
-                  overHero ? "border-white/20 bg-white/95 backdrop-blur-md" : "border-gray-200 bg-white"
+                <div className={cn(
+                  "absolute right-0 top-full mt-3 w-64 rounded-[24px] border bg-white/95 backdrop-blur-xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-4 duration-300",
+                  overHero ? "border-white/20" : "border-gray-100"
                 )}>
-                  <div className="py-1.5">
-                    <Link
-                      href="/profile"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      <div
-                        className={clsx(
-                          "flex items-center gap-3 px-4 py-2.5 text-sm transition-all cursor-pointer mx-1 rounded-lg",
-                          isActive("/profile")
-                            ? "bg-gradient-to-r from-[#ff725a]/10 to-[#ff725a]/5 text-[#ff725a] font-semibold shadow-sm"
-                            : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100"
-                        )}
-                      >
-                        <User className={clsx("h-4 w-4 transition-transform", isActive("/profile") && "scale-110")} />
-                        <span>Profile</span>
-                        {isActive("/profile") && (
-                          <div className="ml-auto w-2 h-2 rounded-full bg-[#ff725a] animate-pulse" />
-                        )}
+                  <div className="p-3 border-b border-gray-50 mb-1">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 mb-1">Signed in as</p>
+                    <p className="text-sm font-bold text-gray-900 truncate ml-1">{user.email}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Link href="/profile" onClick={() => setIsUserMenuOpen(false)}>
+                      <div className={cn(
+                        "flex items-center gap-3 px-4 py-3 text-sm transition-all cursor-pointer rounded-xl group",
+                        isActive("/profile") ? "bg-[#434c9d]/5 text-[#434c9d] font-bold" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                      )}>
+                        <div className={cn("p-2 rounded-lg transition-colors", isActive("/profile") ? "bg-[#434c9d]/10" : "bg-gray-100 group-hover:bg-white")}>
+                          <User className="h-4 w-4" />
+                        </div>
+                        <span className="flex-1">My Profile</span>
+                        {isActive("/profile") && <div className="w-1.5 h-1.5 rounded-full bg-[#434c9d]" />}
                       </div>
                     </Link>
-                    <div className="border-t border-gray-200 my-1.5 mx-2" />
                     <button
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        handleLogout();
-                      }}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 w-full transition-all cursor-pointer mx-1 rounded-lg font-medium"
+                      onClick={() => { setIsUserMenuOpen(false); handleLogout(); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-all cursor-pointer rounded-xl text-red-500 hover:bg-red-50 font-bold group"
                     >
-                      <LogOut className="h-4 w-4" />
-                      <span>Logout</span>
+                      <div className="p-2 bg-red-100/50 rounded-lg group-hover:bg-white transition-colors">
+                        <LogOut className="h-4 w-4" />
+                      </div>
+                      <span>Log Out</span>
                     </button>
                   </div>
                 </div>
@@ -386,67 +394,53 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
         </div>
 
         {/* Mobile Menu Button */}
-        <div className="flex items-center gap-2 lg:hidden">
+        <div className="flex items-center gap-3 lg:hidden">
           {user && (
-            user.avatar_url ? (
-              <div className="relative">
+            <div className="relative">
+              {user.avatar_url ? (
                 <img
                   src={user.avatar_url}
-                  alt={user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.name || "User"}
-                  className="w-9 h-9 rounded-full object-cover border-2 transition-all"
-                  style={{ borderColor: overHero ? 'rgba(255,255,255,0.3)' : '#96cbc3' }}
+                  alt={user.name || 'User'}
+                  className={cn(
+                    "w-9 h-9 rounded-xl object-cover ring-2",
+                    overHero ? "ring-white/30" : "ring-[#434c9d]/20"
+                  )}
                 />
-                {user.is_verified && (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
-                    <CheckCircle2 className="w-2.5 h-2.5 text-white" />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className={clsx(
-                "w-9 h-9 rounded-full flex items-center justify-center transition-all relative",
-                overHero ? "bg-white/20 border-2 border-white/30" : "bg-gradient-to-br from-[#434c9d] to-[#96cbc3] border-2 border-transparent"
-              )}>
-                <span className="text-white font-semibold text-sm">
-                  {(user.first_name?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase()}
-                </span>
-                {user.is_verified && (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
-                    <CheckCircle2 className="w-2.5 h-2.5 text-white" />
-                  </div>
-                )}
-              </div>
-            )
+              ) : (
+                <div className={cn(
+                  "w-9 h-9 rounded-xl flex items-center justify-center",
+                  overHero ? "bg-white/20" : "bg-[#434c9d]/10"
+                )}>
+                  <span className={cn("font-bold text-sm", overHero ? "text-white" : "text-[#434c9d]")}>
+                    {(user.first_name?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase()}
+                  </span>
+                </div>
+              )}
+            </div>
           )}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className={clsx(
-              "transition-colors",
-              overHero
-                ? "text-white hover:text-white/80"
-                : "text-[#434c9d] hover:text-[#434c9d]/80"
+            className={cn(
+              "h-10 w-10 p-0 rounded-xl transition-all duration-300",
+              overHero ? "text-white hover:bg-white/10" : "text-gray-900 hover:bg-gray-50"
             )}
           >
-            {isMobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </Button>
         </div>
       </nav>
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white animate-in slide-in-from-top duration-300">
-          <div className="px-4 py-3 space-y-1">
-            {/* Primary items */}
-            <div className="pb-2 border-b border-gray-200">
-              {primaryNavItems.map((item) => {
+        <div className="lg:hidden bg-white/95 backdrop-blur-xl border-t border-gray-100 animate-in slide-in-from-top duration-300">
+          <div className="p-6 space-y-6">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4 mb-2">Main Menu</p>
+              {allNavItems.map((item) => {
                 const Icon = item.icon;
-                const isMessages = item.name === "Messages";
+                const active = isActive(item.href);
                 return (
                   <Link
                     key={item.name}
@@ -454,17 +448,21 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <Button
-                      variant={isActive(item.href) ? "default" : "ghost"}
-                      className={`w-full justify-start gap-3 py-2.5 transition-all relative ${isActive(item.href)
-                        ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
-                        : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
-                        }`}
+                      variant="ghost"
+                      className={cn(
+                        "w-full justify-start gap-4 h-12 rounded-xl transition-all duration-300",
+                        active
+                          ? "bg-[#434c9d]/5 text-[#434c9d] font-bold"
+                          : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                      )}
                     >
-                      <Icon className={clsx("h-4 w-4 transition-transform", isActive(item.href) && "scale-110")} />
+                      <div className={cn("p-2 rounded-lg", active ? "bg-[#434c9d]/10" : "bg-gray-50")}>
+                        <Icon className="h-4 w-4" />
+                      </div>
                       {item.name}
-                      {isMessages && unreadMessageCount > 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-xs min-w-[18px] h-4.5 flex items-center justify-center rounded-full px-1 font-semibold">
-                          {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                      {item.name === "Messages" && unreadMessageCount > 0 && (
+                        <span className="ml-auto bg-[#ff725a] text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full">
+                          {unreadMessageCount}
                         </span>
                       )}
                     </Button>
@@ -473,56 +471,31 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
               })}
             </div>
 
-            {/* Secondary items */}
-            <div className="pt-2">
-              {secondaryNavItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Button
-                      variant={isActive(item.href) ? "default" : "ghost"}
-                      className={`w-full justify-start gap-3 py-2.5 transition-all ${isActive(item.href)
-                        ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
-                        : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
-                        }`}
-                    >
-                      <Icon className={clsx("h-4 w-4 transition-transform", isActive(item.href) && "scale-110")} />
-                      {item.name}
-                    </Button>
-                  </Link>
-                );
-              })}
-            </div>
-
-            <div className="pt-2 border-t border-slate-200">
-              {user && (
-                <Link
-                  href="/profile"
-                  onClick={() => setIsMobileMenuOpen(false)}
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4 mb-2">Account</p>
+              <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)}>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start gap-4 h-12 rounded-xl transition-all duration-300",
+                    isActive("/profile") ? "bg-[#434c9d]/5 text-[#434c9d] font-bold" : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                  )}
                 >
-                  <Button
-                    variant={isActive("/profile") ? "default" : "ghost"}
-                    className={`w-full justify-start gap-3 py-2.5 transition-all ${isActive("/profile")
-                      ? "bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] text-white hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 shadow-md"
-                      : "text-[#434c9d] hover:text-[#434c9d]/80 hover:bg-gradient-to-r hover:from-[#96cbc3]/20 hover:to-[#96cbc3]/10"
-                      }`}
-                  >
-                    <User className={clsx("h-4 w-4 transition-transform", isActive("/profile") && "scale-110")} />
-                    Profile
-                  </Button>
-                </Link>
-              )}
+                  <div className={cn("p-2 rounded-lg", isActive("/profile") ? "bg-[#434c9d]/10" : "bg-gray-50")}>
+                    <User className="h-4 w-4" />
+                  </div>
+                  My Profile
+                </Button>
+              </Link>
               <Button
-                onClick={handleLogout}
+                onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
                 variant="ghost"
-                className="w-full justify-start gap-3 py-2.5 text-[#434c9d] hover:text-red-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 transition-all"
+                className="w-full justify-start gap-4 h-12 rounded-xl text-red-500 hover:bg-red-50 font-bold transition-all duration-300"
               >
-                <LogOut className="h-4 w-4" />
-                Logout
+                <div className="p-2 bg-red-100/50 rounded-lg">
+                  <LogOut className="h-4 w-4" />
+                </div>
+                Log Out
               </Button>
             </div>
           </div>

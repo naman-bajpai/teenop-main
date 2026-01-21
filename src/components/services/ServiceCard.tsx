@@ -2,9 +2,11 @@ import React from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, Star, ChevronRight } from "lucide-react";
+import { MapPin, Clock, Star, ChevronRight, User, Sparkles } from "lucide-react";
 import { Service, ServiceCategory } from "@/types/service";
 import ImageUpload from "@/components/ui/image-upload";
+import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface ServiceCardProps {
   service: Service;
@@ -25,7 +27,7 @@ const formatDate = (dateString?: string) => {
   if (!dateString) return "";
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
-    day: "numeric",
+    year: "numeric",
   });
 };
 
@@ -49,25 +51,25 @@ export default function ServiceCard({
 
   const getCategoryGradient = (category: string) => {
     switch (category) {
-      case "pet_care": return "from-amber-100 to-orange-100";
-      case "lawn_care": return "from-green-100 to-emerald-100";
-      case "tutoring": return "from-[#96cbc3]/20 to-[#23a699]/20";
-      case "cleaning": return "from-purple-100 to-pink-100";
-      case "tech_support": return "from-[#96cbc3]/20 to-[#434c9d]/20";
-      case "delivery": return "from-yellow-100 to-amber-100";
-      default: return "from-gray-100 to-slate-100";
+      case "pet_care": return "from-amber-100/50 to-orange-100/50";
+      case "lawn_care": return "from-green-100/50 to-emerald-100/50";
+      case "tutoring": return "from-[#96cbc3]/10 to-[#434c9d]/10";
+      case "cleaning": return "from-purple-100/50 to-pink-100/50";
+      case "tech_support": return "from-[#96cbc3]/10 to-[#434c9d]/10";
+      case "delivery": return "from-yellow-100/50 to-amber-100/50";
+      default: return "from-gray-100/50 to-slate-100/50";
     }
   };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case "pet_care": return "bg-amber-100 text-amber-800 border-amber-200";
-      case "lawn_care": return "bg-green-100 text-green-800 border-green-200";
-      case "tutoring": return "bg-[#96cbc3]/20 text-[#434c9d] border-[#96cbc3]/40";
-      case "cleaning": return "bg-purple-100 text-purple-800 border-purple-200";
-      case "tech_support": return "bg-[#96cbc3]/20 text-[#434c9d] border-[#96cbc3]/40";
-      case "delivery": return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
+      case "pet_care": return "bg-amber-50 text-amber-700";
+      case "lawn_care": return "bg-green-50 text-green-700";
+      case "tutoring": return "bg-blue-50 text-[#434c9d]";
+      case "cleaning": return "bg-purple-50 text-purple-700";
+      case "tech_support": return "bg-cyan-50 text-cyan-700";
+      case "delivery": return "bg-yellow-50 text-yellow-700";
+      default: return "bg-gray-50 text-gray-700";
     }
   };
 
@@ -76,12 +78,13 @@ export default function ServiceCard({
   const categoryColor = getCategoryColor(service.category);
 
   return (
-    <div className="group bg-white rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
-      {/* Header with gradient background or image - Square */}
-      <div className={`relative w-full aspect-square overflow-hidden ${(service.images && service.images.length > 0) || service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient}`
-        }`}>
+    <div className="group bg-white rounded-[32px] border border-gray-100 shadow-sm hover:shadow-xl hover:border-[#434c9d]/10 transition-all duration-500 overflow-hidden flex flex-col h-full active:scale-[0.98]">
+      {/* Header Image */}
+      <div className={cn(
+        "relative w-full aspect-[4/3] overflow-hidden bg-gray-50",
+        !((service.images && service.images.length > 0) || service.banner_url) && `bg-gradient-to-br ${gradient}`
+      )}>
         {(() => {
-          // Check for primary image first, then first image, then banner_url
           const primaryImage = service.images?.find(img => img.is_primary);
           const firstImage = service.images?.[0];
           const displayImage = primaryImage || firstImage || service.banner_url;
@@ -91,131 +94,110 @@ export default function ServiceCard({
               <img
                 src={typeof displayImage === 'string' ? displayImage : displayImage.url}
                 alt={service.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
             );
           }
           return (
-            <>
-              <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
-              <div className="relative text-7xl opacity-30 transform group-hover:scale-110 transition-transform duration-300 flex items-center justify-center h-full">
-                {icon}
-              </div>
-            </>
+            <div className="flex items-center justify-center h-full">
+              <span className="text-7xl opacity-20 transform group-hover:scale-110 transition-transform duration-500">{icon}</span>
+            </div>
           );
         })()}
 
-        {/* Status indicator */}
-        <div className="absolute top-3 right-3">
-          <Badge
-            variant={service.status === 'active' ? 'default' : 'secondary'}
-            className={`text-xs px-2 py-1 ${service.status === 'active'
-                ? 'bg-green-100 text-green-700 border-green-200'
-                : 'bg-gray-100 text-gray-600 border-gray-200'
-              }`}
-          >
-            {service.status === 'active' ? 'Available' : 'Paused'}
+        {/* Top Badges */}
+        <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none">
+          <Badge className={cn("text-[10px] font-black uppercase tracking-widest px-3 py-1 border-none backdrop-blur-md", categoryColor, "bg-opacity-90")}>
+            {toTitle(String(service.category))}
           </Badge>
+          
+          <div className="flex items-center gap-1 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg shadow-sm">
+            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+            <span className="text-[10px] font-black text-gray-900">
+              {service.rating != null ? service.rating.toFixed(1) : 'NEW'}
+            </span>
+          </div>
         </div>
+
+        {/* Floating availability indicator */}
+        {service.status === 'active' && (
+          <div className="absolute bottom-4 right-4 bg-green-500/90 backdrop-blur-sm text-white text-[8px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full shadow-lg">
+            Active Now
+          </div>
+        )}
       </div>
 
       {/* Content */}
-      <div className="p-6">
-        {/* Title and description */}
-        <div className="mb-4">
-          <h3 className="font-bold text-gray-900 text-xl mb-2 line-clamp-1 group-hover:text-[#434c9d] transition-colors">
+      <div className="p-6 flex flex-col flex-1">
+        <div className="flex-1 space-y-3">
+          <h3 className="text-xl font-black text-gray-900 leading-tight group-hover:text-[#434c9d] transition-colors line-clamp-1">
             {service.title}
           </h3>
-          <p className="text-gray-600 text-sm line-clamp-2 leading-relaxed">
+          <p className="text-sm text-gray-500 font-medium line-clamp-2 leading-relaxed">
             {service.description}
           </p>
-        </div>
-
-        {/* Category and rating */}
-        <div className="flex items-center gap-3 mb-4">
-          <Badge className={`text-xs px-3 py-1 border ${categoryColor}`}>
-            {toTitle(String(service.category))}
-          </Badge>
-
-          <div className="flex items-center gap-1 text-sm text-gray-600 bg-yellow-50 px-2 py-1 rounded-full">
-            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-            <span className="font-medium">
-              {service.rating != null ? service.rating.toFixed(1) : 'New'}
-            </span>
-            {service.rating != null && (
-              <span className="text-xs text-gray-500 ml-1">
-                ({service.total_bookings} review{service.total_bookings !== 1 ? 's' : ''})
+          
+          <div className="flex flex-wrap gap-4 pt-2">
+            <div className="flex items-center gap-1.5">
+              <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                <MapPin className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate max-w-[120px]">
+                {service.provider_city || service.location || 'Local'}
               </span>
-            )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600">
+                <Clock className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                {service.duration || 30}m
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Location, date, and schedule */}
-        <div className="flex items-center gap-4 text-sm text-gray-500 mb-5 flex-wrap">
-          {(service.location || service.provider_city) && (
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <MapPin className="w-4 h-4 shrink-0 text-gray-400" />
-              <span className="truncate font-medium">
-                {service.provider_city
-                  ? `${service.provider_city}${service.provider_state ? ', ' + service.provider_state : ''}`
-                  : service.location}
-              </span>
+        {/* Footer Area */}
+        <div className="mt-8 pt-6 border-t border-gray-50 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Investment</p>
+              {service.pricing_model === 'quote' ? (
+                <p className="text-lg font-black text-gray-900">Get Quote</p>
+              ) : (
+                <div className="flex items-baseline gap-1">
+                  <p className="text-2xl font-black text-gray-900">{formatPrice(service.price)}</p>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">/hr</span>
+                </div>
+              )}
             </div>
-          )}
-          {service.created_at && (
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <span className="font-medium">{formatDate(service.created_at)}</span>
-            </div>
-          )}
-        </div>
 
-        {/* Price and action */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-baseline gap-1">
-            {service.pricing_model === 'quote' ? (
-              <span className="text-2xl font-bold text-gray-900">
-                Quote Based
-              </span>
-            ) : (
-              <>
-                <span className="text-3xl font-bold text-gray-900">
-                  {formatPrice(service.price)}
-                </span>
-                <span className="text-sm text-gray-500 font-medium">
-                  /{service.pricing_model === 'per_hour' ? 'hour' : 'service'}
-                </span>
-              </>
-            )}
-          </div>
-
-          <Button
-            asChild
-            size="sm"
-            className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2 rounded-xl font-medium"
-          >
             <Link href={`/services/${service.id}`}>
-              View Details
+              <Button className="h-12 px-6 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-[#434c9d]/20 transition-all active:scale-95 group/btn">
+                Details <ChevronRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
             </Link>
-          </Button>
+          </div>
+
+          {/* Provider Peek */}
+          {service.provider_name && (
+            <div className="flex items-center gap-3 p-3 bg-gray-50/50 rounded-2xl border border-gray-100 group/provider">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#434c9d] to-[#96cbc3] flex items-center justify-center shadow-sm">
+                <User className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hustler</p>
+                <p className="text-xs font-bold text-gray-700">{service.provider_name}</p>
+              </div>
+              <Sparkles className="w-3.5 h-3.5 text-[#96cbc3] opacity-0 group-hover/provider:opacity-100 transition-opacity" />
+            </div>
+          )}
         </div>
 
-        {/* Provider info */}
-        {service.provider_name && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-sm text-gray-500">
-              Offered by{" "}
-              <span className="font-semibold text-gray-700">
-                {service.provider_name}
-              </span>{" "}
-            </p>
-          </div>
-        )}
-
-        {/* Image Upload Section */}
+        {/* Image Upload - Admin/Owner Context */}
         {showImageUpload && onImageUploaded && onImageRemoved && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Service Image</h4>
+          <div className="mt-6 pt-6 border-t border-gray-50">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 ml-1">Service Banner</p>
             <ImageUpload
               serviceId={service.id}
               userId={service.user_id}

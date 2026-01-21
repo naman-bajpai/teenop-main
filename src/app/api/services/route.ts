@@ -117,9 +117,15 @@ export async function GET(request: NextRequest) {
 
     console.log(`[GET /api/services] Returning ${transformedServices.length} services for user ${user.id} (allServices: ${allServices})`);
 
+    // Add cache headers based on request type
+    const cacheMaxAge = allServices ? 30 : 10; // Public services cache longer
     return NextResponse.json({ 
       success: true,
       services: transformedServices 
+    }, {
+      headers: {
+        'Cache-Control': `public, s-maxage=${cacheMaxAge}, stale-while-revalidate=60`
+      }
     });
   } catch (error) {
     console.error("Unexpected error in GET /api/services:", error);

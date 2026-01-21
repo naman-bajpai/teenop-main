@@ -1,7 +1,9 @@
 "use client";
+import { Sparkles, Facebook, Instagram, Twitter, Linkedin, Heart, Mail, MapPin, Phone } from "lucide-react";
+import { cn } from "@/lib/utils";
+import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Sparkles } from "lucide-react";
+import { Button } from "./ui/button";
 
 interface FooterProps {
   user?: any | null;
@@ -9,32 +11,36 @@ interface FooterProps {
 
 export default function Footer({ user }: FooterProps) {
   return (
-    <footer className="border-t border-slate-200 bg-white mt-auto">
-      {/* Top CTA strip - Only show for non-logged-in users */}
+    <footer className="bg-white border-t border-gray-100 mt-auto">
+      {/* Top CTA Section - Only for non-logged-in users */}
       {!user && (
-        <div className="bg-slate-50">
-          <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-            <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-              <div>
-                <h3 className="text-xl font-semibold text-slate-900">
-                  Ready to try TeenOp in your town?
+        <div className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-[#434c9d]/5 -z-10" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full bg-[#96cbc3]/5 rounded-full blur-3xl -z-10" />
+          
+          <div className="mx-auto max-w-7xl px-6 py-16 sm:px-8 lg:px-10">
+            <div className="bg-white rounded-[40px] p-8 md:p-12 border border-gray-100 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)] flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="space-y-4 text-center md:text-left">
+                <div className="inline-flex items-center gap-2 bg-[#ff725a]/10 text-[#ff725a] px-4 py-1.5 rounded-full">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Join the community</span>
+                </div>
+                <h3 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight">
+                  Ready to start your <span className="text-[#434c9d]">Teen Hustle?</span>
                 </h3>
-                <p className="mt-1 text-slate-600">
-                  Teens earn. Neighbors get help. Communities get stronger.
+                <p className="text-gray-500 font-medium max-w-md leading-relaxed">
+                  Join thousands of teens building their micro-businesses and neighbors getting trusted local help.
                 </p>
               </div>
-              <div className="flex gap-3">
-                <Link href="/neighborhood">
-                  <Button className="bg-[#ff725a] text-white hover:bg-[#ff725a]/90">
-                    Browse Services
+              <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                <Link href="/signup">
+                  <Button className="w-full sm:w-auto h-14 px-8 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-2xl font-black shadow-lg shadow-[#434c9d]/20 active:scale-95 transition-all">
+                    Get Started Free
                   </Button>
                 </Link>
-                <Link href="/signup">
-                  <Button
-                    variant="outline"
-                    className="border-slate-300 text-slate-900 hover:bg-white"
-                  >
-                    Start as a Teen
+                <Link href="/neighborhood">
+                  <Button variant="ghost" className="w-full sm:w-auto h-14 px-8 border border-gray-100 rounded-2xl font-black text-gray-600 hover:bg-gray-50">
+                    Explore Services
                   </Button>
                 </Link>
               </div>
@@ -43,80 +49,112 @@ export default function Footer({ user }: FooterProps) {
         </div>
       )}
 
-      {/* Main footer */}
-      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-          <div className="col-span-1 md:col-span-2">
-            <div className="mb-4 flex items-center gap-2">
-              <Sparkles className="h-7 w-7 text-[#434c9d]" aria-hidden />
-              <span className="text-xl font-bold">TeenOp</span>
-            </div>
-            <p className="mb-4 text-gray-600">
-              Empowering teens to build their future through entrepreneurship.
+      {/* Main Footer Content */}
+      <div className="mx-auto max-w-7xl px-6 pt-20 pb-12 sm:px-8 lg:px-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8">
+          {/* Brand Column */}
+          <div className="lg:col-span-4 space-y-8">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-gray-100 shadow-sm group-hover:scale-110 transition-transform">
+                <Image src="/images/newlogo.png" alt="TeenOp" width={32} height={32} className="object-contain" />
+              </div>
+              <span className="text-2xl font-black text-gray-900 tracking-tighter">TeenOp</span>
+            </Link>
+            <p className="text-gray-500 font-medium leading-relaxed max-w-sm">
+              Empowering the next generation of entrepreneurs by connecting talented teens with their local community.
             </p>
+            <div className="flex items-center gap-4">
+              {[
+                { icon: Facebook, href: "#" },
+                { icon: Instagram, href: "#" },
+                { icon: Twitter, href: "#" },
+                { icon: Linkedin, href: "#" }
+              ].map((social, i) => (
+                <Link 
+                  key={i} 
+                  href={social.href}
+                  className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-[#434c9d] hover:text-white transition-all shadow-sm"
+                >
+                  <social.icon className="w-5 h-5" />
+                </Link> 
+              ))}
+            </div>
           </div>
 
-          <div>
-            <h3 className="mb-3 text-lg font-semibold">For Teens</h3>
-            <ul className="space-y-2 text-gray-600">
-              <li>
-                <Link href="/signup" className="hover:text-gray-900">
-                  Start Earning
-                </Link>
-              </li>
-              <li>
-                <Link href="/my-teen-hustle" className="hover:text-gray-900">
-                  My Teen Hustle
-                </Link>
-              </li>
-              <li>
-                <Link href="/earnings" className="hover:text-gray-900">
-                  Earnings
-                </Link>
-              </li>
+          {/* Links Columns */}
+          <div className="lg:col-span-2 space-y-6">
+            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">For Teens</h4>
+            <ul className="space-y-4">
+              {[
+                { label: "Start Earning", href: "/signup" },
+                { label: "My Teen Hustle", href: "/my-teen-hustle" },
+                { label: "Earnings", href: "/earnings" },
+                { label: "Resources", href: "/blog" }
+              ].map((link) => (
+                <li key={link.label}>
+                  <Link href={link.href} className="text-gray-600 font-bold hover:text-[#434c9d] transition-colors ml-1">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          <div>
-            <h3 className="mb-3 text-lg font-semibold">For Parents</h3>
-            <ul className="space-y-2 text-gray-600">
-              <li>
-                <Link href="/neighborhood" className="hover:text-gray-900">
-                  Browse Services
-                </Link>
-              </li>
-              <li>
-                <Link href="/my-requests" className="hover:text-gray-900">
-                  My Requests
-                </Link>
-              </li>
-              <li>
-                <Link href="/messages" className="hover:text-gray-900">
-                  Messages
-                </Link>
-              </li>
+          <div className="lg:col-span-2 space-y-6">
+            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">For Neighbors</h4>
+            <ul className="space-y-4">
+              {[
+                { label: "Find Services", href: "/neighborhood" },
+                { label: "My Requests", href: "/my-requests" },
+                { label: "Messages", href: "/messages" },
+                { label: "Support", href: "/help" }
+              ].map((link) => (
+                <li key={link.label}>
+                  <Link href={link.href} className="text-gray-600 font-bold hover:text-[#434c9d] transition-colors ml-1">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
+          </div>
+
+          {/* Contact Column */}
+          <div className="lg:col-span-4 space-y-6">
+            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Get in Touch</h4>
+            <div className="bg-gray-50 rounded-[32px] p-6 space-y-4 border border-gray-100">
+              <div className="flex items-center gap-4 group cursor-pointer">
+                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#96cbc3] shadow-sm group-hover:bg-[#96cbc3] group-hover:text-white transition-all">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-bold text-gray-600">hello@teenop.com</span>
+              </div>
+              <div className="flex items-center gap-4 group cursor-pointer">
+                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#434c9d] shadow-sm group-hover:bg-[#434c9d] group-hover:text-white transition-all">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-bold text-gray-600">San Francisco, CA</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="mt-12 border-t border-slate-200 pt-8">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <p className="text-sm text-gray-600">
-              © {new Date().getFullYear()} TeenOp. All rights reserved.
+        {/* Bottom Bar */}
+        <div className="mt-20 pt-8 border-t border-gray-100">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+              © {new Date().getFullYear()} TeenOp. Made with <Heart className="w-3 h-3 text-[#ff725a] fill-[#ff725a]" /> by the Team
             </p>
-            <div className="flex gap-6">
-              <Link href="/our-story" className="text-sm text-gray-600 hover:text-gray-900">
-                Our Story
-              </Link>
-              <Link href="/contact" className="text-sm text-gray-600 hover:text-gray-900">
-                Contact
-              </Link>
-              <Link href="/privacy" className="text-sm text-gray-600 hover:text-gray-900">
-                Privacy
-              </Link>
-              <Link href="/terms" className="text-sm text-gray-600 hover:text-gray-900">
-                Terms
-              </Link>
+            <div className="flex flex-wrap justify-center gap-8">
+              {[
+                { label: "Our Story", href: "/our-story" },
+                { label: "Privacy", href: "/privacy" },
+                { label: "Terms", href: "/terms" },
+                { label: "Cookies", href: "/cookies" }
+              ].map((link) => (
+                <Link key={link.label} href={link.href} className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hover:text-[#434c9d] transition-colors">
+                  {link.label}
+                </Link>
+              ))}
             </div>
           </div>
         </div>

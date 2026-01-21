@@ -102,10 +102,11 @@ function QuoteRequestsContent() {
     }
   }, [searchParams, quoteRequests]);
 
-  const fetchQuoteRequests = async () => {
+  const fetchQuoteRequests = async (forceRefresh = false) => {
     try {
       setLoading(true);
-      const response = await fetch("/api/quotes/request?role=provider", { cache: "no-store" });
+      const fetchOptions = forceRefresh ? { cache: 'no-store' as RequestCache } : {};
+      const response = await fetch("/api/quotes/request?role=provider", fetchOptions);
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -168,7 +169,7 @@ function QuoteRequestsContent() {
           notes: "",
           valid_until: undefined
         });
-        fetchQuoteRequests();
+        fetchQuoteRequests(true);
       }
     } catch (error: any) {
       toast({

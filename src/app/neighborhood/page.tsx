@@ -5,11 +5,12 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Star, Clock, Filter, LayoutGrid, List } from "lucide-react";
+import { Search, MapPin, Star, Clock, Filter, LayoutGrid, List, ChevronDown } from "lucide-react";
 import CategoryFilter from "@/components/services/CategoryFilter";
 import ServiceCard from "@/components/services/ServiceCard";
 import { useUser } from "@/hooks/useUser";
 import { Service } from "@/types/service";
+import { cn } from "@/lib/utils";
 
 export default function NeighborhoodPage() {
   const { user, loading: userLoading } = useUser();
@@ -39,10 +40,10 @@ export default function NeighborhoodPage() {
         setLoading(true);
         setLoadError(null);
 
-        // Load services and stats in parallel
+        // Load services and stats in parallel with caching
         const [servicesRes, statsRes] = await Promise.all([
-          fetch("/api/services/public"),
-          fetch("/api/neighborhood/stats")
+          fetch("/api/services/public", { next: { revalidate: 30 } }), // Services cache for 30s
+          fetch("/api/neighborhood/stats", { next: { revalidate: 60 } }) // Stats cache for 60s
         ]);
 
         if (!servicesRes.ok) throw new Error("Failed to fetch services");
@@ -151,228 +152,216 @@ export default function NeighborhoodPage() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-orange-50 to-white">
-        <div className="p-6">
-          {/* Hero */}
-          <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-[#96cbc3] to-[#434c9d] bg-clip-text text-transparent mb-3">
-              Discover Your Neighborhood
-            </h1>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              Hire talented teens near you for trusted, local services. Search, filter, and find the perfect match.
-            </p>
-          </div>
-
-          {/* Top search */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-blue-100 mb-8">
-            <div className="max-w-3xl mx-auto">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                <Input
-                  placeholder="Search by service, city, or keywords..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 pr-4 py-3 bg-white border-2 border-blue-200 focus:border-blue-400 rounded-xl text-lg shadow-sm"
-                />
+      <div className="min-h-screen bg-white">
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          {/* Header */}
+          <div className="mb-12">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div className="space-y-2">
+                <h1 className="text-4xl font-black text-gray-900 tracking-tight">
+                  Neighborhood <span className="text-[#96cbc3]">Services</span>
+                </h1>
+                <p className="text-lg text-gray-500 font-medium max-w-xl">
+                  Discover talented teens offering trusted services in your community.
+                </p>
+              </div>
+              <div className="flex items-center gap-4 bg-gray-50 p-2 rounded-2xl border border-gray-100">
+                <div className="px-4 text-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Providers</p>
+                  <p className="text-lg font-black text-gray-900">{stats.activeProviders}</p>
+                </div>
+                <div className="w-px h-8 bg-gray-200" />
+                <div className="px-4 text-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Rating</p>
+                  <p className="text-lg font-black text-gray-900">{stats.averageRating.toFixed(1)}</p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Content layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Sidebar Filters */}
-            <aside className="lg:col-span-3 space-y-6">
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-sm border border-slate-200/60">
-                <div className="flex items-center gap-2 mb-4">
-                  <Filter className="w-4 h-4 text-slate-500" />
-                  <h3 className="font-semibold text-slate-800">Filters</h3>
-                </div>
-
-                <CategoryFilter
-                  selectedCategory={selectedCategory}
-                  onCategoryChange={setSelectedCategory}
-                />
-
-                <div className="mt-4">
-                  <label className="text-sm font-medium text-slate-700 flex items-center justify-between mb-2">
-                    Minimum rating
-                    <span className="text-slate-500 font-normal">{minRating.toFixed(1)}</span>
-                  </label>
-                  <input
-                    type="range"
-                    min={0}
-                    max={5}
-                    step={0.5}
-                    value={minRating}
-                    onChange={(e) => setMinRating(Number(e.target.value))}
-                    className="w-full accent-[#434c9d]"
+          {/* Search Bar */}
+          <div className="relative mb-12 group">
+            <div className="absolute inset-0 bg-gradient-to-r from-[#434c9d]/5 to-[#96cbc3]/5 rounded-[32px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative bg-white rounded-[32px] p-2 border border-gray-100 shadow-sm transition-all focus-within:shadow-xl focus-within:border-[#434c9d]/20">
+              <div className="flex flex-col md:flex-row items-center gap-2">
+                <div className="relative flex-1 w-full">
+                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-[#434c9d]" />
+                  <Input
+                    placeholder="What service do you need today?"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-14 h-14 bg-transparent border-none text-lg font-medium placeholder:text-gray-400 focus-visible:ring-0"
                   />
                 </div>
+                <div className="flex items-center gap-2 p-1 w-full md:w-auto">
+                  <div className="h-10 w-px bg-gray-100 hidden md:block" />
+                  <Button className="h-12 px-8 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-2xl font-bold w-full md:w-auto shadow-lg shadow-[#434c9d]/20 active:scale-95 transition-all">
+                    Search
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-700 mb-1 block">Min price</label>
-                    <Input
-                      inputMode="numeric"
-                      placeholder="e.g. 10"
-                      value={minPrice}
-                      onChange={(e) => setMinPrice(e.target.value.replace(/[^0-9.]/g, ""))}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700 mb-1 block">Max price</label>
-                    <Input
-                      inputMode="numeric"
-                      placeholder="e.g. 100"
-                      value={maxPrice}
-                      onChange={(e) => setMaxPrice(e.target.value.replace(/[^0-9.]/g, ""))}
-                    />
-                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            {/* Sidebar Filters */}
+            <aside className="lg:col-span-3 space-y-8">
+              <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm sticky top-24">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-gray-50 rounded-xl"><Filter className="w-4 h-4 text-gray-500" /></div>
+                  <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Filters</h3>
                 </div>
 
-                <div className="mt-5 flex items-center gap-2">
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Category</label>
+                    <CategoryFilter
+                      selectedCategory={selectedCategory}
+                      onCategoryChange={setSelectedCategory}
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between ml-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Min Rating</label>
+                      <span className="text-sm font-black text-[#434c9d]">{minRating.toFixed(1)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={5}
+                      step={0.5}
+                      value={minRating}
+                      onChange={(e) => setMinRating(Number(e.target.value))}
+                      className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-[#434c9d]"
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Price Range</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                        <Input
+                          placeholder="Min"
+                          value={minPrice}
+                          onChange={(e) => setMinPrice(e.target.value.replace(/[^0-9.]/g, ""))}
+                          className="pl-7 h-11 bg-gray-50/50 border-gray-100 rounded-xl font-medium focus:bg-white transition-all"
+                        />
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                        <Input
+                          placeholder="Max"
+                          value={maxPrice}
+                          onChange={(e) => setMaxPrice(e.target.value.replace(/[^0-9.]/g, ""))}
+                          className="pl-7 h-11 bg-gray-50/50 border-gray-100 rounded-xl font-medium focus:bg-white transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     onClick={() => {
                       setSelectedCategory("all");
                       setMinRating(0);
                       setMinPrice("");
                       setMaxPrice("");
                     }}
-                    className="w-full"
+                    className="w-full text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl font-bold h-11 transition-all"
                   >
-                    Clear filters
+                    Clear All Filters
                   </Button>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-                <div className="bg-white/90 backdrop-blur-sm p-5 rounded-2xl border border-blue-100 shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
-                      <Star className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-600 font-medium">Average Rating</p>
-                      <p className="text-xl font-bold text-gray-800">{stats.averageRating.toFixed(1)}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white/90 backdrop-blur-sm p-5 rounded-2xl border border-green-100 shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-600 font-medium">Active Providers</p>
-                      <p className="text-xl font-bold text-gray-800">{stats.activeProviders}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white/90 backdrop-blur-sm p-5 rounded-2xl border border-purple-100 shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center">
-                      <MapPin className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-600 font-medium">Service Areas</p>
-                      <p className="text-xl font-bold text-gray-800">{stats.serviceAreas}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white/90 backdrop-blur-sm p-5 rounded-2xl border border-orange-100 shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center">
-                      <Search className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-600 font-medium">Total Services</p>
-                      <p className="text-xl font-bold text-gray-800">{stats.totalServices}</p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </aside>
 
             {/* Main Results */}
-            <section className="lg:col-span-9 space-y-6">
-              {/* Controls */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <Badge variant="secondary" className="text-sm bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 px-4 py-2 rounded-full">
-                    {loading ? "Loading..." : `${visibleServices.length} services`}
-                  </Badge>
+            <main className="lg:col-span-9 space-y-8">
+              <div className="flex items-center justify-between bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                <div className="px-4">
+                  <span className="text-sm font-bold text-gray-900">
+                    {loading ? "Discovering..." : `${visibleServices.length} Results Found`}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="hidden sm:flex rounded-xl border border-slate-200 bg-white overflow-hidden">
+                  <div className="flex bg-white rounded-xl p-1 shadow-sm border border-gray-100">
                     <button
                       onClick={() => setViewMode("grid")}
-                      className={`px-3 py-2 flex items-center gap-2 text-sm ${viewMode === "grid" ? "bg-slate-100 text-slate-900" : "text-slate-600"}`}
-                      title="Grid view"
+                      className={cn(
+                        "p-2 rounded-lg transition-all",
+                        viewMode === "grid" ? "bg-[#434c9d] text-white" : "text-gray-400 hover:text-gray-600"
+                      )}
                     >
                       <LayoutGrid className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setViewMode("list")}
-                      className={`px-3 py-2 flex items-center gap-2 text-sm ${viewMode === "list" ? "bg-slate-100 text-slate-900" : "text-slate-600"}`}
-                      title="List view"
+                      className={cn(
+                        "p-2 rounded-lg transition-all",
+                        viewMode === "list" ? "bg-[#434c9d] text-white" : "text-gray-400 hover:text-gray-600"
+                      )}
                     >
                       <List className="w-4 h-4" />
                     </button>
                   </div>
-
                   <div className="relative">
                     <select
-                      className="appearance-none pl-3 pr-8 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-700"
+                      className="appearance-none h-10 pl-4 pr-10 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#434c9d]/10 transition-all cursor-pointer"
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as any)}
                     >
                       <option value="relevance">Relevance</option>
                       <option value="newest">Newest</option>
-                      <option value="rating">Best rated</option>
-                      <option value="price_low">Price: Low to High</option>
-                      <option value="price_high">Price: High to Low</option>
+                      <option value="rating">Best Rated</option>
+                      <option value="price_low">Price: Low-High</option>
+                      <option value="price_high">Price: High-Low</option>
                     </select>
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">▼</span>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
               </div>
 
-              {/* Results */}
               {loadError ? (
-                <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl border border-red-200">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Couldn't load services</h3>
-                  <p className="text-slate-600 mb-4">{loadError}</p>
-                  <Button onClick={() => location.reload()} variant="orange">Retry</Button>
+                <div className="py-24 text-center bg-red-50/30 rounded-[40px] border-2 border-dashed border-red-100">
+                  <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm shadow-red-100/50">
+                    <Filter className="w-10 h-10 text-red-300" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h3>
+                  <p className="text-gray-500 mb-8 max-w-sm mx-auto">{loadError}</p>
+                  <Button onClick={() => location.reload()} className="bg-red-500 hover:bg-red-600 rounded-2xl px-8 h-12 font-bold">Retry</Button>
                 </div>
               ) : loading ? (
-                <div className={`grid ${viewMode === "list" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"} gap-6`}>
+                <div className={cn(
+                  "grid gap-8",
+                  viewMode === "list" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+                )}>
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 animate-pulse border border-blue-100 shadow-lg">
-                      <div className="h-48 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl mb-4" />
-                      <div className="h-4 bg-slate-200 rounded mb-2" />
-                      <div className="h-4 bg-slate-200 rounded w-2/3" />
+                    <div key={i} className="bg-white rounded-[32px] p-6 animate-pulse border border-gray-50 shadow-sm">
+                      <div className="aspect-[4/3] bg-gray-50 rounded-[24px] mb-6" />
+                      <div className="h-4 bg-gray-50 rounded-full w-2/3 mb-3" />
+                      <div className="h-4 bg-gray-50 rounded-full w-1/2" />
                     </div>
                   ))}
                 </div>
               ) : visibleServices.length > 0 ? (
-                <div className={`grid ${viewMode === "list" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"} gap-6`}>
+                <div className={cn(
+                  "grid gap-8",
+                  viewMode === "list" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+                )}>
                   {visibleServices.map((service) => (
                     <ServiceCard key={service.id} service={service} />
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-16 bg-white/90 backdrop-blur-sm rounded-2xl border border-blue-100 shadow-lg">
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Search className="w-10 h-10 text-blue-500" />
+                <div className="py-24 text-center bg-gray-50/50 rounded-[40px] border-2 border-dashed border-gray-100">
+                  <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+                    <Search className="w-10 h-10 text-gray-200" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-3">No services found</h3>
-                  <p className="text-slate-600 mb-6 max-w-md mx-auto">
-                    Try adjusting your search, filters, or browse different categories to discover amazing services.
-                  </p>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No matching services</h3>
+                  <p className="text-gray-500 mb-8 max-w-sm mx-auto">Try adjusting your filters or search terms to find what you're looking for.</p>
                   <Button
-                    variant="orange"
                     onClick={() => {
                       setSearchTerm("");
                       setSelectedCategory("all");
@@ -380,13 +369,13 @@ export default function NeighborhoodPage() {
                       setMinPrice("");
                       setMaxPrice("");
                     }}
-                    className="px-6 py-2"
+                    className="bg-[#434c9d] hover:bg-[#434c9d]/90 rounded-2xl px-8 h-12 font-bold"
                   >
-                    Clear all filters
+                    Reset All Filters
                   </Button>
                 </div>
               )}
-            </section>
+            </main>
           </div>
         </div>
       </div>

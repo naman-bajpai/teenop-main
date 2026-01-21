@@ -15,18 +15,13 @@ import {
   Loader2,
   CreditCard,
   Building2,
+  ChevronRight,
+  Info,
 } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 interface EarningsStats {
   totalEarned: number;
@@ -39,12 +34,12 @@ interface StripeAccountStatus {
   hasAccount: boolean;
   accountStatus: {
     id: string;
-    type?: 'express' | 'standard'; // Account type: Express or Standard
+    type?: 'express' | 'standard';
     detailsSubmitted: boolean;
     chargesEnabled: boolean;
     payoutsEnabled: boolean;
     requirements: any;
-    loginUrl: string | null; // Only available for Express accounts
+    loginUrl: string | null;
   } | null;
 }
 
@@ -77,73 +72,33 @@ export default function EarningsPage() {
   const [refreshingAccount, setRefreshingAccount] = useState(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<any[]>([]);
 
-  // Check URL parameters for Stripe callback results
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const error = params.get('stripe_error');
     const success = params.get('stripe_success');
-    const code = params.get('code'); // OAuth code from Stripe
-    const state = params.get('state'); // User ID from Stripe
+    const code = params.get('code');
+    const state = params.get('state');
     
-    // Log all URL parameters for debugging
-    console.log('Earnings page URL parameters:', {
-      hasError: !!error,
-      hasSuccess: !!success,
-      hasCode: !!code,
-      hasState: !!state,
-      allParams: Object.fromEntries(params.entries())
-    });
-    
-    // If we have code/state but no success/error, the callback might not have been called
     if (code && state && !success && !error) {
-      console.warn('OAuth code received but callback may not have processed it');
-      toast({
-        title: "Processing Stripe Connection",
-        description: "Please wait while we complete the connection...",
-      });
-      // The callback should have handled this, but if we're here, something went wrong
-      setTimeout(() => {
-        fetchAccountStatus(0, true);
-      }, 2000);
+      toast({ title: "Processing Connection", description: "Please wait while we complete the connection..." });
+      setTimeout(() => fetchAccountStatus(0, true), 2000);
     }
     
     if (error) {
-      console.error('Stripe connection error from URL:', error);
-      toast({
-        title: "Stripe Connection Error",
-        description: decodeURIComponent(error),
-        variant: "destructive",
-        duration: 10000,
-      });
-      // Clean up URL
+      toast({ title: "Stripe Connection Error", description: decodeURIComponent(error), variant: "destructive", duration: 10000 });
       window.history.replaceState({}, '', window.location.pathname);
-      // Refresh account status to see current state
-      setTimeout(() => {
-        fetchAccountStatus(0, true);
-      }, 1000);
+      setTimeout(() => fetchAccountStatus(0, true), 1000);
     }
     
     if (success === 'true') {
-      console.log('Stripe connection success detected');
-      toast({
-        title: "Stripe Account Connected!",
-        description: "Your payment account has been successfully set up.",
-      });
-      // Clean up URL and refresh account status with a small delay to ensure DB update is complete
+      toast({ title: "Account Connected!", description: "Your payment account has been successfully set up." });
       window.history.replaceState({}, '', window.location.pathname);
-      // Wait a moment for the database update to propagate, then fetch with retries
-      setTimeout(() => {
-        fetchAccountStatus(0, true);
-      }, 500);
+      setTimeout(() => fetchAccountStatus(0, true), 500);
     }
   }, []);
 
   useEffect(() => {
     if (!userLoading && user) {
-      // Log user ID for debugging
-      console.log('🔍 Current User ID:', user.id);
-      console.log('🔍 Debug URL:', `/api/stripe/connect/debug?userId=${user.id}`);
-      
       fetchEarningsData();
       fetchAccountStatus();
       fetchWithdrawals();
@@ -151,249 +106,112 @@ export default function EarningsPage() {
     }
   }, [user, userLoading]);
 
-  async function fetchEarningsData() {
+  async function fetchEarningsData(forceRefresh = false) {
     try {
-      const res = await fetch("/api/earnings", { cache: "no-store" });
+      const fetchOptions = forceRefresh ? { cache: 'no-store' as RequestCache } : {};
+      const res = await fetch("/api/earnings", fetchOptions);
       if (res.ok) {
         const data = await res.json();
-        if (data.success) {
-          setEarningsStats(data.stats);
-        }
+        if (data.success) setEarningsStats(data.stats);
       }
-    } catch (error) {
-      console.error("Error fetching earnings:", error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error("Error fetching earnings:", error); }
+    finally { setLoading(false); }
   }
 
-  async function fetchAccountStatus(retryCount = 0, showLoading = false) {
-    if (showLoading) {
-      setRefreshingAccount(true);
-    }
+  async function fetchAccountStatus(retryCount = 0, showLoading = false, forceRefresh = false) {
+    if (showLoading) setRefreshingAccount(true);
     try {
-      console.log(`Fetching account status (attempt ${retryCount + 1})...`);
-      const res = await fetch("/api/stripe/connect/setup", { 
-        method: 'GET',
-        cache: "no-store",
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-        }
-      });
-      
+      const fetchOptions = forceRefresh ? { method: 'GET', cache: 'no-store' as RequestCache } : { method: 'GET' };
+      const res = await fetch("/api/stripe/connect/setup", fetchOptions);
       if (res.ok) {
         const data = await res.json();
-        console.log("Account status response:", data);
         if (data.success) {
           setAccountStatus(data);
           setRefreshingAccount(false);
-          console.log("Account status updated:", {
-            hasAccount: data.hasAccount,
-            accountId: data.accountStatus?.id
-          });
-          
-          // Show message if account was cleared (invalid account)
-          if (data.message) {
-            toast({
-              title: "Account Disconnected",
-              description: data.message,
-              variant: "default",
-            });
-          }
-          
+          if (data.message) toast({ title: "Account Disconnected", description: data.message });
           return;
-        } else {
-          console.warn("Account status response not successful:", data);
         }
-      } else {
-        const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
-        console.error("Failed to fetch account status:", {
-          status: res.status,
-          statusText: res.statusText,
-          error: errorData
-        });
       }
-      
-      // If account not found and we haven't retried, wait a bit and retry (in case DB update is still propagating)
-      if (retryCount < 3) {
-        const delay = 1000 * (retryCount + 1); // Wait 1s, 2s, 3s
-        console.log(`Retrying account status fetch in ${delay}ms...`);
-        setTimeout(() => {
-          fetchAccountStatus(retryCount + 1, false);
-        }, delay);
-      } else {
-        console.error("Max retries reached for account status fetch");
-        setRefreshingAccount(false);
-      }
+      if (retryCount < 3) setTimeout(() => fetchAccountStatus(retryCount + 1, false, forceRefresh), 1000 * (retryCount + 1));
+      else setRefreshingAccount(false);
     } catch (error) {
-      console.error("Error fetching account status:", error);
-      // Retry on network errors
-      if (retryCount < 3) {
-        const delay = 1000 * (retryCount + 1);
-        setTimeout(() => {
-          fetchAccountStatus(retryCount + 1, false);
-        }, delay);
-      } else {
-        setRefreshingAccount(false);
-      }
+      if (retryCount < 3) setTimeout(() => fetchAccountStatus(retryCount + 1, false, forceRefresh), 1000 * (retryCount + 1));
+      else setRefreshingAccount(false);
     }
   }
 
-  async function fetchWithdrawals() {
+  async function fetchWithdrawals(forceRefresh = false) {
     try {
-      const res = await fetch("/api/earnings/withdraw", { cache: "no-store" });
+      const fetchOptions = forceRefresh ? { cache: 'no-store' as RequestCache } : {};
+      const res = await fetch("/api/earnings/withdraw", fetchOptions);
       if (res.ok) {
         const data = await res.json();
-        if (data.success) {
-          setWithdrawals(data.withdrawals || []);
-        }
+        if (data.success) setWithdrawals(data.withdrawals || []);
       }
-    } catch (error) {
-      console.error("Error fetching withdrawals:", error);
-    }
+    } catch (error) { console.error("Error fetching withdrawals:", error); }
   }
 
   async function handleStripeConnectSetup() {
     try {
-      const res = await fetch("/api/stripe/connect/setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      // Get response text first to handle empty or malformed JSON
+      const res = await fetch("/api/stripe/connect/setup", { method: "POST", headers: { "Content-Type": "application/json" } });
       const responseText = await res.text();
-      console.log("Stripe Connect setup response:", {
-        status: res.status,
-        statusText: res.statusText,
-        responseText: responseText.substring(0, 500)
-      });
-
       if (!res.ok) {
         let err: any = {};
-        try {
-          err = JSON.parse(responseText);
-        } catch (parseError) {
-          // If JSON parsing fails, create a meaningful error
-          err = {
-            error: `Server returned ${res.status}: ${res.statusText}`,
-            responseText: responseText || "Empty response"
-          };
-        }
-        
-        console.error("Stripe Connect setup error:", err);
-        
-        // Build detailed error message
-        let errorMessage = err.error || "Failed to create payment account";
-        
-        // If there are details/instructions, include them
-        if (err.details) {
-          if (err.details.instructions && Array.isArray(err.details.instructions)) {
-            errorMessage += "\n\n" + err.details.instructions.join("\n");
-          }
-          if (err.details.currentUrl) {
-            errorMessage += `\n\nCurrent URL: ${err.details.currentUrl}`;
-          }
-          if (err.details.originalUrl) {
-            errorMessage += `\nOriginal URL: ${err.details.originalUrl}`;
-          }
-        }
-        
-        // If account already exists, show different message
-        if (err.error === "Stripe Connect account already exists" && err.accountId) {
-          errorMessage = `You already have a Stripe Connect account linked. Account ID: ${err.accountId}`;
-        }
-        
-        // If there are debug instructions, include them
-        if (err.debug && err.debug.instructions) {
-          errorMessage += "\n\n" + err.debug.instructions.join("\n");
-        }
-        
-        throw new Error(errorMessage);
+        try { err = JSON.parse(responseText); } catch (e) { err = { error: `Server error: ${res.status}` }; }
+        throw new Error(err.error || "Failed to create payment account");
       }
-
       const data = JSON.parse(responseText);
-      if (data.success && data.authUrl) {
-        window.location.href = data.authUrl;
-      } else {
-        throw new Error(data.error || "Failed to get authorization URL");
-      }
+      if (data.success && data.authUrl) window.location.href = data.authUrl;
+      else throw new Error(data.error || "Failed to get authorization URL");
     } catch (e: any) {
-      console.error("Stripe Connect setup exception:", e);
-      toast({
-        title: "Could not set up payment account",
-        description: e.message || "An unexpected error occurred",
-        variant: "destructive",
-        duration: 10000, // Show for 10 seconds to read longer messages
-      });
+      toast({ title: "Setup Failed", description: e.message, variant: "destructive" });
     }
   }
 
   async function handleStripeConnectLogin() {
     try {
-      const res = await fetch("/api/stripe/connect/setup", { cache: "no-store" });
+      const res = await fetch("/api/stripe/connect/setup", { cache: 'no-store' as RequestCache });
       if (res.ok) {
         const data = await res.json();
-        if (data.success && data.accountStatus?.loginUrl) {
-          window.open(data.accountStatus.loginUrl, "_blank");
-        } else if (data.success && data.accountStatus?.type === 'standard') {
-          // Standard accounts don't have login links - direct users to Stripe Dashboard
-          toast({
-            title: "Standard Account",
-            description: "Please log in to Stripe Dashboard directly to manage your account.",
-            variant: "default",
-          });
+        if (data.success && data.accountStatus?.loginUrl) window.open(data.accountStatus.loginUrl, "_blank");
+        else if (data.success && data.accountStatus?.type === 'standard') {
+          toast({ title: "Standard Account", description: "Log in to Stripe Dashboard directly." });
           window.open("https://dashboard.stripe.com", "_blank");
-        } else {
-          toast({
-            title: "Account not ready",
-            description: "Please complete your account setup first.",
-            variant: "destructive",
-          });
-        }
+        } else toast({ title: "Not Ready", description: "Please complete setup first.", variant: "destructive" });
       }
-    } catch (e: any) {
-      toast({
-        title: "Could not access payment account",
-        description: e.message,
-        variant: "destructive",
-      });
-    }
+    } catch (e: any) { toast({ title: "Error", description: e.message, variant: "destructive" }); }
   }
 
-
-  async function fetchWithdrawalRequests() {
+  async function fetchWithdrawalRequests(forceRefresh = false) {
     try {
-      const res = await fetch("/api/withdrawal-requests", { cache: "no-store" });
+      const fetchOptions = forceRefresh ? { cache: 'no-store' as RequestCache } : {};
+      const res = await fetch("/api/withdrawal-requests", fetchOptions);
       if (res.ok) {
         const data = await res.json();
-        if (data.success) {
-          setWithdrawalRequests(data.withdrawalRequests || []);
-        }
+        if (data.success) setWithdrawalRequests(data.withdrawalRequests || []);
       }
-    } catch (error) {
-      console.error("Error fetching withdrawal requests:", error);
-    }
+    } catch (error) { console.error("Error fetching requests:", error); }
   }
 
   function getStatusBadge(status: string) {
-    switch (status) {
-      case "completed":
-        return <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 shadow-sm"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>;
-      case "processing":
-        return <Badge className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 shadow-sm"><Clock className="w-3 h-3 mr-1" />Processing</Badge>;
-      case "failed":
-        return <Badge className="bg-gradient-to-r from-red-100 to-rose-100 text-red-700 shadow-sm"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>;
-      default:
-        return <Badge className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 shadow-sm">{status}</Badge>;
-    }
+    const s = status.toLowerCase();
+    return (
+      <Badge variant="outline" className={cn(
+        "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border-none",
+        s === "completed" ? "bg-green-50 text-green-700" :
+        s === "processing" ? "bg-blue-50 text-blue-700" :
+        s === "failed" ? "bg-red-50 text-red-700" : "bg-gray-50 text-gray-700"
+      )}>
+        {status}
+      </Badge>
+    );
   }
 
   if (userLoading || loading) {
     return (
       <DashboardLayout user={user}>
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="w-8 h-8 animate-spin text-[#434c9d]" />
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#434c9d] border-t-transparent" />
         </div>
       </DashboardLayout>
     );
@@ -401,331 +219,128 @@ export default function EarningsPage() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="p-6 max-w-7xl mx-auto bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
-        {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent mb-3">
-            Earnings & Account
-          </h1>
-          <p className="text-gray-500 text-lg mb-4">Manage your earnings, withdrawals, and payment account</p>
-          
-          {/* How Earnings Work Section */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-100 shadow-sm mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Wallet className="w-6 h-6 text-[#434c9d]" />
-              How Earnings on TeenOp work
-            </h2>
-            <div className="space-y-3 text-gray-700">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">1</div>
-                <p className="flex-1">First, your service must be booked and paid by the buyer.</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">2</div>
-                <p className="flex-1">After the service is completed, the service must be marked as completed (by you or the buyer). You will see the ability to mark a service as completed if you view Booking Details under your Scheduled services on your Teen Hustle Page.</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">3</div>
-                <p className="flex-1">After service is marked as completed, your earnings will be transferred to your Stripe account within 1-2 business days.</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-[#434c9d] text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-0.5">4</div>
-                <p className="flex-1">To transfer your earnings from your Stripe account to your bank account, visit your Stripe account and select Balances from the left menu bar. At the top of the page, select Pay out and follow instructions. You can create automatic transfers by clicking Manage Payout.</p>
-              </div>
-            </div>
+      <div className="max-w-6xl mx-auto px-4 py-12">
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-[#434c9d]/10 rounded-xl"><Wallet className="w-5 h-5 text-[#434c9d]" /></div>
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Earnings & Payouts</h1>
           </div>
+          <p className="text-gray-500 font-medium ml-12">Manage your revenue and track your transaction history.</p>
         </div>
 
-        {/* Earnings Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl">
-                <DollarSign className="w-6 h-6 text-blue-600" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+              <div className="flex items-center justify-between mb-6">
+                <div className="p-3 bg-green-50 rounded-2xl group-hover:bg-green-100 transition-colors"><DollarSign className="w-6 h-6 text-green-600" /></div>
+                <TrendingUp className="w-5 h-5 text-gray-200" />
               </div>
-              <TrendingUp className="w-5 h-5 text-blue-300" />
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Balance</div>
+              <div className="text-4xl font-black text-gray-900">${earningsStats.totalEarned.toFixed(2)}</div>
             </div>
-            <p className="text-sm text-gray-500 mb-1 font-medium">Total Earned</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
-              ${earningsStats.totalEarned.toFixed(2)}
-            </p>
+
+            <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+              <div className="flex items-center justify-between mb-6">
+                <div className="p-3 bg-blue-50 rounded-2xl group-hover:bg-blue-100 transition-colors"><Clock className="w-6 h-6 text-blue-600" /></div>
+                <div className="text-[10px] font-bold text-blue-400 bg-blue-50 px-2 py-1 rounded-full uppercase">Pending</div>
+              </div>
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Incoming</div>
+              <div className="text-4xl font-black text-gray-900">${earningsStats.pendingEarnings.toFixed(2)}</div>
+            </div>
+
+            <div className="bg-[#fafafa] rounded-[32px] p-6 border border-gray-100 sm:col-span-2">
+              <div className="flex items-center gap-2 mb-4 text-[#434c9d]">
+                <Info className="w-4 h-4" />
+                <span className="text-xs font-bold uppercase tracking-wider">Quick Guide</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium text-gray-500 leading-relaxed">
+                <p>1. Services are booked & paid by the buyer.</p>
+                <p>2. Mark service as completed to trigger transfer.</p>
+                <p>3. Funds arrive in Stripe within 1-2 days.</p>
+                <p>4. Payout to your bank from the Stripe dashboard.</p>
+              </div>
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-green-100 to-green-50 rounded-xl">
-                <TrendingUp className="w-6 h-6 text-green-600" />
-              </div>
-              <Clock className="w-5 h-5 text-green-300" />
-            </div>
-            <p className="text-sm text-gray-500 mb-1 font-medium">This Week</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent">
-              ${earningsStats.thisWeekEarned.toFixed(2)}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
-              </div>
-              <Clock className="w-5 h-5 text-purple-300" />
-            </div>
-            <p className="text-sm text-gray-500 mb-1 font-medium">This Month</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">
-              ${earningsStats.thisMonthEarned.toFixed(2)}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-orange-100 to-orange-50 rounded-xl">
-                <Wallet className="w-6 h-6 text-orange-600" />
-              </div>
-              <Clock className="w-5 h-5 text-orange-300" />
-            </div>
-            <p className="text-sm text-gray-500 mb-1 font-medium">Pending</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent">
-              ${earningsStats.pendingEarnings.toFixed(2)}
-            </p>
-          </div>
-        </div>
-
-        <div className="mb-6">
-          {/* Payment Account Section */}
-          <div className="bg-white rounded-2xl p-8 shadow-lg">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Account</h2>
-                <p className="text-sm text-gray-500">Manage your Stripe Connect account</p>
-              </div>
-              <div className="p-3 bg-gradient-to-br from-[#434c9d]/10 to-[#96cbc3]/10 rounded-xl">
-                <CreditCard className="w-8 h-8 text-[#434c9d]" />
-              </div>
-            </div>
+          <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#434c9d]/5 rounded-full -mr-16 -mt-16" />
+            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+              <CreditCard className="w-5 h-5 text-[#434c9d]" />
+              Payout Account
+            </h3>
 
             {!accountStatus?.hasAccount ? (
-              <div className="space-y-5">
-                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-5 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <AlertCircle className="w-5 h-5 text-yellow-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">Account Not Set Up</p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Set up your payment account to receive withdrawals
-                      </p>
-                    </div>
-                    {refreshingAccount && (
-                      <Loader2 className="w-4 h-4 animate-spin text-yellow-600" />
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={handleStripeConnectSetup}
-                    className="flex-1 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-md hover:shadow-lg transition-all"
-                  >
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Set Up Payment Account
-                  </Button>
-                  <Button
-                    onClick={() => fetchAccountStatus(0, true)}
-                    variant="outline"
-                    disabled={refreshingAccount}
-                    className="px-4 shadow-sm hover:shadow-md transition-all"
-                  >
-                    {refreshingAccount ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <ExternalLink className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
+              <div className="space-y-6">
+                <p className="text-sm text-gray-500 leading-relaxed">Connect your account to Stripe to enable payouts to your bank account.</p>
+                <Button onClick={handleStripeConnectSetup} className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 rounded-2xl h-14 font-bold shadow-lg shadow-[#434c9d]/20">
+                  Connect Stripe
+                </Button>
               </div>
-            ) : accountStatus.accountStatus ? (
-              <div className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl">
-                    <span className="text-sm font-medium text-gray-700">Account Status</span>
-                    {accountStatus.accountStatus.chargesEnabled && accountStatus.accountStatus.payoutsEnabled ? (
-                      <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 shadow-sm">
-                        <CheckCircle className="w-3 h-3 mr-1" />Active
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-700 shadow-sm">
-                        <AlertCircle className="w-3 h-3 mr-1" />Setup Required
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl">
-                    <span className="text-sm font-medium text-gray-700">Details Submitted</span>
-                    {accountStatus.accountStatus.detailsSubmitted ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-red-500" />
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl">
-                    <span className="text-sm font-medium text-gray-700">Payouts Enabled</span>
-                    {accountStatus.accountStatus.payoutsEnabled ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-red-500" />
-                    )}
-                  </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Status</span>
+                  {accountStatus.accountStatus?.chargesEnabled && accountStatus.accountStatus?.payoutsEnabled ? (
+                    <Badge className="bg-green-50 text-green-700 border-none px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Active</Badge>
+                  ) : (
+                    <Badge className="bg-yellow-50 text-yellow-700 border-none px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Action Req.</Badge>
+                  )}
                 </div>
-
-                {accountStatus.accountStatus.loginUrl ? (
-                  <Button
-                    onClick={handleStripeConnectLogin}
-                    variant="outline"
-                    className="w-full shadow-sm hover:shadow-md transition-all"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Manage Account in Stripe
-                  </Button>
-                ) : accountStatus.accountStatus.type === 'standard' ? (
-                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 shadow-sm">
-                    <p className="text-sm text-blue-900 font-medium">
-                      Standard Account: Log in to <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" className="underline">Stripe Dashboard</a> to manage your account
-                    </p>
-                  </div>
-                ) : null}
-
-                {!accountStatus.accountStatus.detailsSubmitted && (
-                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 shadow-sm">
-                    <p className="text-sm text-blue-900 font-medium">
-                      Complete your account setup to enable payouts
-                    </p>
-                  </div>
-                )}
+                <Button variant="outline" onClick={handleStripeConnectLogin} className="w-full h-14 rounded-2xl border-2 border-gray-100 font-bold text-gray-700 hover:bg-gray-50 transition-all">
+                  Go to Dashboard <ChevronRight className="w-4 h-4 ml-2 opacity-30" />
+                </Button>
               </div>
-            ) : null}
+            )}
           </div>
-
         </div>
 
-        {/* Withdrawal History */}
-        <div className="bg-white rounded-2xl p-8 shadow-lg mt-6">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Transaction History</h2>
-              <p className="text-sm text-gray-500">View your past transactions</p>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-[#434c9d]/10 to-[#96cbc3]/10 rounded-xl">
-              <Building2 className="w-8 h-8 text-[#434c9d]" />
-            </div>
+        <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-8 border-b border-gray-50 flex items-center justify-between">
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+              <div className="p-2 bg-gray-100 rounded-xl"><Building2 className="w-5 h-5 text-gray-500" /></div>
+              Transaction History
+            </h3>
           </div>
 
-          {(withdrawals.length > 0 || withdrawalRequests.length > 0) ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+          <div className="overflow-x-auto">
+            {(withdrawals.length > 0 || withdrawalRequests.length > 0) ? (
+              <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Date</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Type</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Amount</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Platform Fee</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Total Earnings</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Status</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">Reference</th>
+                  <tr className="bg-gray-50/50">
+                    <th className="py-4 px-8 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Date</th>
+                    <th className="py-4 px-8 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Type</th>
+                    <th className="py-4 px-8 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Amount</th>
+                    <th className="py-4 px-8 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {/* Direct Withdrawals */}
-                  {withdrawals.map((withdrawal, index) => (
-                    <tr 
-                      key={`withdrawal-${withdrawal.id}`} 
-                      className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/50 transition-colors ${
-                        index !== withdrawals.length - 1 || withdrawalRequests.length > 0 ? 'border-b border-gray-100' : ''
-                      }`}
-                    >
-                      <td className="py-4 px-4 text-sm text-gray-900 font-medium">
-                        {new Date(withdrawal.created_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </td>
-                      <td className="py-4 px-4 text-sm">
-                        <Badge className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 shadow-sm">
-                          Direct Transfer
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-4 text-sm font-semibold text-gray-900">
-                        ${withdrawal.amount.toFixed(2)}
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600">
-                        ${(withdrawal.platform_fee || 0).toFixed(2)}
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600">
-                        ${(withdrawal.total_earnings || withdrawal.amount).toFixed(2)}
-                      </td>
-                      <td className="py-4 px-4 text-sm">
-                        {getStatusBadge(withdrawal.status)}
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-500 font-mono text-xs">
-                        {withdrawal.stripe_transfer_id ? `${withdrawal.stripe_transfer_id.substring(0, 20)}...` : 'N/A'}
-                      </td>
+                <tbody className="divide-y divide-gray-50">
+                  {withdrawals.map((w) => (
+                    <tr key={w.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="py-5 px-8 text-sm font-bold text-gray-900">{new Date(w.created_at).toLocaleDateString()}</td>
+                      <td className="py-5 px-8 text-xs font-medium text-gray-500">Direct Transfer</td>
+                      <td className="py-5 px-8 text-sm font-black text-gray-900 text-right">${w.amount.toFixed(2)}</td>
+                      <td className="py-5 px-8">{getStatusBadge(w.status)}</td>
                     </tr>
                   ))}
-                  
-                  {/* Withdrawal Requests */}
-                  {withdrawalRequests.map((request, index) => (
-                    <tr 
-                      key={`request-${request.id}`} 
-                      className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/50 transition-colors ${
-                        index !== withdrawalRequests.length - 1 ? 'border-b border-gray-100' : ''
-                      }`}
-                    >
-                      <td className="py-4 px-4 text-sm text-gray-900 font-medium">
-                        {new Date(request.created_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </td>
-                      <td className="py-4 px-4 text-sm">
-                        <Badge className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 shadow-sm">
-                          Admin Request
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-4 text-sm font-semibold text-gray-900">
-                        ${(request.amount || 0).toFixed(2)}
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600">
-                        ${(request.platform_fee || 0).toFixed(2)}
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600">
-                        ${(request.total_earnings || request.amount || 0).toFixed(2)}
-                      </td>
-                      <td className="py-4 px-4 text-sm">
-                        {getStatusBadge(request.status || 'pending')}
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-500 font-mono text-xs">
-                        {request.id.substring(0, 8)}...
-                      </td>
+                  {withdrawalRequests.map((r) => (
+                    <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="py-5 px-8 text-sm font-bold text-gray-900">{new Date(r.created_at).toLocaleDateString()}</td>
+                      <td className="py-5 px-8 text-xs font-medium text-gray-500">Admin Request</td>
+                      <td className="py-5 px-8 text-sm font-black text-gray-900 text-right">${(r.amount || 0).toFixed(2)}</td>
+                      <td className="py-5 px-8">{getStatusBadge(r.status || 'pending')}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-gray-400" />
+            ) : (
+              <div className="py-20 text-center">
+                <div className="w-16 h-16 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-4"><Clock className="w-8 h-8 text-gray-200" /></div>
+                <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">No transactions yet</p>
               </div>
-              <p className="text-sm text-gray-500 font-medium">No withdrawal history yet</p>
-              <p className="text-xs text-gray-400 mt-2">Your withdrawal history will appear here once you make a withdrawal</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </DashboardLayout>
   );
 }
-

@@ -296,10 +296,11 @@ export default function MyServicesPage() {
     }
   }, [open, editingService]);
 
-  async function fetchServices() {
+  async function fetchServices(forceRefresh = false) {
     try {
       setLoading(true);
-      const res = await fetch("/api/services", { cache: "no-store" });
+      const fetchOptions = forceRefresh ? { cache: 'no-store' as RequestCache } : {};
+      const res = await fetch("/api/services", fetchOptions);
       if (res.ok) {
         const data = await res.json();
         // Handle both response formats: { services: [...] } or { success: true, services: [...] }
@@ -329,9 +330,10 @@ export default function MyServicesPage() {
     }
   }
 
-  async function checkStripeAccount() {
+  async function checkStripeAccount(forceRefresh = false) {
     try {
-      const res = await fetch("/api/stripe/connect/setup", { cache: "no-store" });
+      const fetchOptions = forceRefresh ? { cache: 'no-store' as RequestCache } : {};
+      const res = await fetch("/api/stripe/connect/setup", fetchOptions);
       if (res.ok) {
         const data = await res.json();
         console.log("Stripe account check response:", data);
@@ -515,7 +517,7 @@ export default function MyServicesPage() {
 
       setOpen(false);
       resetForm();
-      fetchServices();
+      fetchServices(true);
     } catch (e: any) {
       toast({ title: `Could not ${editingService ? 'update' : 'add'} service`, description: e.message, variant: "destructive" });
     }

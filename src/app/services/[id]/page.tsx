@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, DollarSign, FileText, Loader2, MessageCircle } from "lucide-react";
+import { MapPin, Clock, Star, ArrowLeft, User, Shield, CheckCircle, AlertCircle, Calendar, Image as ImageIcon, X, DollarSign, FileText, Loader2, MessageCircle, ChevronRight, Info, Sparkles } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ServiceAvailabilityCalendar from "@/components/availability/ServiceAvailabilityCalendar";
 import ReviewsList from "@/components/reviews/ReviewsList";
@@ -18,6 +18,7 @@ import { Service } from "@/types/service";
 import { CreateBookingRequest, BookingResponse } from "@/types/booking";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
 
 export default function ServiceDetailsPage() {
   const params = useParams();
@@ -73,8 +74,9 @@ export default function ServiceDetailsPage() {
       }
 
       try {
+        // Cache for 10 seconds - booking status can change
         const res = await fetch(`/api/bookings/check?service_id=${serviceId}`, {
-          cache: "no-store"
+          next: { revalidate: 10 }
         });
         if (res.ok) {
           const data = await res.json();
@@ -529,30 +531,49 @@ export default function ServiceDetailsPage() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-orange-50 to-white">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <Button onClick={() => router.back()} variant="ghost" className="mb-6 text-gray-600 hover:text-gray-900">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Services
-          </Button>
+      <div className="min-h-screen bg-white">
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          {/* Top Bar */}
+          <div className="flex items-center justify-between mb-8">
+            <Button
+              onClick={() => router.back()}
+              variant="ghost"
+              className="group text-gray-500 hover:text-[#434c9d] transition-colors rounded-xl px-0"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center mr-3 group-hover:bg-[#434c9d]/10 transition-colors">
+                <ArrowLeft className="w-5 h-5" />
+              </div>
+              <span className="font-bold">Back to discovery</span>
+            </Button>
+
+            <Badge
+              className={cn(
+                "text-[10px] font-black uppercase tracking-widest px-4 py-1.5 border-none",
+                service.status === "active" ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-500"
+              )}
+            >
+              {service.status === "active" ? "Accepting Bookings" : "Temporarily Paused"}
+            </Badge>
+          </div>
 
           {bookingSuccess && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+            <div className="mb-12 p-6 bg-green-50/50 border border-green-100 rounded-[32px] flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="p-3 bg-green-100 rounded-2xl text-green-600 shadow-lg shadow-green-100/50">
+                <CheckCircle className="w-6 h-6" />
+              </div>
               <div>
-                <h3 className="font-semibold text-green-800">Booking Request Sent!</h3>
-                <p className="text-green-700 text-sm">The provider will review your request and get back to you soon. You can view the status of your request under My Requests and will receive an email confirmation or an alternative proposed time.</p>
+                <h3 className="text-lg font-bold text-gray-900 leading-tight">Request Sent Successfully!</h3>
+                <p className="text-green-700 font-medium text-sm mt-0.5">The provider will review your request and respond shortly.</p>
               </div>
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden hover:shadow-xl transition-shadow">
-                {/* Main Banner Image - Modern Aspect Ratio */}
-                <div className={`relative w-full aspect-[16/9] overflow-hidden ${(service.images && service.images.length > 0) || service.banner_url ? 'bg-gray-100' : `bg-gradient-to-br ${gradient} flex items-center justify-center`
-                  }`}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            {/* Left Column: Service Details */}
+            <div className="lg:col-span-8 space-y-12">
+              {/* Banner & Gallery */}
+              <div className="space-y-6">
+                <div className="relative aspect-[21/9] rounded-[40px] overflow-hidden bg-gray-50 border border-gray-100 shadow-sm">
                   {(() => {
                     const primaryImage = service.images?.find(img => img.is_primary);
                     const firstImage = service.images?.[0];
@@ -568,664 +589,447 @@ export default function ServiceDetailsPage() {
                       );
                     }
                     return (
-                      <>
-                        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
-                        <div className="relative text-9xl opacity-30">{icon}</div>
-                      </>
+                      <div className={cn("w-full h-full bg-gradient-to-br flex items-center justify-center", gradient)}>
+                        <span className="text-9xl opacity-20">{icon}</span>
+                      </div>
                     );
                   })()}
-                  <div className="absolute top-4 right-4">
-                    <Badge
-                      variant={service.status === "active" ? "default" : "secondary"}
-                      className={`text-sm px-3 py-1 font-semibold shadow-md ${service.status === "active"
-                          ? "bg-green-500 text-white border-green-600"
-                          : "bg-gray-400 text-white border-gray-500"
-                        }`}
-                    >
-                      {service.status === "active" ? "Available" : "Paused"}
-                    </Badge>
-                  </div>
                 </div>
 
-                {/* Image Gallery */}
-                {((service.images && service.images.length > 1) || (service.user_id && providerAvatarUrl)) && (
-                  <div className="p-6 border-t border-gray-200 bg-gray-50">
-                    <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <ImageIcon className="w-5 h-5 text-gray-600" />
-                      {service.images && service.images.length > 1 ? "More Images" : "Provider"}
-                    </h3>
-                    <div className="grid grid-cols-4 gap-3">
-                      {/* Provider Profile Picture */}
-                      {service.user_id && providerAvatarUrl && (
-                        <Link
-                          href={`/profile/${service.user_id}`}
-                          className="relative aspect-square rounded-xl overflow-hidden border-2 border-[#434c9d] hover:border-[#434c9d]/80 transition-all cursor-pointer group shadow-sm hover:shadow-md"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <p className="text-xs font-semibold text-white bg-[#434c9d]/90 px-2 py-1 rounded">View Profile</p>
-                          </div>
-                          <img
-                            src={providerAvatarUrl}
-                            alt={service.provider_name || "Provider"}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                          />
-                        </Link>
-                      )}
-                      {/* Service Images */}
-                      {service.images && service.images.length > 1 && service.images.slice(1).map((image) => (
-                        <div key={image.id} className="relative aspect-square rounded-xl overflow-hidden border-2 border-gray-200 hover:border-[#434c9d] transition-all cursor-pointer group shadow-sm hover:shadow-md">
-                          <img
-                            src={image.url}
-                            alt={`${service.title} - Image ${image.id}`}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                            onClick={() => {
-                              // Scroll to top and could implement lightbox here
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
+                {service.images && service.images.length > 1 && (
+                  <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                    {service.images.map((image) => (
+                      <div
+                        key={image.id}
+                        className="flex-shrink-0 w-32 aspect-square rounded-3xl overflow-hidden border-2 border-gray-50 hover:border-[#434c9d]/30 transition-all cursor-pointer shadow-sm active:scale-95"
+                      >
+                        <img src={image.url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
                   </div>
                 )}
+              </div>
 
-                <div className="p-8">
-                  {/* Provider Profile Card - Prominent and Clickable */}
-                  {service.user_id && (
-                    <Link
-                      href={`/profile/${service.user_id}`}
-                      className="block mb-6 pb-6 border-b border-gray-200 hover:bg-gray-50 rounded-xl p-4 -m-4 transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-4">
-                        {providerAvatarUrl ? (
-                          <img
-                            src={providerAvatarUrl}
-                            alt={service.provider_name || "Service Provider"}
-                            className="w-16 h-16 rounded-full object-cover border-3 border-white shadow-lg ring-2 ring-blue-100 group-hover:ring-[#434c9d] transition-all"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-3 border-white shadow-lg ring-2 ring-blue-100 group-hover:ring-[#434c9d] transition-all">
-                            <User className="w-8 h-8 text-blue-600" />
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Service Provider</p>
-                          <h2 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-[#434c9d] transition-colors">
-                            {service.provider_name || "View Provider Profile"}
-                          </h2>
-                          <div className="flex items-center gap-3">
-                            {service.rating != null && (
-                              <div className="flex items-center gap-1 text-sm">
-                                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                <span className="font-semibold text-gray-900">{Number(service.rating).toFixed(1)}</span>
-                                <span className="text-gray-500">({service.total_bookings} {service.total_bookings === 1 ? 'booking' : 'bookings'})</span>
-                              </div>
-                            )}
-                            <Badge className={`text-xs px-2 py-1 border ${categoryColor}`}>
-                              {toTitle(service.category)}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-2 group-hover:text-[#434c9d] transition-colors">
-                            Click to view profile →
-                          </p>
-                        </div>
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ArrowLeft className="w-5 h-5 text-[#434c9d] rotate-[-90deg]" />
-                        </div>
-                      </div>
-                    </Link>
+              {/* Title & Description */}
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-center gap-3">
+                  <Badge className={cn("text-[10px] font-black uppercase tracking-widest px-3 py-1 border-none", categoryColor)}>
+                    {toTitle(service.category)}
+                  </Badge>
+                  {service.rating != null && (
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-yellow-50 rounded-full border border-yellow-100">
+                      <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                      <span className="text-xs font-black text-gray-900">{Number(service.rating).toFixed(1)}</span>
+                    </div>
                   )}
+                </div>
+                
+                <div className="space-y-4">
+                  <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-[1.1]">
+                    {service.title}
+                  </h1>
+                  <p className="text-xl text-gray-500 font-medium leading-relaxed max-w-3xl">
+                    {service.description}
+                  </p>
+                </div>
+              </div>
 
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h1 className="text-3xl font-bold text-gray-900 mb-2">{service.title}</h1>
-                      {!service.provider_name && (
-                        <div className="flex items-center gap-3">
-                          <Badge className={`text-sm px-3 py-1 border ${categoryColor}`}>
-                            {toTitle(service.category)}
-                          </Badge>
-                          {service.rating != null && (
-                            <div className="flex items-center gap-1 text-sm text-gray-600 bg-yellow-50 px-3 py-1 rounded-full">
-                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                              <span className="font-medium">{Number(service.rating).toFixed(1)}</span>
-                              <span className="text-gray-500">({service.total_bookings} bookings)</span>
-                            </div>
-                          )}
+              {/* Provider Card */}
+              <Link
+                href={`/profile/${service.user_id}`}
+                className="block group"
+              >
+                <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm transition-all hover:shadow-xl hover:border-[#434c9d]/10 flex flex-col sm:flex-row items-center gap-8">
+                  <div className="relative">
+                    <div className="w-24 h-24 rounded-[32px] overflow-hidden ring-4 ring-gray-50 group-hover:ring-[#434c9d]/10 transition-all">
+                      {providerAvatarUrl ? (
+                        <img src={providerAvatarUrl} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#434c9d] to-[#96cbc3] flex items-center justify-center">
+                          <User className="w-10 h-10 text-white" />
                         </div>
                       )}
                     </div>
-                  </div>
-
-                  <p className="text-gray-700 text-lg leading-relaxed mb-6">{service.description}</p>
-
-                  {(service.qualifications || service.education) && (
-                    <div className="border-t border-gray-200 pt-6 mb-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Shield className="w-5 h-5 text-blue-600" />
-                        Provider Qualifications
-                      </h3>
-                      <div className="space-y-4">
-                        {service.qualifications && (
-                          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                            <p className="text-sm font-semibold text-blue-900 mb-2">Experience & Skills</p>
-                            <p className="text-gray-700 leading-relaxed">{service.qualifications}</p>
-                          </div>
-                        )}
-                        {service.education && (
-                          <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
-                            <p className="text-sm font-semibold text-indigo-900 mb-2">Education</p>
-                            <p className="text-gray-700 leading-relaxed">{service.education}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="border-t border-gray-200 pt-6 mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Service Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <MapPin className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Location</p>
-                          <p className="font-semibold text-gray-900">{service.location}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <Clock className="w-5 h-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Duration</p>
-                          <p className="font-semibold text-gray-900">{service.duration} minutes</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                          <DollarSign className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Pricing</p>
-                          <p className="font-semibold text-gray-900">
-                            {formatPrice(service.price as number)} / {service.pricing_model === "per_hour" ? "hour" : "service"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                        <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                          <CheckCircle className="w-5 h-5 text-orange-600" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Delivery</p>
-                          <p className="font-semibold text-gray-900">
-                            {service.delivery_method === "in_person" ? "In Person" : "Online"}
-                          </p>
-                        </div>
+                    <div className="absolute -bottom-2 -right-2 bg-white p-1.5 rounded-xl shadow-lg border border-gray-50">
+                      <div className="bg-[#96cbc3] p-1.5 rounded-lg text-white">
+                        <CheckCircle className="w-4 h-4" />
                       </div>
                     </div>
                   </div>
 
-                  {/* Service Availability Calendar */}
-                  {service && service.id && (
-                    <div className="mb-6 p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
-                      <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Service Availability</h3>
-                        <p className="text-sm text-gray-600">
-                          Select the times you're typically available to provide this service. Customers will see your availability, send a booking request, and you can confirm it or suggest an alternative time if needed.
-                        </p>
+                  <div className="flex-1 text-center sm:text-left space-y-2">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Service Provided By</p>
+                    <h2 className="text-2xl font-black text-gray-900 group-hover:text-[#434c9d] transition-colors">
+                      {service.provider_name}
+                    </h2>
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-4">
+                      <div className="flex items-center gap-1.5 text-sm font-bold text-gray-500">
+                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                        {Number(service.rating || 0).toFixed(1)} Rating
                       </div>
-                      <ServiceAvailabilityCalendar
-                        serviceId={service.id}
-                        initialAvailability={service.availability &&
-                          service.availability !== null &&
-                          typeof service.availability === 'object' &&
-                          Object.keys(service.availability).length > 0
-                          ? (service.availability as Record<string, Array<{ start: string; end: string }>>)
-                          : undefined}
-                        readOnly={true}
-                      />
+                      <div className="flex items-center gap-1.5 text-sm font-bold text-gray-500">
+                        <CheckCircle className="w-4 h-4 text-[#96cbc3]" />
+                        {service.total_bookings} Jobs Completed
+                      </div>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center group-hover:bg-[#434c9d] group-hover:text-white transition-all">
+                    <ChevronRight className="w-6 h-6" />
+                  </div>
+                </div>
+              </Link>
+
+              {/* Service Specs Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {[
+                  { label: "Location", value: service.location, icon: MapPin, color: "text-blue-600", bg: "bg-blue-50" },
+                  { label: "Duration", value: `${service.duration} mins`, icon: Clock, color: "text-purple-600", bg: "bg-purple-50" },
+                  { label: "Pricing", value: service.pricing_model === 'quote' ? "Custom Quote" : `${formatPrice(service.price)} / hr`, icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
+                  { label: "Delivery", value: service.delivery_method === 'in_person' ? 'In Person' : 'Online', icon: CheckCircle, color: "text-orange-600", bg: "bg-orange-50" }
+                ].map((spec, i) => (
+                  <div key={i} className="bg-gray-50/50 rounded-3xl p-6 border border-gray-100 space-y-4">
+                    <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm shadow-black/5", spec.bg)}>
+                      <spec.icon className={cn("w-6 h-6", spec.color)} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{spec.label}</p>
+                      <p className="text-sm font-black text-gray-900">{spec.value}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Qualifications */}
+              {(service.qualifications || service.education) && (
+                <div className="space-y-8">
+                  <h3 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 rounded-xl"><Shield className="w-5 h-5 text-blue-600" /></div>
+                    Background & Skills
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {service.qualifications && (
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Experience</p>
+                        <div className="bg-white rounded-3xl p-6 border border-gray-100 text-gray-600 font-medium leading-relaxed italic">
+                          &quot;{service.qualifications}&quot;
+                        </div>
+                      </div>
+                    )}
+                    {service.education && (
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Education</p>
+                        <div className="bg-white rounded-3xl p-6 border border-gray-100 text-gray-600 font-medium leading-relaxed italic">
+                          &quot;{service.education}&quot;
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Availability */}
+              <div className="space-y-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <h3 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                    <div className="p-2 bg-purple-50 rounded-xl"><Calendar className="w-5 h-5 text-purple-600" /></div>
+                    Typical Availability
+                  </h3>
+                  <Badge variant="outline" className="rounded-full text-gray-400 font-bold border-gray-100 uppercase text-[10px] px-4 py-1.5">Weekly Schedule</Badge>
+                </div>
+                <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-8">
+                  <ServiceAvailabilityCalendar
+                    serviceId={service.id}
+                    initialAvailability={service.availability as any}
+                    readOnly={true}
+                  />
+                </div>
+              </div>
+
+              {/* Reviews */}
+              <div className="space-y-8">
+                <h3 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                  <div className="p-2 bg-yellow-50 rounded-xl"><Star className="w-5 h-5 text-yellow-500 fill-yellow-500" /></div>
+                  Community Feedback
+                </h3>
+                <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-8 overflow-hidden">
+                  <ReviewsList serviceId={service.id} />
                 </div>
               </div>
             </div>
 
-            {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6 sticky top-8 hover:shadow-xl transition-shadow">
-                {service.pricing_model === "quote" ? (
-                  <>
-                    <div className="text-center mb-6">
-                      <div className="text-2xl font-bold text-gray-900 mb-1">Quote Based</div>
-                      <div className="text-sm text-gray-500">
-                        Contact provider for pricing
-                      </div>
+            {/* Right Column: Booking Card */}
+            <div className="lg:col-span-4">
+              <div className="sticky top-24 space-y-6">
+                <div className="bg-white rounded-[40px] border border-gray-100 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.05)] overflow-hidden">
+                  <div className="p-8 space-y-8">
+                    {/* Price Display */}
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Investment</p>
+                      {service.pricing_model === "quote" ? (
+                        <div className="space-y-1">
+                          <h2 className="text-3xl font-black text-gray-900">Custom Quote</h2>
+                          <p className="text-sm font-medium text-gray-500">Contact provider for pricing</p>
+                        </div>
+                      ) : (
+                        <div className="flex items-baseline gap-2">
+                          <h2 className="text-5xl font-black text-gray-900">{formatPrice(service.price as number)}</h2>
+                          <span className="text-lg font-bold text-gray-400">/hr</span>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Features List */}
+                    <div className="space-y-4">
+                      {[
+                        { icon: Shield, text: "Secure booking process", color: "text-blue-500" },
+                        { icon: CheckCircle, text: "Provider confirmation", color: "text-green-500" },
+                        { icon: Clock, text: `approx. ${service.duration} mins`, color: "text-purple-500" }
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <div className={cn("p-1.5 rounded-lg bg-gray-50", item.color)}>
+                            <item.icon className="w-4 h-4" />
+                          </div>
+                          <span className="text-sm font-bold text-gray-600">{item.text}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Primary Actions */}
                     <div className="space-y-3">
-                      <Dialog open={isQuoteDialogOpen} onOpenChange={setIsQuoteDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button
-                            className="w-full bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
-                            disabled={service.status !== "active"}
-                          >
-                            {service.status === "active" ? "Request Quote" : "Service Unavailable"}
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="w-12 h-12 bg-gradient-to-br from-[#434c9d]/20 to-[#96cbc3]/20 rounded-xl flex items-center justify-center">
-                                <FileText className="w-6 h-6 text-[#434c9d]" />
-                              </div>
-                              <div>
-                                <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-[#434c9d] bg-clip-text text-transparent">
-                                  Request Quote
-                                </DialogTitle>
-                                <DialogDescription className="text-base mt-1">
-                                  Get a personalized quote from {service.provider_name || "the provider"}
+                      {service.pricing_model === "quote" ? (
+                        <Dialog open={isQuoteDialogOpen} onOpenChange={setIsQuoteDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button
+                              className="w-full h-16 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-2xl font-black text-lg shadow-xl shadow-[#434c9d]/20 active:scale-95 transition-all"
+                              disabled={service.status !== "active"}
+                            >
+                              Request a Quote
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-2xl border-none rounded-[40px] p-0 overflow-hidden shadow-2xl">
+                            <div className="bg-[#434c9d] p-8 text-white">
+                              <DialogHeader>
+                                <DialogTitle className="text-3xl font-black tracking-tight mb-2">Request Quote</DialogTitle>
+                                <DialogDescription className="text-white/70 font-medium text-base">
+                                  Provide details about your project to get a custom price from {service.provider_name}.
                                 </DialogDescription>
-                              </div>
+                              </DialogHeader>
                             </div>
-                          </DialogHeader>
-                          {quoteRequestSuccess ? (
-                            <div className="text-center py-12">
-                              <div className="relative w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-200 rounded-full blur-xl opacity-50"></div>
-                                <CheckCircle className="w-12 h-12 text-green-600 relative z-10" />
-                              </div>
-                              <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-green-600 bg-clip-text text-transparent mb-3">
-                                Quote Request Sent!
-                              </h3>
-                              <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
-                                The provider will review your request and get back to you soon. You can view the status of your request under My Requests and will receive an email confirmation.
-                              </p>
-                              <Button
-                                onClick={() => {
-                                  setIsQuoteDialogOpen(false);
-                                  setQuoteRequestSuccess(false);
-                                  router.push("/my-requests");
-                                }}
-                                className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white"
-                              >
-                                View My Requests
-                              </Button>
-                            </div>
-                          ) : (
-                            <form onSubmit={handleQuoteRequest} className="space-y-6">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="quote-date" className="text-base font-semibold flex items-center gap-2">
-                                    <Calendar className="w-4 h-4 text-[#434c9d]" />
-                                    Preferred Date *
-                                  </Label>
-                                  <Input
-                                    id="quote-date"
-                                    type="date"
-                                    value={quoteRequestForm.requested_date}
-                                    onChange={(e) => setQuoteRequestForm((prev) => ({ ...prev, requested_date: e.target.value }))}
-                                    min={new Date().toISOString().split("T")[0]}
-                                    required
-                                    className="h-11 border-2 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20"
-                                  />
-                                  <p className="text-xs text-gray-500">Select your preferred service date</p>
+                            <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                              {quoteRequestSuccess ? (
+                                <div className="py-12 text-center space-y-6">
+                                  <div className="w-20 h-20 bg-green-50 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
+                                    <CheckCircle className="w-10 h-10 text-green-500" />
+                                  </div>
+                                  <h3 className="text-2xl font-black text-gray-900">Success!</h3>
+                                  <p className="text-gray-500 font-medium">Your quote request has been sent.</p>
+                                  <Button onClick={() => setIsQuoteDialogOpen(false)} className="bg-[#434c9d] text-white rounded-2xl px-8 h-14 font-bold">Close</Button>
                                 </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="quote-time" className="text-base font-semibold flex items-center gap-2">
-                                    <Clock className="w-4 h-4 text-[#434c9d]" />
-                                    Preferred Time *
-                                  </Label>
-                                  <Input
-                                    id="quote-time"
-                                    type="time"
-                                    value={quoteRequestForm.requested_time}
-                                    onChange={(e) => setQuoteRequestForm((prev) => ({ ...prev, requested_time: e.target.value }))}
-                                    required
-                                    className="h-11 border-2 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20"
-                                  />
-                                  <p className="text-xs text-gray-500">Select your preferred service time</p>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="quote-instructions" className="text-base font-semibold flex items-center gap-2">
-                                  <FileText className="w-4 h-4 text-[#434c9d]" />
-                                  Special Instructions
-                                  <span className="text-xs font-normal text-gray-500">(Optional)</span>
-                                </Label>
-                                <Textarea
-                                  id="quote-instructions"
-                                  placeholder="Any specific requirements or details you'd like the provider to know..."
-                                  value={quoteRequestForm.special_instructions}
-                                  onChange={(e) =>
-                                    setQuoteRequestForm((prev) => ({ ...prev, special_instructions: e.target.value }))
-                                  }
-                                  rows={4}
-                                  className="border-2 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 resize-none"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="quote-address" className="text-base font-semibold flex items-center gap-2">
-                                  <MapPin className="w-4 h-4 text-[#434c9d]" />
-                                  Service Address
-                                  <span className="text-xs font-normal text-gray-500">(Optional)</span>
-                                </Label>
-                                <Input
-                                  id="quote-address"
-                                  placeholder="Enter address if service will take place at your location..."
-                                  value={quoteRequestForm.service_address}
-                                  onChange={(e) =>
-                                    setQuoteRequestForm((prev) => ({ ...prev, service_address: e.target.value }))
-                                  }
-                                  className="h-11 border-2 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20"
-                                />
-                                <p className="text-xs text-gray-500">
-                                  Only include if the service will be performed at your address
-                                </p>
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-base font-semibold flex items-center gap-2">
-                                  <ImageIcon className="w-4 h-4 text-[#434c9d]" />
-                                  Upload Image
-                                  <span className="text-xs font-normal text-gray-500">(Optional)</span>
-                                </Label>
-                                <div className="space-y-3">
-                                  {imagePreview && (
-                                    <div className="relative inline-block group">
-                                      <div className="absolute inset-0 bg-gradient-to-br from-[#434c9d]/10 to-[#96cbc3]/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                      <img
-                                        src={imagePreview}
-                                        alt="Preview"
-                                        className="max-w-full max-h-64 rounded-xl object-contain border-2 border-gray-200 shadow-md"
+                              ) : (
+                                <form onSubmit={handleQuoteRequest} className="space-y-8">
+                                  <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                      <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Preferred Date</Label>
+                                      <Input
+                                        type="date"
+                                        value={quoteRequestForm.requested_date}
+                                        onChange={(e) => setQuoteRequestForm(p => ({ ...p, requested_date: e.target.value }))}
+                                        min={new Date().toISOString().split("T")[0]}
+                                        required
+                                        className="h-12 bg-gray-50 border-gray-100 rounded-xl font-bold"
                                       />
-                                      <Button
-                                        type="button"
-                                        variant="destructive"
-                                        size="sm"
-                                        className="absolute top-3 right-3 h-8 w-8 p-0 rounded-full shadow-lg"
-                                        onClick={removeImage}
-                                      >
-                                        <X className="w-4 h-4" />
-                                      </Button>
                                     </div>
-                                  )}
-                                  <div className="flex gap-2">
-                                    <input
-                                      ref={fileInputRef}
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={handleImageSelect}
-                                      className="hidden"
-                                      disabled={uploadingImage}
+                                    <div className="space-y-2">
+                                      <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Preferred Time</Label>
+                                      <Input
+                                        type="time"
+                                        value={quoteRequestForm.requested_time}
+                                        onChange={(e) => setQuoteRequestForm(p => ({ ...p, requested_time: e.target.value }))}
+                                        required
+                                        className="h-12 bg-gray-50 border-gray-100 rounded-xl font-bold"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Service Location (Optional)</Label>
+                                    <Input
+                                      placeholder="Where will this take place?"
+                                      value={quoteRequestForm.service_address}
+                                      onChange={(e) => setQuoteRequestForm(p => ({ ...p, service_address: e.target.value }))}
+                                      className="h-12 bg-gray-50 border-gray-100 rounded-xl font-bold"
                                     />
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="lg"
-                                      onClick={() => fileInputRef.current?.click()}
-                                      disabled={uploadingImage || quoteRequestLoading}
-                                      className="flex items-center gap-2 border-2 hover:border-[#434c9d] hover:bg-[#434c9d]/5"
-                                    >
-                                      <ImageIcon className="w-5 h-5" />
-                                      {selectedImage ? "Change Image" : "Select Image"}
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Project Details</Label>
+                                    <Textarea
+                                      placeholder="Describe what you need help with..."
+                                      value={quoteRequestForm.special_instructions}
+                                      onChange={(e) => setQuoteRequestForm(p => ({ ...p, special_instructions: e.target.value }))}
+                                      className="min-h-[120px] bg-gray-50 border-gray-100 rounded-2xl font-medium p-4 resize-none"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Reference Images</Label>
+                                    <div className="flex items-center gap-4">
+                                      {imagePreview ? (
+                                        <div className="relative group">
+                                          <img src={imagePreview} className="w-24 h-24 rounded-2xl object-cover shadow-md" />
+                                          <button onClick={removeImage} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <X className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => fileInputRef.current?.click()}
+                                          className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 hover:border-[#434c9d] hover:text-[#434c9d] transition-all"
+                                        >
+                                          <ImageIcon className="w-6 h-6 mb-1" />
+                                          <span className="text-[8px] font-black uppercase">Add Photo</span>
+                                        </button>
+                                      )}
+                                      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+                                    </div>
+                                  </div>
+
+                                  <div className="flex gap-4 pt-4">
+                                    <Button type="button" variant="ghost" onClick={() => setIsQuoteDialogOpen(false)} className="flex-1 h-14 rounded-2xl font-bold">Cancel</Button>
+                                    <Button type="submit" disabled={quoteRequestLoading} className="flex-1 h-14 bg-[#434c9d] text-white rounded-2xl font-bold shadow-lg shadow-[#434c9d]/20">
+                                      {quoteRequestLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send Request"}
                                     </Button>
                                   </div>
-                                  <p className="text-xs text-gray-500">
-                                    Upload an image to help the provider understand your request better (max 5MB)
-                                  </p>
+                                </form>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ) : (
+                        <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button
+                              className="w-full h-16 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-2xl font-black text-lg shadow-xl shadow-[#434c9d]/20 active:scale-95 transition-all"
+                              disabled={service.status !== "active"}
+                            >
+                              Reserve Now
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md border-none rounded-[40px] p-0 overflow-hidden shadow-2xl">
+                            <div className="bg-[#434c9d] p-8 text-white">
+                              <DialogHeader>
+                                <DialogTitle className="text-3xl font-black tracking-tight mb-2">Request Service</DialogTitle>
+                                <DialogDescription className="text-white/70 font-medium text-base">
+                                  Book {service.title} with {service.provider_name}.
+                                </DialogDescription>
+                              </DialogHeader>
+                            </div>
+                            <div className="p-8">
+                              <form onSubmit={handleBookingSubmit} className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Date</Label>
+                                    <Input
+                                      type="date"
+                                      value={bookingForm.requested_date}
+                                      onChange={(e) => setBookingForm(p => ({ ...p, requested_date: e.target.value }))}
+                                      min={new Date().toISOString().split("T")[0]}
+                                      required
+                                      className="h-12 bg-gray-50 border-gray-100 rounded-xl font-bold"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Time</Label>
+                                    <Input
+                                      type="time"
+                                      value={bookingForm.requested_time}
+                                      onChange={(e) => setBookingForm(p => ({ ...p, requested_time: e.target.value }))}
+                                      required
+                                      className="h-12 bg-gray-50 border-gray-100 rounded-xl font-bold"
+                                    />
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="flex gap-3 pt-4 border-t border-gray-200">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setIsQuoteDialogOpen(false);
-                                    removeImage();
-                                  }}
-                                  className="flex-1 h-12 border-2 hover:bg-gray-50"
-                                  disabled={quoteRequestLoading || uploadingImage}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  type="submit"
-                                  disabled={quoteRequestLoading || uploadingImage}
-                                  className="flex-1 h-12 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all font-semibold"
-                                >
-                                  {uploadingImage ? (
-                                    <span className="flex items-center gap-2">
-                                      <Loader2 className="w-4 h-4 animate-spin" />
-                                      Uploading...
-                                    </span>
-                                  ) : quoteRequestLoading ? (
-                                    <span className="flex items-center gap-2">
-                                      <Loader2 className="w-4 h-4 animate-spin" />
-                                      Sending...
-                                    </span>
-                                  ) : (
-                                    <span className="flex items-center gap-2">
-                                      <FileText className="w-4 h-4" />
-                                      Request Quote
-                                    </span>
-                                  )}
-                                </Button>
-                              </div>
-                            </form>
-                          )}
-                        </DialogContent>
-                      </Dialog>
+                                <div className="space-y-2">
+                                  <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Address</Label>
+                                  <Input
+                                    placeholder="Where should they go?"
+                                    value={bookingForm.service_address}
+                                    onChange={(e) => setBookingForm(p => ({ ...p, service_address: e.target.value }))}
+                                    className="h-12 bg-gray-50 border-gray-100 rounded-xl font-bold"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notes</Label>
+                                  <Textarea
+                                    placeholder="Any specific instructions..."
+                                    value={bookingForm.special_instructions}
+                                    onChange={(e) => setBookingForm(p => ({ ...p, special_instructions: e.target.value }))}
+                                    className="bg-gray-50 border-gray-100 rounded-2xl p-4 resize-none"
+                                  />
+                                </div>
+                                <div className="flex gap-4 pt-4">
+                                  <Button type="button" variant="ghost" onClick={() => setIsBookingDialogOpen(false)} className="flex-1 h-14 rounded-2xl font-bold">Cancel</Button>
+                                  <Button type="submit" disabled={bookingLoading} className="flex-1 h-14 bg-[#434c9d] text-white rounded-2xl font-bold shadow-lg shadow-[#434c9d]/20">
+                                    {bookingLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirm"}
+                                  </Button>
+                                </div>
+                              </form>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+
                       {service.user_id && user && user.id !== service.user_id && (
                         <Button
-                          variant="outline"
-                          className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white transition-all duration-200 py-3 text-lg font-semibold"
+                          variant="ghost"
+                          className="w-full h-14 rounded-2xl text-[#434c9d] font-bold hover:bg-[#434c9d]/5 group transition-all"
                           onClick={() => {
                             if (existingBookingId) {
                               router.push(`/messages?booking_id=${existingBookingId}`);
                             } else {
                               toast({
-                                title: "Booking Required",
-                                description: "Please Request a Quote or Service to start a conversation with this provider.",
+                                title: "Chat Unavailable",
+                                description: "Please request a quote or service first to start a conversation.",
                               });
-                              // Optionally open booking dialog
-                              if (service.pricing_model === 'quote') {
-                                setIsQuoteDialogOpen(true);
-                              } else {
-                                setIsBookingDialogOpen(true);
-                              }
                             }
                           }}
                         >
-                          <MessageCircle className="w-5 h-5 mr-2" />
-                          Message Provider
+                          <MessageCircle className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                          Chat with Provider
                         </Button>
                       )}
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-center mb-6">
-                      <div className="text-4xl font-bold text-gray-900 mb-1">{formatPrice(service.price as number)}</div>
-                      <div className="text-sm text-gray-500">
-                        per {service.pricing_model === "per_hour" ? "hour" : "service"}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button
-                            className="w-full bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-lg font-semibold"
-                            disabled={service.status !== "active"}
-                          >
-                            {service.status === "active" ? "Request Service" : "Service Unavailable"}
-                          </Button>
-                        </DialogTrigger>
-                      </Dialog>
-                      {service.user_id && user && user.id !== service.user_id && (
-                        <Button
-                          variant="outline"
-                          className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white transition-all duration-200 py-3 text-lg font-semibold"
-                          onClick={() => router.push(`/messages?provider_id=${service.user_id}`)}
-                        >
-                          <MessageCircle className="w-5 h-5 mr-2" />
-                          Message Provider
-                        </Button>
-                      )}
-                      <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
-                        <DialogContent className="sm:max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Request Service</DialogTitle>
-                            <DialogDescription>
-                              Fill out the form below to request this service from {service.provider_name}.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <form onSubmit={handleBookingSubmit} className="space-y-4">
-                            <div>
-                              <Label htmlFor="date">Preferred Date</Label>
-                              <Input
-                                id="date"
-                                type="date"
-                                value={bookingForm.requested_date}
-                                onChange={(e) => setBookingForm((prev) => ({ ...prev, requested_date: e.target.value }))}
-                                min={new Date().toISOString().split("T")[0]}
-                                required
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="time">Preferred Time</Label>
-                              <Input
-                                id="time"
-                                type="time"
-                                value={bookingForm.requested_time}
-                                onChange={(e) => setBookingForm((prev) => ({ ...prev, requested_time: e.target.value }))}
-                                required
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="service-address">Service Address (Optional)</Label>
-                              <Input
-                                id="service-address"
-                                type="text"
-                                placeholder="If the service will take place at the client's address, please enter the address here"
-                                value={bookingForm.service_address || ""}
-                                onChange={(e) =>
-                                  setBookingForm((prev) => ({ ...prev, service_address: e.target.value }))
-                                }
-                                className="mt-1"
-                              />
-                              <p className="text-xs text-gray-500 mt-1">
-                                If the service will take place at the client's address, please enter the address here.
-                              </p>
-                            </div>
-                            <div>
-                              <Label htmlFor="instructions">Special Instructions (Optional)</Label>
-                              <Textarea
-                                id="instructions"
-                                placeholder="Any specific requirements or notes..."
-                                value={bookingForm.special_instructions}
-                                onChange={(e) =>
-                                  setBookingForm((prev) => ({ ...prev, special_instructions: e.target.value }))
-                                }
-                                rows={3}
-                              />
-                            </div>
-                            <div className="flex gap-3 pt-4">
-                              <Button type="button" variant="outline" onClick={() => setIsBookingDialogOpen(false)} className="flex-1">
-                                Cancel
-                              </Button>
-                              <Button type="submit" disabled={bookingLoading} className="flex-1 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90">
-                                {bookingLoading ? "Sending..." : "Send Request"}
-                              </Button>
-                            </div>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-
-                    </div>
-                  </>
-                )}
-
-                <div className="mt-6 space-y-4">
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <Shield className="w-4 h-4 text-green-500" />
-                    <span>Secure booking process</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>Provider confirmation required</span>
+
+                  {/* Guaranteed Badge */}
+                  <div className="bg-gray-50 p-6 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                      <Sparkles className="w-5 h-5 text-[#96cbc3]" />
+                    </div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">TeenOp Verified Quality</p>
                   </div>
                 </div>
 
-                {service.provider_name && (
-                  <div className="mt-6 pt-6 border-t border-gray-100">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-3">Service Provided By</h3>
-                    <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                      {service.user_id ? (
-                        <Link href={`/profile/${service.user_id}`} className="cursor-pointer">
-                          {providerAvatarUrl ? (
-                            <img
-                              src={providerAvatarUrl}
-                              alt={service.provider_name}
-                              className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-md hover:ring-2 hover:ring-[#434c9d] transition-all"
-                            />
-                          ) : (
-                            <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-2 border-white shadow-md hover:ring-2 hover:ring-[#434c9d] transition-all">
-                              <User className="w-7 h-7 text-blue-600" />
-                            </div>
-                          )}
-                        </Link>
-                      ) : (
-                        <>
-                          {providerAvatarUrl ? (
-                            <img
-                              src={providerAvatarUrl}
-                              alt={service.provider_name}
-                              className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-md"
-                            />
-                          ) : (
-                            <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                              <User className="w-7 h-7 text-blue-600" />
-                            </div>
-                          )}
-                        </>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        {service.user_id ? (
-                          <Link
-                            href={`/profile/${service.user_id}`}
-                            className="font-semibold text-gray-900 truncate hover:text-[#434c9d] transition-colors cursor-pointer block"
-                          >
-                            {service.provider_name}
-                          </Link>
-                        ) : (
-                          <p className="font-semibold text-gray-900 truncate">{service.provider_name}</p>
-                        )}
-                        {service.rating != null && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                            <span className="text-xs font-medium text-gray-700">{Number(service.rating).toFixed(1)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                {/* Safety Info */}
+                <div className="bg-[#fafafa] rounded-[32px] p-6 border border-gray-100">
+                  <div className="flex items-center gap-2 mb-4 text-[#434c9d]">
+                    <Info className="w-4 h-4" />
+                    <span className="text-xs font-black uppercase tracking-wider">Booking Guide</span>
                   </div>
-                )}
+                  <div className="space-y-3 text-xs font-bold text-gray-500">
+                    <p>1. Send your request with details.</p>
+                    <p>2. Provider accepts or suggests a time.</p>
+                    <p>3. Pay securely once confirmed.</p>
+                    <p>4. Rate your experience after job.</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Reviews Section */}
-      {service && (
-        <div className="mt-8 bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-lg">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
-            Reviews & Ratings
-          </h2>
-          <ReviewsList serviceId={service.id} />
-        </div>
-      )}
     </DashboardLayout>
   );
 }

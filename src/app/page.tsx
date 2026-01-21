@@ -16,7 +16,8 @@ export default function Home() {
   useEffect(() => {
     const loadServices = async () => {
       try {
-        const response = await fetch("/api/services/public");
+        // Cache for 30 seconds on homepage - services don't change that frequently
+        const response = await fetch("/api/services/public", { next: { revalidate: 30 } });
         if (response.ok) {
           const data = await response.json();
           setServices(data.services || []);
