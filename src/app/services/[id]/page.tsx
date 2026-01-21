@@ -808,10 +808,10 @@ export default function ServiceDetailsPage() {
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="sm:max-w-2xl border-none rounded-[40px] p-0 overflow-hidden shadow-2xl">
-                            <div className="bg-[#434c9d] p-8 text-white">
+                            <div className="bg-white p-8 text-gray-900">
                               <DialogHeader>
                                 <DialogTitle className="text-3xl font-black tracking-tight mb-2">Request Quote</DialogTitle>
-                                <DialogDescription className="text-white/70 font-medium text-base">
+                                <DialogDescription className="text-gray-500 font-medium text-base">
                                   Provide details about your project to get a custom price from {service.provider_name}.
                                 </DialogDescription>
                               </DialogHeader>
@@ -918,10 +918,10 @@ export default function ServiceDetailsPage() {
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="sm:max-w-md border-none rounded-[40px] p-0 overflow-hidden shadow-2xl">
-                            <div className="bg-[#434c9d] p-8 text-white">
+                            <div className="bg-white p-8 text-gray-900">
                               <DialogHeader>
                                 <DialogTitle className="text-3xl font-black tracking-tight mb-2">Request Service</DialogTitle>
-                                <DialogDescription className="text-white/70 font-medium text-base">
+                                <DialogDescription className="text-gray-500 font-medium text-base">
                                   Book {service.title} with {service.provider_name}.
                                 </DialogDescription>
                               </DialogHeader>

@@ -309,84 +309,79 @@ export async function PUT(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { id, title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url, availability } = body;
+    const { id, status } = body;
 
-    // Validate required fields
-    if (!id || !title || !description || price === undefined || !location || !category || !status) {
+    if (!id) {
       return NextResponse.json({ 
-        error: "Missing required fields: id, title, description, price, location, category, status" 
+        error: "Missing required field: id" 
       }, { status: 400 });
     }
 
-    // Validate pricing model if provided (check this before price validation)
-    if (pricing_model && !["per_job", "per_hour", "quote"].includes(pricing_model)) {
-      return NextResponse.json({ 
-        error: "Pricing model must be either 'per_job', 'per_hour', or 'quote'" 
-      }, { status: 400 });
+    // Get existing service to ensure ownership and get current values for validation if needed
+    const { data: existingService, error: fetchError } = await supabase
+      .from("services")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (fetchError || !existingService) {
+      return NextResponse.json({ error: "Service not found or you don't have permission" }, { status: 404 });
     }
 
-    // Validate price - must be positive, except for quote-based services (which must be 0)
-    const isQuoteBased = pricing_model === "quote";
-    if (isQuoteBased) {
-      // For quote-based services, price must be exactly 0
-      if (typeof price !== "number" || price !== 0) {
-        return NextResponse.json({ 
-          error: "Quote-based services must have a price of 0" 
-        }, { status: 400 });
+    // Prepare update data
+    const updateData: any = {};
+    
+    // List of all possible fields that can be updated
+    const fields = [
+      'title', 'description', 'price', 'location', 'category', 'status', 
+      'duration', 'education', 'qualifications', 'address', 'pricing_model', 
+      'delivery_method', 'location_type', 'banner_url', 'availability'
+    ];
+
+    fields.forEach(field => {
+      if (body[field] !== undefined) {
+        if (field === 'title' || field === 'description' || field === 'location') {
+          updateData[field] = body[field].trim();
+        } else {
+          updateData[field] = body[field];
+        }
       }
-    } else {
-      // For non-quote services, price must be greater than 0
-      if (typeof price !== "number" || price <= 0) {
-        return NextResponse.json({ 
-          error: "Price must be greater than 0" 
-        }, { status: 400 });
+    });
+
+    // Validation for fields if they are being updated
+    if (updateData.status && !["active", "paused"].includes(updateData.status)) {
+      return NextResponse.json({ error: "Status must be either 'active' or 'paused'" }, { status: 400 });
+    }
+
+    if (updateData.pricing_model && !["per_job", "per_hour", "quote"].includes(updateData.pricing_model)) {
+      return NextResponse.json({ error: "Pricing model must be 'per_job', 'per_hour', or 'quote'" }, { status: 400 });
+    }
+
+    if (updateData.price !== undefined) {
+      const price = Number(updateData.price);
+      const pricingModel = updateData.pricing_model || existingService.pricing_model;
+      if (pricingModel === "quote") {
+        if (price !== 0) return NextResponse.json({ error: "Quote-based services must have price 0" }, { status: 400 });
+      } else if (price <= 0) {
+        return NextResponse.json({ error: "Price must be greater than 0" }, { status: 400 });
       }
+      updateData.price = price;
     }
 
-    // Validate status
-    if (!["active", "paused"].includes(status)) {
-      return NextResponse.json({ 
-        error: "Status must be either 'active' or 'paused'" 
-      }, { status: 400 });
-    }
-
-    // Validate category
-    const validCategories = ["tutoring", "pet_care", "lawn_care", "cleaning", "tech_support", "delivery", "art_commissions", "beauty", "photography", "graphic_design", "other"];
-    if (!validCategories.includes(category)) {
-      return NextResponse.json({ 
-        error: `Invalid category. Must be one of: ${validCategories.join(", ")}` 
-      }, { status: 400 });
-    }
-
-    // Validate duration if provided
-    if (duration !== undefined && (typeof duration !== "number" || duration < 15)) {
-      return NextResponse.json({ 
-        error: "Duration must be a number greater than or equal to 15 minutes" 
-      }, { status: 400 });
+    if (updateData.category) {
+      const validCategories = ["tutoring", "pet_care", "lawn_care", "cleaning", "tech_support", "delivery", "art_commissions", "beauty", "photography", "graphic_design", "other"];
+      if (!validCategories.includes(updateData.category)) {
+        return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+      }
     }
 
     // Update the service
     const { data: service, error } = await (supabase as any)
       .from("services")
-      .update({
-        title: title.trim(),
-        description: description.trim(),
-        price: Number(price),
-        location: location.trim(),
-        category,
-        status,
-        duration: duration || 60,
-        education: education || null,
-        qualifications: qualifications || null,
-        address: address || null,
-        pricing_model: pricing_model || "per_hour",
-        delivery_method: delivery_method || "in_person",
-        location_type: location_type || "public_address",
-        banner_url: banner_url || null,
-        availability: availability || null
-      })
+      .update(updateData)
       .eq("id", id)
-      .eq("user_id", user.id) // Ensure user can only update their own services
+      .eq("user_id", user.id)
       .select(`
         id,
         user_id,
