@@ -84,9 +84,6 @@ function MessagesPageContent() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const shouldScrollToBottomRef = useRef(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -245,8 +242,6 @@ function MessagesPageContent() {
             const uniqueMessages = (data.messages || []).filter((message: Message, index: number, self: Message[]) =>
               index === self.findIndex(m => m.id === message.id)
             );
-            // Scroll to bottom when loading a new conversation
-            shouldScrollToBottomRef.current = true;
             setMessages(prev => {
               if (prev.length === uniqueMessages.length && prev.every((msg, i) => msg.id === uniqueMessages[i].id)) return prev;
               return uniqueMessages;
@@ -280,29 +275,7 @@ function MessagesPageContent() {
     markMessagesAsRead();
   }, [selectedConversation]);
 
-  // Smart scroll - only scroll to bottom when user sends a message or on initial load
-  useEffect(() => {
-    if (messages.length === 0) return;
-    
-    // Always scroll if we explicitly requested it (after sending a message)
-    if (shouldScrollToBottomRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      shouldScrollToBottomRef.current = false;
-      return;
-    }
-    
-    // Check if user is near the bottom of the chat (within 150px)
-    const container = messagesContainerRef.current;
-    if (container) {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
-      
-      // Only auto-scroll if user is already near the bottom
-      if (isNearBottom) {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }
-    }
-  }, [messages]);
+
 
   useEffect(() => {
     return () => { if (imagePreview) URL.revokeObjectURL(imagePreview); };
@@ -332,13 +305,13 @@ function MessagesPageContent() {
 
   const sendMessage = async () => {
     if ((!newMessage.trim() && !selectedImage) || !selectedConversation || !user) return;
-    
+
     const messageContent = newMessage.trim();
     const currentImage = selectedImage;
-    
+
     // Clear input immediately for better UX
     setNewMessage("");
-    
+
     try {
       setSending(true);
       let imageUrl = null;
@@ -368,8 +341,7 @@ function MessagesPageContent() {
         sender_name: "You"
       };
 
-      // Add optimistic message immediately and scroll to bottom
-      shouldScrollToBottomRef.current = true;
+      // Add optimistic message immediately
       setMessages(prev => [...prev, optimisticMessage]);
       removeImage();
 
@@ -394,7 +366,7 @@ function MessagesPageContent() {
       const data = await response.json();
       if (data.success) {
         // Replace optimistic message with real message from server
-        setMessages(prev => prev.map(msg => 
+        setMessages(prev => prev.map(msg =>
           msg.id === optimisticMessage.id ? data.message : msg
         ));
         setConversations(prev =>
@@ -514,7 +486,7 @@ function MessagesPageContent() {
   }
 
   return (
-    <DashboardLayout user={user}>
+    <DashboardLayout user={user} hideFooter>
       <div className="h-[calc(100vh-64px)] flex bg-white relative overflow-hidden">
         {/* Conversations Sidebar */}
         <div className={cn(
@@ -697,7 +669,7 @@ function MessagesPageContent() {
               </div>
 
               {/* Messages Area */}
-              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white/40">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white/40">
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 border border-gray-50">
@@ -755,7 +727,6 @@ function MessagesPageContent() {
                     );
                   })
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Input Area */}
@@ -809,6 +780,7 @@ function MessagesPageContent() {
                       placeholder="Message..."
                       className="flex-1 max-h-32 min-h-[40px] py-2.5 px-1 bg-transparent border-none focus:ring-0 text-sm resize-none custom-scrollbar"
                       disabled={uploadingImage}
+                      autoFocus={false}
                       rows={1}
                     />
                     <Button
@@ -894,7 +866,7 @@ function MessagesPageContent() {
 export default function MessagesPage() {
   return (
     <Suspense fallback={
-      <DashboardLayout user={null}>
+      <DashboardLayout user={null} hideFooter>
         <div className="min-h-screen bg-white flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#434c9d] border-t-transparent" />
         </div>

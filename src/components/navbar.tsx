@@ -56,12 +56,6 @@ export default function Navbar() {
             />
             <div className="absolute inset-0 bg-white/20 blur-xl rounded-full -z-10 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
-          <span className={cn(
-            "text-xl font-black tracking-tight transition-colors duration-300",
-            overHero ? "text-white" : "text-gray-900"
-          )}>
-            TeenOp
-          </span>
         </Link>
 
         {/* Desktop Navigation */}

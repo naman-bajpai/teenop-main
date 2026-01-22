@@ -25,16 +25,17 @@ interface User {
 interface DashboardLayoutProps {
   children: React.ReactNode;
   user?: User | null;
+  hideFooter?: boolean;
 }
 
-export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, user, hideFooter = false }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-orange-50/20 flex flex-col">
       <AuthenticatedNavbar user={user} />
       <main className="flex-1">
         {children}
       </main>
-      <Footer user={user} />
+      {!hideFooter && <Footer user={user} />}
     </div>
   );
 }

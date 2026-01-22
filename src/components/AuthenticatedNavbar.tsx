@@ -80,8 +80,8 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
     const fetchUnreadCount = async () => {
       try {
         // Use revalidate: 10 for short-term caching (10 seconds)
-        const res = await fetch("/api/messages/conversations", { 
-          next: { revalidate: 10 } 
+        const res = await fetch("/api/messages/conversations", {
+          next: { revalidate: 10 }
         });
         if (res.ok) {
           const data = await res.json();
@@ -333,7 +333,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                     </div>
                   )}
                 </div>
-                
+
                 <div className="text-left hidden xl:block">
                   <p className={cn(
                     "text-sm font-bold leading-tight transition-colors duration-300",
