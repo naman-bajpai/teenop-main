@@ -275,17 +275,9 @@ export default function MyRequestsPage() {
   };
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
-    // Optimistic UI update
-    setBookings(prev =>
-      prev.map(booking =>
-        booking.id === bookingId
-          ? { ...booking, status: newStatus as any, updated_at: new Date().toISOString() }
-          : booking
-      )
-    );
-
     try {
       setUpdating(bookingId);
+      console.log(`Updating booking ${bookingId} to status: ${newStatus}`);
 
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: "PATCH",
@@ -296,12 +288,24 @@ export default function MyRequestsPage() {
       });
 
       const result = await response.json();
+      console.log(`API response for booking ${bookingId}:`, { ok: response.ok, success: result.success, result });
 
       if (!response.ok || !result.success) {
         // Revert optimistic update on failure
         await fetchBookings(true);
-        throw new Error(result.error || "Failed to update booking");
+        const errorMessage = result.error || "Failed to update booking";
+        console.error(`Failed to update booking ${bookingId}:`, errorMessage);
+        throw new Error(errorMessage);
       }
+
+      // Optimistic UI update after successful API call
+      setBookings(prev =>
+        prev.map(booking =>
+          booking.id === bookingId
+            ? { ...booking, status: newStatus as any, updated_at: new Date().toISOString() }
+            : booking
+        )
+      );
 
       // Fetch fresh data to ensure consistency
       await fetchBookings(true);
@@ -317,6 +321,8 @@ export default function MyRequestsPage() {
         description: err.message || "Failed to update booking",
         variant: "destructive",
       });
+      // Revert on error by fetching fresh data
+      await fetchBookings(true);
     } finally {
       setUpdating(null);
     }
@@ -349,6 +355,53 @@ export default function MyRequestsPage() {
         description: "Failed to open messages. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleCancelQuoteRequest = async (quoteRequestId: string) => {
+    try {
+      setUpdating(quoteRequestId);
+      const response = await fetch(`/api/quotes/request/${quoteRequestId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to cancel quote request");
+      }
+
+      // Refresh data
+      await fetchBookings(true);
+
+      toast({
+        title: "Quote Request Cancelled",
+        description: "The quote request has been cancelled successfully.",
+      });
+    } catch (err: any) {
+      console.error("Error cancelling quote request:", err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to cancel quote request",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  // Helper function to check if quote request is past due
+  const isQuoteRequestPastDue = (qr: any): boolean => {
+    if (!qr.requested_date || !qr.requested_time) return false;
+    try {
+      const requestedDateTime = new Date(`${qr.requested_date}T${qr.requested_time}`);
+      return requestedDateTime < new Date();
+    } catch {
+      return false;
     }
   };
 
@@ -596,63 +649,94 @@ export default function MyRequestsPage() {
                       );
                     })}
                     {/* Quote Requests (only in pending tab) */}
-                    {value === "pending" && tabQuoteRequests.map((qr: any) => (
-                      <div key={qr.id} className="bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge className="bg-purple-100 text-purple-700">Quote Request</Badge>
-                              <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{qr.services?.title || 'Service'}</h3>
+                    {value === "pending" && tabQuoteRequests.map((qr: any) => {
+                      const pastDue = isQuoteRequestPastDue(qr);
+                      return (
+                        <div key={qr.id} className="bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge className="bg-purple-100 text-purple-700">Quote Request</Badge>
+                                <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{qr.services?.title || 'Service'}</h3>
+                              </div>
+                              <p className="text-sm text-gray-600">Quote request for your service</p>
                             </div>
-                            <p className="text-sm text-gray-600">Quote request for your service</p>
-                          </div>
-                          <Badge className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 flex-shrink-0">
-                            {qr.status === "quoted" ? "Quoted" : "Pending"}
-                          </Badge>
-                        </div>
-                        {qr.requested_date && qr.requested_time && (
-                          <div className="mb-4 p-3 bg-gray-50/50 rounded-xl border border-gray-100 text-sm text-gray-600">
-                            <div className="flex items-center gap-3 mb-1">
-                              <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                              <span className="font-medium">{formatDate(qr.requested_date)}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Clock className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                              <span className="font-medium">{formatTime(qr.requested_time)}</span>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 flex-shrink-0">
+                                {qr.status === "quoted" ? "Quoted" : "Pending"}
+                              </Badge>
+                              {pastDue && (
+                                <Badge className="bg-red-100 text-red-700 text-xs font-semibold px-3 py-1 flex-shrink-0">
+                                  Past Due
+                                </Badge>
+                              )}
                             </div>
                           </div>
-                        )}
-                        {qr.quotes && qr.quotes.length > 0 && (
-                          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                            <p className="text-sm font-semibold text-green-900 mb-1">Provider's Quote:</p>
-                            <p className="text-lg font-bold text-green-700">${qr.quotes[0].price.toFixed(2)}</p>
-                            {qr.quotes[0].estimated_duration && (
-                              <p className="text-xs text-green-600">Est. {qr.quotes[0].estimated_duration} minutes</p>
+                          {qr.requested_date && qr.requested_time && (
+                            <div className="mb-4 p-3 bg-gray-50/50 rounded-xl border border-gray-100 text-sm text-gray-600">
+                              <div className="flex items-center gap-3 mb-1">
+                                <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                <span className="font-medium">{formatDate(qr.requested_date)}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <Clock className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                                <span className="font-medium">{formatTime(qr.requested_time)}</span>
+                              </div>
+                            </div>
+                          )}
+                          {qr.quotes && qr.quotes.length > 0 && (
+                            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <p className="text-sm font-semibold text-green-900 mb-1">Provider's Quote:</p>
+                              <p className="text-lg font-bold text-green-700">${qr.quotes[0].price.toFixed(2)}</p>
+                              {qr.quotes[0].estimated_duration && (
+                                <p className="text-xs text-green-600">Est. {qr.quotes[0].estimated_duration} minutes</p>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-100">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white h-10"
+                              onClick={() => router.push(`/my-quote-requests`)}
+                            >
+                              <FileText className="w-4 h-4 mr-2" />
+                              View Details
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white h-10"
+                              onClick={() => router.push(`/messages`)}
+                            >
+                              <MessageCircle className="w-4 h-4 mr-2" />
+                              Message
+                            </Button>
+                            {(pastDue || qr.status === "pending" || qr.status === "quoted") && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={updating === qr.id}
+                                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 h-10"
+                                onClick={() => handleCancelQuoteRequest(qr.id)}
+                              >
+                                {updating === qr.id ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Cancelling...
+                                  </>
+                                ) : (
+                                  <>
+                                    <XCircle className="w-4 h-4 mr-2" />
+                                    Cancel Request
+                                  </>
+                                )}
+                              </Button>
                             )}
                           </div>
-                        )}
-                        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-100">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white h-10"
-                            onClick={() => router.push(`/my-quote-requests`)}
-                          >
-                            <FileText className="w-4 h-4 mr-2" />
-                            View Details
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white h-10"
-                            onClick={() => router.push(`/messages`)}
-                          >
-                            <MessageCircle className="w-4 h-4 mr-2" />
-                            Message
-                          </Button>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <EmptyState
@@ -969,10 +1053,20 @@ function BookingCard({
               <Button
                 onClick={onComplete}
                 size="sm"
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-md text-xs sm:text-sm h-10"
+                disabled={updating || !onComplete}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-md text-xs sm:text-sm h-10 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                Mark as Completed
+                {updating ? (
+                  <>
+                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
+                    Marking...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                    Mark as Completed
+                  </>
+                )}
               </Button>
               <Button
                 onClick={onCancel}

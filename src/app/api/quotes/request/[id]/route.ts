@@ -136,17 +136,34 @@ export async function PATCH(
 
     const qr = quoteRequest as any;
 
-    // Check permissions - only customer can cancel their own request
-    if (qr.customer_id !== user.id) {
+    // Get service to check provider
+    const { data: service } = await supabase
+      .from("services")
+      .select("user_id")
+      .eq("id" as any, qr.service_id as any)
+      .single();
+
+    const isCustomer = qr.customer_id === user.id;
+    const isProvider = service?.user_id === user.id;
+
+    // Check permissions - customer or provider can cancel
+    if (!isCustomer && !isProvider) {
       return NextResponse.json(
         { success: false, error: "Access denied" },
         { status: 403 }
       );
     }
 
-    // Only allow cancelling pending or quoted requests
+    // Check if quote request is past due
+    const isPastDue = qr.requested_date && qr.requested_time ? 
+      new Date(`${qr.requested_date}T${qr.requested_time}`) < new Date() : false;
+
+    // Allow cancelling if:
+    // 1. Status is pending or quoted (normal case)
+    // 2. OR if the request is past due (even if status is still pending/quoted)
     if (status === "cancelled") {
-      if (!["pending", "quoted"].includes(qr.status)) {
+      const canCancel = ["pending", "quoted"].includes(qr.status) || isPastDue;
+      if (!canCancel && qr.status !== "cancelled") {
         return NextResponse.json(
           { success: false, error: "Cannot cancel this quote request" },
           { status: 400 }

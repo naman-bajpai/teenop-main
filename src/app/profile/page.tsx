@@ -419,22 +419,23 @@ export default function ProfilePage() {
                 </Dialog>
 
                 {profile?.role === "teen" && (
-                  <button onClick={() => window.location.href = "/my-teen-hustle"} className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-all text-left group">
-                    <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-white transition-colors"><Briefcase className="w-4 h-4 text-gray-500" /></div>
-                    <div className="flex-1">
-                      <div className="text-sm font-bold text-gray-900">Teen Hustle</div>
-                      <div className="text-xs text-gray-500">Manage your services</div>
-                    </div>
-                  </button>
+                  <>
+                    <button onClick={() => window.location.href = "/my-teen-hustle"} className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-all text-left group">
+                      <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-white transition-colors"><Briefcase className="w-4 h-4 text-gray-500" /></div>
+                      <div className="flex-1">
+                        <div className="text-sm font-bold text-gray-900">Teen Hustle</div>
+                        <div className="text-xs text-gray-500">Manage your services</div>
+                      </div>
+                    </button>
+                    <button onClick={() => window.location.href = "/earnings"} className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-all text-left group">
+                      <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-white transition-colors"><Wallet className="w-4 h-4 text-gray-500" /></div>
+                      <div className="flex-1">
+                        <div className="text-sm font-bold text-gray-900">Payments</div>
+                        <div className="text-xs text-gray-500">Payouts and methods</div>
+                      </div>
+                    </button>
+                  </>
                 )}
-
-                <button onClick={() => { if (profile?.role === "teen") window.location.href = "/earnings"; else alert("Coming soon!"); }} className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-all text-left group">
-                  <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-white transition-colors"><Wallet className="w-4 h-4 text-gray-500" /></div>
-                  <div className="flex-1">
-                    <div className="text-sm font-bold text-gray-900">Payments</div>
-                    <div className="text-xs text-gray-500">Payouts and methods</div>
-                  </div>
-                </button>
               </div>
             </div>
           </div>

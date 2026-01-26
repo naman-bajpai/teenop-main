@@ -47,6 +47,7 @@ import {
   AlertCircle,
   ChevronRight,
   Info,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -299,6 +300,7 @@ export default function TeenHustlePage() {
   const [cancelledBookings, setCancelledBookings] = useState<Booking[]>([]);
   const [quoteRequests, setQuoteRequests] = useState<any[]>([]);
   const [servicesNeedingCompletion, setServicesNeedingCompletion] = useState<number>(0);
+  const [cancellingQuoteRequest, setCancellingQuoteRequest] = useState<string | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -369,6 +371,32 @@ export default function TeenHustlePage() {
     } catch (e: any) {
       toast({ title: "Load failed", description: e.message, variant: "destructive" });
     } finally { setLoading(false); }
+  };
+
+  const handleDenyQuoteRequest = async (quoteRequestId: string) => {
+    try {
+      setCancellingQuoteRequest(quoteRequestId);
+      const response = await fetch(`/api/quotes/request/${quoteRequestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to deny quote request");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        toast({ title: "Quote Request Denied", description: "The quote request has been cancelled." });
+        await fetchEverything(true);
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to deny quote request", variant: "destructive" });
+    } finally {
+      setCancellingQuoteRequest(null);
+    }
   };
 
   const handleBookingStatusUpdate = async (bookingId: string, newStatus: string, alternativeDate?: string, alternativeTime?: string) => {
@@ -554,9 +582,34 @@ export default function TeenHustlePage() {
                             </div>
                             <p className="text-sm text-gray-500 font-medium">From <span className="text-[#434c9d] font-bold">{qr.profiles?.first_name}</span></p>
                           </div>
-                          <Button onClick={() => router.push(`/provider/quote-requests?request=${qr.id}`)} className="bg-[#96cbc3] hover:bg-[#96cbc3]/90 text-white rounded-xl font-bold h-10 px-6">Respond</Button>
+                          <div className="flex gap-2">
+                            <Button onClick={() => router.push(`/provider/quote-requests?request=${qr.id}`)} className="bg-[#96cbc3] hover:bg-[#96cbc3]/90 text-white rounded-xl font-bold h-10 px-6">Respond</Button>
+                          </div>
                         </div>
-                        {qr.special_instructions && <p className="text-sm text-gray-500 leading-relaxed bg-gray-50 p-4 rounded-xl italic">&quot;{qr.special_instructions}&quot;</p>}
+                        {qr.special_instructions && <p className="text-sm text-gray-500 leading-relaxed bg-gray-50 p-4 rounded-xl italic mb-4">&quot;{qr.special_instructions}&quot;</p>}
+                        {(qr.status === "pending" || qr.status === "quoted") && (
+                          <div className="flex gap-2 pt-2 border-t border-gray-100">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDenyQuoteRequest(qr.id)}
+                              disabled={cancellingQuoteRequest === qr.id}
+                              className="flex-1 text-red-600 border-red-100 hover:bg-red-50 rounded-xl h-10 font-bold"
+                            >
+                              {cancellingQuoteRequest === qr.id ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Denying...
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="w-4 h-4 mr-2" />
+                                  Deny Request
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </>

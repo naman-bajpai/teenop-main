@@ -79,9 +79,9 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
 
     const fetchUnreadCount = async () => {
       try {
-        // Use revalidate: 10 for short-term caching (10 seconds)
+        // Use cache: 'no-store' to always get fresh data
         const res = await fetch("/api/messages/conversations", {
-          next: { revalidate: 10 }
+          cache: 'no-store'
         });
         if (res.ok) {
           const data = await res.json();
@@ -96,9 +96,19 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
     };
 
     fetchUnreadCount();
+    
+    // Listen for custom event when messages are marked as read
+    const handleMessagesMarkedAsRead = () => {
+      fetchUnreadCount();
+    };
+    window.addEventListener('messagesMarkedAsRead', handleMessagesMarkedAsRead);
+    
     // Refresh every 60 seconds (reduced from 30 to reduce load)
     const interval = setInterval(fetchUnreadCount, 60000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('messagesMarkedAsRead', handleMessagesMarkedAsRead);
+    };
   }, [user]);
 
   const handleLogout = async () => {

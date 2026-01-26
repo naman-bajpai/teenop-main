@@ -265,6 +265,8 @@ function MessagesPageContent() {
           setConversations(prev =>
             prev.map(conv => conv.id === selectedConversation.id ? { ...conv, unread_count: 0 } : conv)
           );
+          // Dispatch custom event to notify navbar to refresh unread count
+          window.dispatchEvent(new CustomEvent('messagesMarkedAsRead'));
         }
       } catch (error) {
         console.error("Failed to mark messages as read:", error);

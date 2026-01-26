@@ -25,7 +25,6 @@ type Profile = {
   id: string;
   first_name: string;
   last_name: string;
-  email: string;
   phone: string | null;
   city: string | null;
   state: string | null;
@@ -60,7 +59,7 @@ export default function UserProfilePage() {
         setError(null);
         const { data: p, error: pErr } = await supabase
           .from("profiles")
-          .select("id, first_name, last_name, email, phone, city, state, bio, role, created_at, avatar_url, schedule_url")
+          .select("id, first_name, last_name, phone, city, state, bio, role, created_at, avatar_url, schedule_url")
           .eq("id", userId)
           .single();
 

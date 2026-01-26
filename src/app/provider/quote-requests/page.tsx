@@ -77,6 +77,7 @@ function QuoteRequestsContent() {
   const [selectedQuoteRequest, setSelectedQuoteRequest] = useState<QuoteRequest | null>(null);
   const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
   const [submittingQuote, setSubmittingQuote] = useState(false);
+  const [cancellingRequest, setCancellingRequest] = useState<string | null>(null);
   const [quoteForm, setQuoteForm] = useState<CreateQuoteRequest>({
     quote_request_id: "",
     price: 0,
@@ -179,6 +180,43 @@ function QuoteRequestsContent() {
       });
     } finally {
       setSubmittingQuote(false);
+    }
+  };
+
+  const handleDenyQuoteRequest = async (quoteRequestId: string) => {
+    try {
+      setCancellingRequest(quoteRequestId);
+      const response = await fetch(`/api/quotes/request/${quoteRequestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to deny quote request");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: "Quote Request Denied",
+          description: "The quote request has been cancelled.",
+        });
+        fetchQuoteRequests(true);
+        if (selectedQuoteRequest?.id === quoteRequestId) {
+          setIsQuoteDialogOpen(false);
+          setSelectedQuoteRequest(null);
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to deny quote request",
+        variant: "destructive",
+      });
+    } finally {
+      setCancellingRequest(null);
     }
   };
 
@@ -298,6 +336,8 @@ function QuoteRequestsContent() {
                           setIsQuoteDialogOpen(true);
                         }}
                         onMessage={() => router.push("/messages")}
+                        onDeny={() => handleDenyQuoteRequest(qr.id)}
+                        cancellingRequest={cancellingRequest}
                       />
                     );
                   })}
@@ -393,6 +433,8 @@ function QuoteRequestsContent() {
             formatDate={formatDate}
             formatTime={formatTime}
             formatPrice={formatPrice}
+            onDeny={selectedQuoteRequest ? () => handleDenyQuoteRequest(selectedQuoteRequest.id) : undefined}
+            cancellingRequest={cancellingRequest}
           />
         )}
       </div>
@@ -426,7 +468,9 @@ function ProviderQuoteRequestCard({
   formatTime,
   formatPrice,
   onViewDetails,
-  onMessage
+  onMessage,
+  onDeny,
+  cancellingRequest
 }: {
   quoteRequest: QuoteRequest;
   statusConfig: ReturnType<typeof getStatusConfig>;
@@ -435,6 +479,8 @@ function ProviderQuoteRequestCard({
   formatPrice: (price: number) => string;
   onViewDetails: () => void;
   onMessage: () => void;
+  onDeny?: () => void;
+  cancellingRequest?: string | null;
 }) {
   const hasQuote = quoteRequest.quotes && quoteRequest.quotes.length > 0;
   const customerName = quoteRequest.customer 
@@ -494,25 +540,48 @@ function ProviderQuoteRequestCard({
           </div>
         )}
 
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onViewDetails}
-            className="flex-1 border-2 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            {hasQuote ? "View" : "Respond"}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onMessage}
-            className="flex-1 border-2 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
-          >
-            <MessageCircle className="w-4 h-4 mr-2" />
-            Message
-          </Button>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onViewDetails}
+              className="flex-1 border-2 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              {hasQuote ? "View" : "Respond"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onMessage}
+              className="flex-1 border-2 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Message
+            </Button>
+          </div>
+          {onDeny && (quoteRequest.status === "pending" || quoteRequest.status === "quoted") && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onDeny}
+              disabled={cancellingRequest === quoteRequest.id}
+              className="w-full border-2 border-red-500 text-red-600 hover:bg-red-50"
+            >
+              {cancellingRequest === quoteRequest.id ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Denying...
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Deny Request
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -530,7 +599,9 @@ function QuoteRequestDetailsDialog({
   submittingQuote,
   formatDate,
   formatTime,
-  formatPrice
+  formatPrice,
+  onDeny,
+  cancellingRequest
 }: {
   quoteRequest: QuoteRequest;
   isOpen: boolean;
@@ -542,6 +613,8 @@ function QuoteRequestDetailsDialog({
   formatDate: (date: string) => string;
   formatTime: (time: string) => string;
   formatPrice: (price: number) => string;
+  onDeny?: () => void;
+  cancellingRequest?: string | null;
 }) {
   const hasQuote = quoteRequest.quotes && quoteRequest.quotes.length > 0;
   const customerName = quoteRequest.customer 
@@ -755,28 +828,50 @@ function QuoteRequestDetailsDialog({
           ) : null}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="flex-1 h-12 border-2"
-            >
-              Close
-            </Button>
-            <Button
-              onClick={() => {
-                if (quoteRequest.booking_id) {
-                  window.location.href = `/messages?booking_id=${quoteRequest.booking_id}`;
-                } else {
-                  // Fallback: try to find booking by quote request ID in special_instructions
-                  window.location.href = "/messages";
-                }
-              }}
-              className="flex-1 h-12 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white"
-            >
-              <MessageCircle className="w-5 h-5 mr-2" />
-              Message Customer
-            </Button>
+          <div className="space-y-3 pt-4 border-t border-gray-200">
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="flex-1 h-12 border-2"
+              >
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  if (quoteRequest.booking_id) {
+                    window.location.href = `/messages?booking_id=${quoteRequest.booking_id}`;
+                  } else {
+                    // Fallback: try to find booking by quote request ID in special_instructions
+                    window.location.href = "/messages";
+                  }
+                }}
+                className="flex-1 h-12 bg-gradient-to-r from-[#434c9d] to-[#96cbc3] hover:from-[#434c9d]/90 hover:to-[#96cbc3]/90 text-white"
+              >
+                <MessageCircle className="w-5 h-5 mr-2" />
+                Message Customer
+              </Button>
+            </div>
+            {onDeny && (quoteRequest.status === "pending" || quoteRequest.status === "quoted") && (
+              <Button
+                variant="outline"
+                onClick={onDeny}
+                disabled={cancellingRequest === quoteRequest.id}
+                className="w-full h-12 border-2 border-red-500 text-red-600 hover:bg-red-50"
+              >
+                {cancellingRequest === quoteRequest.id ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Denying Request...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-5 h-5 mr-2" />
+                    Deny Quote Request
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
