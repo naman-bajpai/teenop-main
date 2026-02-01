@@ -92,28 +92,51 @@ export async function GET(request: NextRequest) {
       imagesMap.get(image.service_id).push(image);
     });
 
-    // Transform the data to match the expected format
-    const transformedServices = services?.map((service: any) => ({
-      id: service.id,
-      user_id: service.user_id,
-      title: service.title,
-      description: service.description,
-      price: service.price,
-      location: service.location,
-      category: service.category,
-      status: service.status,
-      duration: service.duration || 60,
-      education: service.education || null,
-      qualifications: service.qualifications || null,
-      address: service.address || null,
-      pricing_model: service.pricing_model || "per_hour",
-      banner_url: service.banner_url,
-      created_at: service.created_at,
-      rating: service.rating || null,
-      total_bookings: service.total_bookings || 0,
-      provider_name: profileMap.get(service.user_id) || null,
-      images: imagesMap.get(service.id) || []
-    })) || [];
+    // Compute rating from reviews table (parent/customer reviews) so teens see ratings on their services
+    const { data: reviewRows } = await (supabase as any)
+      .from("reviews")
+      .select("service_id, rating")
+      .in("service_id", serviceIds);
+    const ratingByService = new Map<string, { avg: number; count: number }>();
+    (reviewRows || []).forEach((r: any) => {
+      if (!r.service_id) return;
+      const numRating = typeof r.rating === "number" ? r.rating : parseFloat(r.rating);
+      if (typeof numRating !== "number" || isNaN(numRating)) return;
+      const existing = ratingByService.get(r.service_id);
+      if (existing) {
+        existing.avg = (existing.avg * existing.count + numRating) / (existing.count + 1);
+        existing.count += 1;
+      } else {
+        ratingByService.set(r.service_id, { avg: numRating, count: 1 });
+      }
+    });
+
+    // Transform the data to match the expected format; use computed rating from reviews when available
+    const transformedServices = services?.map((service: any) => {
+      const computed = ratingByService.get(service.id);
+      const rating = computed ? Math.round(computed.avg * 10) / 10 : (service.rating ?? null);
+      return {
+        id: service.id,
+        user_id: service.user_id,
+        title: service.title,
+        description: service.description,
+        price: service.price,
+        location: service.location,
+        category: service.category,
+        status: service.status,
+        duration: service.duration || 60,
+        education: service.education || null,
+        qualifications: service.qualifications || null,
+        address: service.address || null,
+        pricing_model: service.pricing_model || "per_hour",
+        banner_url: service.banner_url,
+        created_at: service.created_at,
+        rating,
+        total_bookings: service.total_bookings || 0,
+        provider_name: profileMap.get(service.user_id) || null,
+        images: imagesMap.get(service.id) || []
+      };
+    }) || [];
 
     console.log(`[GET /api/services] Returning ${transformedServices.length} services for user ${user.id} (allServices: ${allServices})`);
 

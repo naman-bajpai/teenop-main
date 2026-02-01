@@ -22,7 +22,8 @@ import {
   Image as ImageIcon,
   User,
   Loader2,
-  Send
+  Send,
+  Info
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -31,6 +32,7 @@ import { useUser } from "@/hooks/useUser";
 import { useToast } from "@/components/ui/use-toast";
 import { QuoteRequest, Quote, CreateQuoteRequest } from "@/types/quote";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 function getStatusConfig(status: string) {
   const configs: Record<string, { color: string; bgColor: string; borderColor: string; icon: React.ReactNode; label: string }> = {
@@ -292,7 +294,7 @@ function QuoteRequestsContent() {
                     className="rounded-xl px-8 py-3 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
                   >
                     {tab.label}
-                    <span className={cn("ml-2 px-2 py-0.5 rounded-lg bg-current/10 opacity-50", tab.color)}>{tab.count}</span>
+                    <span className={cn("ml-2 px-2 py-0.5 rounded-lg bg-current/10 opacity-50", tab.color)}>{tab.count}</span>  
                   </TabsTrigger>
                 ))}
               </TabsList>

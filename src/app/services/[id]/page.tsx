@@ -175,11 +175,27 @@ export default function ServiceDetailsPage() {
         }
       }
 
+      // Compute rating from reviews (parent/customer reviews) so displayed rating is accurate
+      let computedRating: number | null = serviceData.rating ?? provider_rating ?? null;
+      try {
+        const reviewRes = await fetch(`/api/reviews?service_id=${id}`);
+        if (reviewRes.ok) {
+          const reviewData = await reviewRes.json();
+          const reviews = reviewData.reviews || [];
+          if (reviews.length > 0) {
+            const sum = reviews.reduce((s: number, r: any) => s + (Number(r.rating) || 0), 0);
+            computedRating = Math.round((sum / reviews.length) * 10) / 10;
+          }
+        }
+      } catch (_) {
+        // Keep DB rating if review fetch fails
+      }
+
       const normalizedServiceData: Service = {
         ...serviceData,
         duration: serviceData.duration ?? 30,
         price: serviceData.price ?? 0,
-        rating: serviceData.rating ?? provider_rating ?? null,
+        rating: computedRating,
         total_bookings: serviceData.total_bookings ?? 0,
         description: serviceData.description ?? "",
         location: serviceData.location ?? "",

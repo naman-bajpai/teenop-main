@@ -73,11 +73,16 @@ export default function UserProfilePage() {
         const { count: bookingCount } = await supabase.from("bookings").select("*", { count: "exact", head: true }).eq("user_id", userId);
         totalBookings.current = bookingCount ?? 0;
 
-        const { data: reviews } = await supabase.from("reviews").select("rating").eq("reviewee_id", userId);
-        if (reviews && reviews.length > 0) {
-          const avgRating = reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length;
-          setRating(Math.round(avgRating * 10) / 10);
-          setReviewCount(reviews.length);
+        // Fetch reviews received by this user via API (works for any viewer; avoids RLS blocking)
+        const reviewRes = await fetch(`/api/reviews?reviewee_id=${encodeURIComponent(userId)}`);
+        if (reviewRes.ok) {
+          const reviewData = await reviewRes.json();
+          const reviews = reviewData.reviews || [];
+          if (reviews.length > 0) {
+            const avgRating = reviews.reduce((sum: number, r: any) => sum + (r.rating ?? 0), 0) / reviews.length;
+            setRating(Math.round(avgRating * 10) / 10);
+            setReviewCount(reviews.length);
+          }
         }
       } catch (e: any) {
         console.error(e);

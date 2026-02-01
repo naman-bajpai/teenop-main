@@ -1,5 +1,5 @@
 "use client";
-import { Sparkles, Facebook, Instagram, Twitter, Linkedin, Heart, Mail, MapPin, Phone } from "lucide-react";
+import { Sparkles, Facebook, Instagram, Video, Linkedin, Heart, Mail, MapPin, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
@@ -65,14 +65,17 @@ export default function Footer({ user }: FooterProps) {
             </p>
             <div className="flex items-center gap-4">
               {[
-                { icon: Facebook, href: "#" },
-                { icon: Instagram, href: "#" },
-                { icon: Twitter, href: "#" },
-                { icon: Linkedin, href: "#" }
+                { icon: Facebook, href: "https://www.facebook.com/profile.php?id=61574994367732", label: "Facebook" },
+                { icon: Instagram, href: "https://www.instagram.com/teenop.co/", label: "Instagram" },
+                { icon: Video, href: "https://www.tiktok.com/@teenop.co", label: "TikTok" },
+                { icon: Linkedin, href: "https://www.linkedin.com/in/teenop-teen-opportunity-2b95593a8/", label: "LinkedIn" }
               ].map((social, i) => (
                 <Link 
                   key={i} 
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.label}
                   className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-[#434c9d] hover:text-white transition-all shadow-sm"
                 >
                   <social.icon className="w-5 h-5" />
@@ -126,7 +129,7 @@ export default function Footer({ user }: FooterProps) {
                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#96cbc3] shadow-sm group-hover:bg-[#96cbc3] group-hover:text-white transition-all">
                   <Mail className="w-5 h-5" />
                 </div>
-                <span className="text-sm font-bold text-gray-600">hello@teenop.com</span>
+                <span className="text-sm font-bold text-gray-600">teenop@gmail.com</span>
               </div>
               <div className="flex items-center gap-4 group cursor-pointer">
                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#434c9d] shadow-sm group-hover:bg-[#434c9d] group-hover:text-white transition-all">
@@ -147,9 +150,6 @@ export default function Footer({ user }: FooterProps) {
             <div className="flex flex-wrap justify-center gap-8">
               {[
                 { label: "Our Story", href: "/our-story" },
-                { label: "Privacy", href: "/privacy" },
-                { label: "Terms", href: "/terms" },
-                { label: "Cookies", href: "/cookies" }
               ].map((link) => (
                 <Link key={link.label} href={link.href} className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hover:text-[#434c9d] transition-colors">
                   {link.label}

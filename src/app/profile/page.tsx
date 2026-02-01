@@ -117,7 +117,8 @@ export default function ProfilePage() {
         const { count: bookingCount } = await supabase.from("bookings").select("*", { count: "exact", head: true }).eq("user_id", authUser.id);
         totalBookings.current = bookingCount ?? 0;
 
-        const { data: reviews } = await supabase.from("service_reviews").select("rating").eq("reviewer_id", authUser.id);
+        // Reviews received by this user (as reviewee) — from parents/customers
+        const { data: reviews } = await supabase.from("reviews").select("rating").eq("reviewee_id", authUser.id);
         if (reviews && reviews.length > 0) {
           const avgRating = reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length;
           setRating(Math.round(avgRating * 10) / 10);
