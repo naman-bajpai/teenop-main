@@ -276,6 +276,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // When user replies, mark all messages in this conversation sent to them as read (clears red bubble for this conversation)
+    try {
+      await (supabase as any)
+        .from("messages")
+        .update({ read_at: new Date().toISOString() })
+        .eq("booking_id", booking_id)
+        .eq("receiver_id", user.id)
+        .is("read_at", null);
+    } catch (markReadErr) {
+      console.error("Error marking conversation as read after reply:", markReadErr);
+      // Don't fail the send if mark-read fails
+    }
+
     // Type assertion for message data
     const messageData = message as any;
 

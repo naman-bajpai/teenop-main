@@ -19,6 +19,7 @@ import {
   Image as ImageIcon,
   X,
   AlertTriangle,
+  CheckCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -87,6 +88,7 @@ function MessagesPageContent() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
 
   const addMessageSafely = (newMessage: Message) => {
     setMessages(prev => {
@@ -277,6 +279,28 @@ function MessagesPageContent() {
     markMessagesAsRead();
   }, [selectedConversation]);
 
+  const markAllAsRead = async () => {
+    const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0);
+    if (totalUnread === 0) return;
+    try {
+      setMarkingAllRead(true);
+      const response = await fetch("/api/messages/mark-read-all", { method: "POST" });
+      if (response.ok) {
+        setConversations(prev => prev.map(c => ({ ...c, unread_count: 0 })));
+        window.dispatchEvent(new CustomEvent("messagesMarkedAsRead"));
+        toast({ title: "Done", description: "All messages marked as read." });
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast({ title: "Error", description: data.error || "Failed to mark as read", variant: "destructive" });
+      }
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+      toast({ title: "Error", description: "Failed to mark as read", variant: "destructive" });
+    } finally {
+      setMarkingAllRead(false);
+    }
+  };
+
 
 
   useEffect(() => {
@@ -371,10 +395,15 @@ function MessagesPageContent() {
         setMessages(prev => prev.map(msg =>
           msg.id === optimisticMessage.id ? data.message : msg
         ));
+        // Backend marked this conversation as read when we replied; clear unread in UI and update navbar
         setConversations(prev =>
-          prev.map(conv => conv.id === selectedConversation.id ? { ...conv, last_message: data.message } : conv)
+          prev.map(conv => conv.id === selectedConversation.id
+            ? { ...conv, unread_count: 0, last_message: data.message }
+            : conv
+          )
         );
-        window.dispatchEvent(new CustomEvent('messageSent', { detail: { bookingId: selectedConversation.booking_id, message: data.message } }));
+        window.dispatchEvent(new CustomEvent("messagesMarkedAsRead"));
+        window.dispatchEvent(new CustomEvent("messageSent", { detail: { bookingId: selectedConversation.booking_id, message: data.message } }));
       }
     } catch (error: any) {
       setUploadingImage(false);
@@ -514,6 +543,27 @@ function MessagesPageContent() {
                 className="pl-9 h-10 border-gray-100 bg-gray-50/50 focus:bg-white focus:border-[#434c9d]/30 focus:ring-[#434c9d]/10 rounded-xl transition-all"
               />
             </div>
+            {conversations.reduce((sum, c) => sum + c.unread_count, 0) > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={markAllAsRead}
+                disabled={markingAllRead}
+                className="w-full mt-3 h-9 rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-[#434c9d]/30 hover:text-[#434c9d]"
+              >
+                {markingAllRead ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="h-3.5 w-3.5 rounded-full border-2 border-[#434c9d] border-t-transparent animate-spin" />
+                    Marking...
+                  </span>
+                ) : (
+                  <>
+                    <CheckCheck className="w-4 h-4 mr-2" />
+                    Mark all as read
+                  </>
+                )}
+              </Button>
+            )}
           </div>
 
           {/* Conversations List */}

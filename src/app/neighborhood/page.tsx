@@ -33,7 +33,7 @@ export default function NeighborhoodPage() {
     totalServices: 0
   });
 
-  // Initial load from Supabase (public.v_services)
+  // Load all active services (no filter by parent's profile location; search is text-only on title/description/location)
   React.useEffect(() => {
     const load = async () => {
       try {

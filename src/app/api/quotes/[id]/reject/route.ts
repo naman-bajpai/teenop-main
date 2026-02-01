@@ -86,22 +86,30 @@ export async function POST(
     }
 
     // Check if there are any other pending quotes for this request
-    const { data: otherQuotes } = await supabase
+    const { data: otherQuotes, error: otherQuotesError } = await supabase
       .from("quotes")
       .select("id")
       .eq("quote_request_id" as any, quoteRequest.id as any)
       .eq("status" as any, "pending" as any);
 
-    // If no more pending quotes, mark the quote request as cancelled
+    if (otherQuotesError) {
+      console.error("Error checking other quotes:", otherQuotesError);
+    }
+
+    // If no more pending quotes, mark the quote request as rejected
     if (!otherQuotes || otherQuotes.length === 0) {
       const quoteRequestUpdatePayload: QuoteRequestsUpdate = {
-        status: "cancelled",
+        status: "rejected",
         updated_at: new Date().toISOString()
       };
       const quoteRequestQuery = supabase.from("quote_requests");
-      await (quoteRequestQuery as any)
+      const { error: qrUpdateError } = await (quoteRequestQuery as any)
         .update(quoteRequestUpdatePayload)
         .eq("id", quoteRequest.id);
+
+      if (qrUpdateError) {
+        console.error("Error updating quote request status:", qrUpdateError);
+      }
     }
 
     return NextResponse.json({

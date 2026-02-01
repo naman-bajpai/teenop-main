@@ -21,7 +21,8 @@ import {
   User,
   Sparkles,
   FileText,
-  Star
+  Star,
+  Info
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,6 +33,7 @@ import { PaymentModal } from "@/components/payments/PaymentModal";
 import { useToast } from "@/components/ui/use-toast";
 import ReviewForm from "@/components/reviews/ReviewForm";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 // Status configuration helper function
 type StatusConfig = {
@@ -99,6 +101,13 @@ function getStatusConfig(status: string): StatusConfig {
       borderColor: "border-orange-200",
       icon: <Clock className="w-4 h-4" />,
       label: "Alternative Proposed"
+    },
+    expired: {
+      color: "text-gray-600",
+      bgColor: "bg-gray-50",
+      borderColor: "border-gray-200",
+      icon: <Clock className="w-4 h-4" />,
+      label: "Expired"
     }
   };
 
@@ -124,6 +133,19 @@ export default function MyRequestsPage() {
     if (user) {
       fetchBookings();
     }
+  }, [user]);
+
+  // Refetch when tab becomes visible so parent sees updated status after paying (e.g. webhook updated booking)
+  useEffect(() => {
+    if (!user) return;
+    const onFocus = () => fetchBookings(true);
+    const onVisibility = () => { if (document.visibilityState === "visible") fetchBookings(true); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [user]);
 
   // Helper function to check if booking is expired
@@ -158,22 +180,7 @@ export default function MyRequestsPage() {
         throw new Error(result.error || "Failed to fetch bookings");
       }
 
-      let requestedBookings = result.myRequests || [];
-
-      // Debug: Log alternative_proposed bookings
-      const altProposed = requestedBookings.filter((b: Booking) => b.status === "alternative_proposed");
-      if (altProposed.length > 0) {
-        console.log("Alternative proposed bookings found:", altProposed);
-      }
-
-      // Filter out expired bookings (only for pending/confirmed/alternative_proposed)
-      requestedBookings = requestedBookings.filter((booking: Booking) => {
-        if (booking.status === "pending" || booking.status === "confirmed" || booking.status === "alternative_proposed") {
-          return !isBookingExpired(booking);
-        }
-        return true; // Keep paid, completed, cancelled, rejected regardless of date
-      });
-
+      const requestedBookings = result.myRequests || [];
       setBookings(requestedBookings);
 
       // Fetch completed bookings that need reviews (only when teen has marked as completed)
@@ -425,21 +432,19 @@ export default function MyRequestsPage() {
     });
   };
 
-  // Filter bookings by status
-  const allBookings = bookings;
-  // Pending: service is accepted and waiting for payment (pending, alternative_proposed, confirmed)
-  const pendingBookings = bookings.filter(booking =>
-    booking.status === "pending" ||
-    booking.status === "alternative_proposed" ||
-    booking.status === "confirmed"
+  // Filter bookings by status (any request past its requested date goes under Expired)
+  const pendingStatuses = (b: Booking) =>
+    b.status === "pending" || b.status === "alternative_proposed" || b.status === "confirmed";
+  const expiredBookings = bookings.filter(
+    (b) => pendingStatuses(b) && isBookingExpired(b)
   );
-  // Scheduled: once it is paid
-  const scheduledBookings = bookings.filter(booking => booking.status === "paid");
-  // Completed: once the service is completed
-  const completedBookings = bookings.filter(booking => booking.status === "completed");
-  // Cancelled: cancelled or rejected requests
-  const cancelledBookings = bookings.filter(booking =>
-    booking.status === "cancelled" || booking.status === "rejected"
+  const pendingBookings = bookings.filter(
+    (b) => pendingStatuses(b) && !isBookingExpired(b)
+  );
+  const scheduledBookings = bookings.filter((b) => b.status === "paid");
+  const completedBookings = bookings.filter((b) => b.status === "completed");
+  const cancelledBookings = bookings.filter(
+    (b) => b.status === "cancelled" || b.status === "rejected"
   );
 
   // Filter quote requests by status (only show in pending tab)
@@ -465,174 +470,156 @@ export default function MyRequestsPage() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-orange-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#434c9d] to-[#96cbc3] rounded-xl flex items-center justify-center shadow-lg">
-                <Calendar className="w-6 h-6 text-white" />
+      <div className="min-h-screen bg-white">
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          {/* Page Header */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 mb-12">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 bg-[#434c9d]/10 text-[#434c9d] rounded-full px-4 py-1.5">
+                <Calendar className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-[0.15em]">Customer Dashboard</span>
               </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent">
-                  My Requests
-                </h1>
-                <p className="text-gray-600 mt-1">Track and manage your service bookings</p>
-                {user?.role === "teen" && (
-                  <p className="text-sm text-gray-500 mt-2 italic">
-                    If you requested/purchased a service from another teen it will show up here. If looking for service requests for your own services visit the My Teen Hustle Page or{" "}
-                    <Link href="/my-teen-hustle" className="text-[#434c9d] hover:underline font-medium">
-                      click here
-                    </Link>
-                    .
-                  </p>
-                )}
-              </div>
+              <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+                My <span className="text-[#434c9d]">Requests</span>
+              </h1>
+              <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">
+                Track and manage your service bookings and quote requests.
+              </p>
+              {user?.role === "teen" && (
+                <p className="text-sm text-gray-400 font-medium italic">
+                  Looking for requests for your own services? Visit the{" "}
+                  <Link href="/my-teen-hustle" className="text-[#434c9d] hover:underline font-bold">
+                    My Teen Hustle
+                  </Link>{" "}
+                  page.
+                </p>
+              )}
             </div>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
-              <div className="flex items-center justify-between">
-                <p className="text-red-700 font-medium">{error}</p>
-                <Button
-                  onClick={() => fetchBookings(true)}
-                  variant="outline"
-                  size="sm"
-                  className="border-red-300 text-red-700 hover:bg-red-100"
-                >
-                  Try Again
-                </Button>
+            <div className="mb-12 p-6 bg-red-50 border-2 border-red-100 rounded-[32px] flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-red-600" />
+                </div>
+                <p className="text-red-700 font-bold">{error}</p>
               </div>
+              <Button
+                onClick={() => fetchBookings(true)}
+                variant="outline"
+                className="rounded-xl font-bold border-red-200 text-red-700 hover:bg-red-100"
+              >
+                Try Again
+              </Button>
             </div>
           )}
 
           {/* Stats Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-8">
-            <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
-                <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
-                  <AlertCircle className="w-5 h-5 md:w-7 md:h-7 text-white" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-16">
+            {[
+              { label: "Pending", value: pendingBookings.length + pendingQuoteRequests.length, icon: AlertCircle, color: "text-yellow-500", bg: "bg-yellow-50", description: "Awaiting action" },
+              { label: "Scheduled", value: scheduledBookings.length, icon: Calendar, color: "text-[#434c9d]", bg: "bg-[#434c9d]/10", description: "Upcoming services" },
+              { label: "Completed", value: completedBookings.length, icon: CheckCircle, color: "text-[#96cbc3]", bg: "bg-[#96cbc3]/10", description: "Services delivered" },
+            ].map((stat, i) => (
+              <div key={i} className="bg-white p-8 rounded-[32px] border border-gray-100 flex items-center gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center shrink-0", stat.bg)}>
+                  <stat.icon className={cn("w-8 h-8", stat.color)} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Pending</p>
-                  <p className="text-xl md:text-3xl font-bold text-gray-900">{pendingBookings.length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
-                <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
-                  <Calendar className="w-5 h-5 md:w-7 md:h-7 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Scheduled</p>
-                  <p className="text-xl md:text-3xl font-bold text-gray-900">{scheduledBookings.length}</p>
+                <div>
+                  <div className="text-3xl font-black text-gray-900 leading-tight">{stat.value}</div>
+                  <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] mb-1">{stat.label}</div>
+                  <div className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{stat.description}</div>
                 </div>
               </div>
-            </div>
-            <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
-                <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-md">
-                  <CheckCircle className="w-5 h-5 md:w-7 md:h-7 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Completed</p>
-                  <p className="text-xl md:text-3xl font-bold text-gray-900">{completedBookings.length}</p>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Tip, Rate, and Review Section */}
           {completedBookingsForReview.length > 0 && (
-            <div className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-200 shadow-lg">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Tip, Rate, and Review Your Latest Teen Provider
+            <div className="mb-16 relative overflow-hidden bg-white rounded-[40px] border-2 border-[#434c9d]/10 p-8 shadow-sm hover:shadow-xl transition-all duration-500">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#434c9d]/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+              <div className="relative flex flex-col lg:flex-row items-center gap-8">
+                <div className="w-20 h-20 bg-[#434c9d]/10 rounded-[24px] flex items-center justify-center shrink-0">
+                  <Star className="w-10 h-10 text-[#434c9d]" />
+                </div>
+                <div className="flex-1 text-center lg:text-left">
+                  <h2 className="text-2xl font-black text-gray-900 mb-2">
+                    Tip & Review Your Recent Services
                   </h2>
-                  <p className="text-gray-600">
-                    The service has been marked as completed. Help other parents by sharing your experience and supporting the teen who provided your service.
+                  <p className="text-gray-500 font-medium leading-relaxed max-w-2xl">
+                    Support your teen provider by sharing your experience. Your feedback helps the entire community!
                   </p>
                 </div>
-              </div>
-              <div className="space-y-3">
-                {completedBookingsForReview.slice(0, 3).map((booking: any) => (
-                  <div
-                    key={booking.id}
-                    className="bg-white rounded-lg p-4 border border-purple-200 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">
-                          {booking.service?.title || "Service"}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          Completed on {formatDate(booking.requested_date)}
-                        </p>
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setSelectedBookingForReview(booking);
-                          setReviewModalOpen(true);
-                        }}
-                        className="bg-[#434c9d] hover:bg-[#434c9d]/90 text-white"
-                        size="sm"
-                      >
-                        <Star className="w-4 h-4 mr-2" />
-                        Review & Tip
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                <div className="flex flex-wrap justify-center gap-3 shrink-0">
+                  {completedBookingsForReview.slice(0, 2).map((booking: any) => (
+                    <Button
+                      key={booking.id}
+                      onClick={() => {
+                        setSelectedBookingForReview(booking);
+                        setReviewModalOpen(true);
+                      }}
+                      className="bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-2xl px-6 h-12 font-black shadow-lg shadow-[#434c9d]/20 transition-all active:scale-95"
+                    >
+                      Review {booking.service?.title}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
           {/* Tabs */}
           <Tabs defaultValue="pending" className="w-full">
-            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-              <TabsList className="inline-flex w-full sm:grid sm:grid-cols-4 bg-gray-100 p-1 rounded-xl h-auto min-w-max sm:min-w-0">
-                <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap relative">
-                  Pending ({pendingBookings.length + pendingQuoteRequests.length})
-                  {pendingBookings.some(b => b.status === "confirmed") && (
-                    <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[18px] h-4.5 flex items-center justify-center rounded-full px-1 animate-pulse">
-                      !
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="scheduled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Scheduled ({scheduledBookings.length})
-                </TabsTrigger>
-                <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Completed ({completedBookings.length})
-                </TabsTrigger>
-                <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg font-semibold py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Cancelled ({cancelledBookings.length})
-                </TabsTrigger>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-6 mb-10 pb-6 border-b border-gray-100">
+              <TabsList className="bg-gray-100/50 p-1.5 rounded-2xl h-auto flex flex-wrap justify-center">
+                {[
+                  { value: "pending", label: "Pending", count: pendingBookings.length + pendingQuoteRequests.length, color: "text-yellow-600" },
+                  { value: "expired", label: "Expired", count: expiredBookings.length, color: "text-gray-500" },
+                  { value: "scheduled", label: "Scheduled", count: scheduledBookings.length, color: "text-[#434c9d]" },
+                  { value: "completed", label: "History", count: completedBookings.length, color: "text-[#96cbc3]" },
+                  { value: "cancelled", label: "Cancelled", count: cancelledBookings.length, color: "text-red-500" },
+                ].map((tab) => (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className={cn(
+                      "rounded-xl px-6 py-3 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all relative",
+                      tab.value === "pending" && pendingBookings.some(b => b.status === "confirmed") && "pr-8"
+                    )}
+                  >
+                    {tab.label}
+                    <span className={cn("ml-2 px-2 py-0.5 rounded-lg bg-current/10 opacity-50", tab.color)}>{tab.count}</span>
+                    {tab.value === "pending" && pendingBookings.some(b => b.status === "confirmed") && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                    )}
+                  </TabsTrigger>
+                ))}
               </TabsList>
             </div>
 
             {/* Status-specific tabs */}
             {[
-              { value: "pending", bookings: pendingBookings, quoteRequests: pendingQuoteRequests, icon: <AlertCircle className="w-16 h-16" />, title: "No pending requests", description: "All your requests have been processed." },
-              { value: "scheduled", bookings: scheduledBookings, quoteRequests: [], icon: <Calendar className="w-16 h-16" />, title: "No scheduled services", description: "Paid services will appear here once payment is completed." },
-              { value: "completed", bookings: completedBookings, quoteRequests: [], icon: <CheckCircle className="w-16 h-16" />, title: "No completed requests", description: "Completed services will appear here." },
-              { value: "cancelled", bookings: cancelledBookings, quoteRequests: [], icon: <XCircle className="w-16 h-16" />, title: "No cancelled requests", description: "Cancelled requests will appear here." }
+              { value: "pending", bookings: pendingBookings, quoteRequests: pendingQuoteRequests, icon: <AlertCircle className="w-12 h-12" />, title: "No pending requests", description: "All your requests have been processed." },
+              { value: "expired", bookings: expiredBookings, quoteRequests: [], icon: <Clock className="w-12 h-12" />, title: "No expired requests", description: "Requests that passed their scheduled date will appear here." },
+              { value: "scheduled", bookings: scheduledBookings, quoteRequests: [], icon: <Calendar className="w-12 h-12" />, title: "No scheduled services", description: "Paid services will appear here once payment is completed." },
+              { value: "completed", bookings: completedBookings, quoteRequests: [], icon: <CheckCircle className="w-12 h-12" />, title: "No history yet", description: "Your completed services will appear here." },
+              { value: "cancelled", bookings: cancelledBookings, quoteRequests: [], icon: <XCircle className="w-12 h-12" />, title: "No cancelled requests", description: "Cancelled requests will appear here." }
             ].map(({ value, bookings: tabBookings, quoteRequests: tabQuoteRequests, icon, title, description }) => (
-              <TabsContent key={value} value={value} className="mt-6">
+              <TabsContent key={value} value={value} className="mt-0 outline-none">
                 {(tabBookings.length > 0 || tabQuoteRequests.length > 0) ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {/* Regular Bookings */}
                     {tabBookings.map((booking) => {
-                      const statusConfig = getStatusConfig(booking.status);
+                      const isExpiredTab = value === "expired";
+                      const statusConfig = isExpiredTab ? getStatusConfig("expired") : getStatusConfig(booking.status);
                       return (
                         <BookingCard
                           key={booking.id}
                           booking={booking}
                           statusConfig={statusConfig}
                           updating={updating === booking.id}
+                          isExpired={isExpiredTab}
                           onCancel={() => updateBookingStatus(booking.id, "cancelled")}
                           onPay={() => {
                             setSelectedBooking(booking);
@@ -652,84 +639,82 @@ export default function MyRequestsPage() {
                     {value === "pending" && tabQuoteRequests.map((qr: any) => {
                       const pastDue = isQuoteRequestPastDue(qr);
                       return (
-                        <div key={qr.id} className="bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge className="bg-purple-100 text-purple-700">Quote Request</Badge>
-                                <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{qr.services?.title || 'Service'}</h3>
-                              </div>
-                              <p className="text-sm text-gray-600">Quote request for your service</p>
+                        <div key={qr.id} className="group bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col h-full">
+                          <div className="flex justify-between items-start mb-6">
+                            <div className="space-y-2">
+                              <Badge className="bg-purple-500/10 text-purple-600 border-none text-[10px] font-black uppercase tracking-widest px-3 py-1.5">
+                                Quote Request
+                              </Badge>
+                              <h3 className="text-xl font-black text-gray-900 group-hover:text-[#434c9d] transition-colors line-clamp-1">
+                                {qr.services?.title || 'Service'}
+                              </h3>
                             </div>
                             <div className="flex flex-col items-end gap-2">
-                              <Badge className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 flex-shrink-0">
+                              <Badge className={cn(
+                                "text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border-none",
+                                qr.status === "quoted" ? "bg-blue-500 text-white" : "bg-yellow-500 text-white"
+                              )}>
                                 {qr.status === "quoted" ? "Quoted" : "Pending"}
                               </Badge>
                               {pastDue && (
-                                <Badge className="bg-red-100 text-red-700 text-xs font-semibold px-3 py-1 flex-shrink-0">
+                                <Badge className="bg-red-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border-none">
                                   Past Due
                                 </Badge>
                               )}
                             </div>
                           </div>
-                          {qr.requested_date && qr.requested_time && (
-                            <div className="mb-4 p-3 bg-gray-50/50 rounded-xl border border-gray-100 text-sm text-gray-600">
-                              <div className="flex items-center gap-3 mb-1">
-                                <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                <span className="font-medium">{formatDate(qr.requested_date)}</span>
+
+                          <div className="space-y-3 mb-8">
+                            {qr.requested_date && qr.requested_time && (
+                              <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-2">
+                                <div className="flex items-center gap-3 text-gray-600">
+                                  <Calendar className="w-4 h-4 text-[#96cbc3]" />
+                                  <span className="text-xs font-bold">{formatDate(qr.requested_date)}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-gray-600">
+                                  <Clock className="w-4 h-4 text-[#434c9d]" />
+                                  <span className="text-xs font-bold">{formatTime(qr.requested_time)}</span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <Clock className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                                <span className="font-medium">{formatTime(qr.requested_time)}</span>
+                            )}
+
+                            {qr.quotes && qr.quotes.length > 0 && (
+                              <div className="p-4 bg-[#96cbc3]/10 rounded-2xl border border-[#96cbc3]/20">
+                                <p className="text-[10px] font-black text-[#96cbc3] uppercase tracking-widest mb-1">Provider's Quote</p>
+                                <p className="text-2xl font-black text-gray-900">{formatPrice(qr.quotes[0].price)}</p>
+                                {qr.quotes[0].estimated_duration && (
+                                  <p className="text-xs font-bold text-gray-500 mt-1">Est. {qr.quotes[0].estimated_duration} minutes</p>
+                                )}
                               </div>
-                            </div>
-                          )}
-                          {qr.quotes && qr.quotes.length > 0 && (
-                            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                              <p className="text-sm font-semibold text-green-900 mb-1">Provider's Quote:</p>
-                              <p className="text-lg font-bold text-green-700">${qr.quotes[0].price.toFixed(2)}</p>
-                              {qr.quotes[0].estimated_duration && (
-                                <p className="text-xs text-green-600">Est. {qr.quotes[0].estimated_duration} minutes</p>
-                              )}
-                            </div>
-                          )}
-                          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-100">
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 mt-auto pt-6 border-t border-gray-50">
                             <Button
-                              size="sm"
                               variant="outline"
-                              className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white h-10"
+                              className="rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11"
                               onClick={() => router.push(`/my-quote-requests`)}
                             >
-                              <FileText className="w-4 h-4 mr-2" />
-                              View Details
+                              <FileText className="w-4 h-4 mr-2" /> Details
                             </Button>
                             <Button
-                              size="sm"
                               variant="outline"
-                              className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white h-10"
+                              className="rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11"
                               onClick={() => router.push(`/messages`)}
                             >
-                              <MessageCircle className="w-4 h-4 mr-2" />
-                              Message
+                              <MessageCircle className="w-4 h-4 mr-2" /> Message
                             </Button>
                             {(pastDue || qr.status === "pending" || qr.status === "quoted") && (
                               <Button
-                                size="sm"
                                 variant="outline"
                                 disabled={updating === qr.id}
-                                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 h-10"
+                                className="col-span-2 rounded-xl font-bold border-gray-100 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all h-11"
                                 onClick={() => handleCancelQuoteRequest(qr.id)}
                               >
                                 {updating === qr.id ? (
-                                  <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Cancelling...
-                                  </>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
-                                  <>
-                                    <XCircle className="w-4 h-4 mr-2" />
-                                    Cancel Request
-                                  </>
+                                  <><XCircle className="w-4 h-4 mr-2" /> Cancel Request</>
                                 )}
                               </Button>
                             )}
@@ -739,11 +724,15 @@ export default function MyRequestsPage() {
                     })}
                   </div>
                 ) : (
-                  <EmptyState
-                    icon={icon}
-                    title={title}
-                    description={description}
-                  />
+                  <div className="py-24 text-center bg-gray-50/50 rounded-[40px] border-2 border-dashed border-gray-100">
+                    <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+                      <div className="text-gray-200">{icon}</div>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
+                    <p className="text-gray-500 max-w-sm mx-auto leading-relaxed font-medium">
+                      {description}
+                    </p>
+                  </div>
                 )}
               </TabsContent>
             ))}
@@ -805,6 +794,7 @@ function BookingCard({
   booking,
   statusConfig,
   updating,
+  isExpired,
   onCancel,
   onPay,
   onComplete,
@@ -818,6 +808,7 @@ function BookingCard({
   booking: Booking;
   statusConfig: StatusConfig;
   updating: boolean;
+  isExpired?: boolean;
   onCancel: () => void;
   onPay: () => void;
   onComplete?: () => void;
@@ -829,290 +820,239 @@ function BookingCard({
   toast: ReturnType<typeof useToast>['toast'];
 }) {
   return (
-    <div className="bg-white rounded-xl md:rounded-2xl border border-gray-100 p-4 md:p-6 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
-        <div className="flex-1 min-w-0">
-          <Link
-            href={`/services/${booking.service_id}`}
-            className="text-lg sm:text-xl font-bold text-gray-900 hover:text-[#434c9d] transition-colors block mb-2 line-clamp-2"
-          >
-            {booking.service?.title}
-          </Link>
-          <Badge className={`${statusConfig.bgColor} ${statusConfig.color} ${statusConfig.borderColor} border px-2 sm:px-3 py-1 flex items-center gap-1.5 w-fit text-xs sm:text-sm`}>
-            {statusConfig.icon}
-            <span className="font-semibold">{statusConfig.label}</span>
-          </Badge>
+    <div className={cn(
+      "group bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col h-full",
+      isExpired && "opacity-75 grayscale-[0.5]"
+    )}>
+      {/* Header Section */}
+      <div className="p-8 pb-6">
+        <div className="flex justify-between items-start mb-6">
+          <div className="space-y-2">
+            <Badge className={cn(
+              "text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border-none shadow-sm",
+              statusConfig.bgColor,
+              statusConfig.color
+            )}>
+              <span className="flex items-center gap-1.5">{statusConfig.icon} {statusConfig.label}</span>
+            </Badge>
+            <Link
+              href={`/services/${booking.service_id}`}
+              className="text-xl font-black text-gray-900 group-hover:text-[#434c9d] transition-colors block line-clamp-2 leading-tight"
+            >
+              {booking.service?.title}
+            </Link>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-black text-gray-900">
+              {formatPrice(booking.total_price)}
+            </p>
+          </div>
         </div>
-        <div className="text-left sm:text-right">
-          <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent">
-            {formatPrice(booking.total_price)}
-          </p>
-        </div>
-      </div>
 
-      {/* Details */}
-      <div className="space-y-3 mb-4 text-sm text-gray-600 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-        <div className="flex items-center gap-3">
-          <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
-          <span className="font-medium">{formatDate(booking.requested_date)}</span>
+        {/* Details Grid */}
+        <div className="grid grid-cols-1 gap-3 mb-6">
+          <div className="flex items-center gap-3 p-3 bg-gray-50/50 rounded-2xl border border-gray-100">
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
+              <Calendar className="w-4 h-4 text-[#96cbc3]" />
+            </div>
+            <span className="text-xs font-bold text-gray-600">{formatDate(booking.requested_date)}</span>
+          </div>
+          <div className="flex items-center gap-3 p-3 bg-gray-50/50 rounded-2xl border border-gray-100">
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
+              <Clock className="w-4 h-4 text-[#434c9d]" />
+            </div>
+            <span className="text-xs font-bold text-gray-600">{formatTime(booking.requested_time)}</span>
+          </div>
+          <div className="flex items-center gap-3 p-3 bg-gray-50/50 rounded-2xl border border-gray-100">
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
+              <MapPin className="w-4 h-4 text-[#ff725a]" />
+            </div>
+            <span className="text-xs font-bold text-gray-600 truncate">{booking.service?.location}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Clock className="w-4 h-4 text-purple-600 flex-shrink-0" />
-          <span className="font-medium">{formatTime(booking.requested_time)}</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <MapPin className="w-4 h-4 text-red-600 flex-shrink-0" />
-          <span className="font-medium truncate">{booking.service?.location}</span>
-        </div>
-      </div>
 
-      {/* Alternative Time Proposal Display */}
-      {booking.status === "alternative_proposed" && booking.alternative_date && booking.alternative_time && (
-        <div className="mb-4 p-4 bg-orange-50 border-l-4 border-orange-400 rounded-r-lg">
-          <div className="flex items-start gap-2">
-            <Clock className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-orange-900 mb-2">Alternative Time Proposed</p>
-              <div className="space-y-1 text-sm text-orange-800">
-                <p><strong>Original:</strong> {formatDate(booking.requested_date)} at {formatTime(booking.requested_time)}</p>
-                <p><strong>Proposed:</strong> {formatDate(booking.alternative_date)} at {formatTime(booking.alternative_time)}</p>
+        {/* Alternative Time Proposal Display */}
+        {booking.status === "alternative_proposed" && booking.alternative_date && booking.alternative_time && (
+          <div className="mb-6 p-4 bg-orange-50 rounded-2xl border border-orange-100">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm shrink-0">
+                <Clock className="w-4 h-4 text-orange-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-orange-900 uppercase tracking-widest mb-2">Alternative Proposed</p>
+                <div className="space-y-1 text-xs font-bold text-orange-800">
+                  <p className="opacity-60">Original: {formatDate(booking.requested_date)} at {formatTime(booking.requested_time)}</p>
+                  <p>Proposed: {formatDate(booking.alternative_date)} at {formatTime(booking.alternative_time)}</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Special Instructions */}
-      {booking.special_instructions && (
-        <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-          <p className="text-sm text-gray-700 break-words">
-            <strong className="text-blue-700">Note:</strong> {booking.special_instructions}
-          </p>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="space-y-3 pt-2 border-t border-gray-100">
-        {booking.status === "alternative_proposed" && (
-          <div className="space-y-2">
-            <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-center">
-              <div className="flex items-center justify-center text-orange-700 gap-2">
-                <Clock className="w-4 h-4" />
-                <span className="text-sm font-medium">Provider Proposed Alternative Time</span>
+        {/* Special Instructions */}
+        {booking.special_instructions && (
+          <div className="mb-6 p-4 bg-[#434c9d]/5 rounded-2xl border border-[#434c9d]/10">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm shrink-0">
+                <Info className="w-4 h-4 text-[#434c9d]" />
               </div>
+              <p className="text-xs font-medium text-gray-600 leading-relaxed italic">
+                &quot;{booking.special_instructions}&quot;
+              </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
+          </div>
+        )}
+      </div>
+
+      {/* Action Buttons */}
+      <div className="mt-auto p-8 pt-0">
+        <div className="flex flex-col gap-2 pt-6 border-t border-gray-50">
+          {isExpired && (
+            <div className="space-y-3">
+              <div className="p-3 bg-gray-50 rounded-xl text-center">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Request Expired</p>
+              </div>
               <Button
-                onClick={() => {
-                  if (onAcceptAlternative && booking.alternative_date && booking.alternative_time) {
-                    onAcceptAlternative(booking.id, booking.alternative_date, booking.alternative_time);
-                  }
-                }}
-                size="sm"
-                disabled={updating || !onAcceptAlternative || !booking.alternative_date || !booking.alternative_time}
-                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md text-xs sm:text-sm h-10"
+                variant="outline"
+                className="w-full rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11"
+                onClick={onMessage}
               >
-                {updating ? (
-                  <>
-                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" />
-                    Accepting...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                    Accept & Pay
-                  </>
-                )}
+                <MessageCircle className="w-4 h-4 mr-2" /> Message Provider
               </Button>
+            </div>
+          )}
+
+          {!isExpired && booking.status === "alternative_proposed" && (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    if (onAcceptAlternative && booking.alternative_date && booking.alternative_time) {
+                      onAcceptAlternative(booking.id, booking.alternative_date, booking.alternative_time);
+                    }
+                  }}
+                  disabled={updating}
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold h-11 shadow-lg shadow-green-100"
+                >
+                  {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-2" /> Accept</>}
+                </Button>
+                <Button
+                  onClick={onCancel}
+                  variant="outline"
+                  disabled={updating}
+                  className="flex-1 rounded-xl font-bold border-gray-100 text-red-500 hover:bg-red-500 hover:text-white transition-all h-11"
+                >
+                  <XCircle className="w-4 h-4 mr-2" /> Decline
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11"
+                onClick={onMessage}
+              >
+                <MessageCircle className="w-4 h-4 mr-2" /> Message Provider
+              </Button>
+            </div>
+          )}
+
+          {!isExpired && booking.status === "pending" && (
+            <div className="flex gap-2">
               <Button
                 onClick={onCancel}
                 variant="outline"
-                size="sm"
                 disabled={updating}
-                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm h-10"
+                className="flex-1 rounded-xl font-bold border-gray-100 text-red-500 hover:bg-red-500 hover:text-white transition-all h-11"
               >
-                {updating ? (
-                  <>
-                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" />
-                    Declining...
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                    Decline
-                  </>
-                )}
+                {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><XCircle className="w-4 h-4 mr-2" /> Cancel</>}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11"
+                onClick={onMessage}
+              >
+                <MessageCircle className="w-4 h-4 mr-2" /> Message
               </Button>
             </div>
-            <Button
-              onClick={onMessage}
-              variant="outline"
-              size="sm"
-              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm h-10"
-            >
-              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-              Message Provider
-            </Button>
-          </div>
-        )}
+          )}
 
-        {booking.status === "pending" && (
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              onClick={onCancel}
-              variant="outline"
-              size="sm"
-              disabled={updating}
-              className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm h-10"
-            >
-              {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
-              {updating ? "Cancelling..." : "Cancel"}
-            </Button>
-            <Button
-              onClick={onMessage}
-              variant="outline"
-              size="sm"
-              className="flex-1 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm h-10"
-            >
-              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-              Message
-            </Button>
-          </div>
-        )}
-
-        {booking.status === "confirmed" && (
-          <div className="space-y-2">
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-              <div className="flex items-center justify-center text-blue-700 gap-2">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">Confirmed - Payment Required</span>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
+          {!isExpired && booking.status === "confirmed" && (
+            <div className="space-y-2">
               <Button
                 onClick={onPay}
-                size="sm"
-                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md text-xs sm:text-sm h-10"
+                className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-xl font-black h-12 shadow-xl shadow-[#434c9d]/20 transition-all active:scale-95"
               >
-                <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                Confirm and Pay
+                <CreditCard className="w-5 h-5 mr-2" /> Confirm and Pay
               </Button>
-              <Button
-                onClick={onCancel}
-                variant="outline"
-                size="sm"
-                disabled={updating}
-                className="w-full sm:w-auto border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm h-10 px-4"
-              >
-                {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />}
-                <span className="ml-2 sm:hidden">Cancel</span>
-              </Button>
-            </div>
-            <Button
-              onClick={onMessage}
-              variant="outline"
-              size="sm"
-              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm h-10"
-            >
-              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-              Message Provider
-            </Button>
-          </div>
-        )}
-
-        {booking.status === "completed" && (
-          <div className="space-y-2">
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
-              <div className="flex items-center justify-center text-green-700 gap-2">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">Service Completed</span>
+              <div className="flex gap-2">
+                <Button
+                  onClick={onCancel}
+                  variant="outline"
+                  disabled={updating}
+                  className="flex-1 rounded-xl font-bold border-gray-100 text-red-500 hover:bg-red-50 transition-all h-11"
+                >
+                  <XCircle className="w-4 h-4 mr-2" /> Cancel
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11"
+                  onClick={onMessage}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" /> Message
+                </Button>
               </div>
             </div>
-            <Button
-              onClick={onMessage}
-              variant="outline"
-              size="sm"
-              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm h-10"
-            >
-              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-              Message Provider
-            </Button>
-          </div>
-        )}
+          )}
 
-        {booking.status === "paid" && (
-          <div className="space-y-2">
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-center">
-              <div className="flex items-center justify-center text-emerald-700 gap-2">
-                <Calendar className="w-4 h-4" />
-                <span className="text-sm font-medium">Scheduled - Payment Completed</span>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
+          {booking.status === "completed" && (
+            <Button
+              variant="outline"
+              className="w-full rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11"
+              onClick={onMessage}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" /> Message Provider
+            </Button>
+          )}
+
+          {booking.status === "paid" && (
+            <div className="space-y-2">
               <Button
                 onClick={onComplete}
-                size="sm"
-                disabled={updating || !onComplete}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-md text-xs sm:text-sm h-10 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {updating ? (
-                  <>
-                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
-                    Marking...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                    Mark as Completed
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={onCancel}
-                variant="outline"
-                size="sm"
                 disabled={updating}
-                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm h-10"
+                className="w-full bg-green-500 hover:bg-green-600 text-white rounded-xl font-black h-12 shadow-xl shadow-green-100 transition-all active:scale-95"
               >
-                {updating ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
-                {updating ? "Cancelling..." : "Cancel Service"}
+                {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-2" /> Mark as Completed</>}
               </Button>
-            </div>
-            <Button
-              onClick={onMessage}
-              variant="outline"
-              size="sm"
-              className="w-full border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm h-10"
-            >
-              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-              Message Provider
-            </Button>
-          </div>
-        )}
-
-        {(booking.status === "cancelled" || booking.status === "rejected") && (
-          <div className="space-y-2">
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-center">
-              <div className="flex items-center justify-center text-gray-700 gap-2">
-                <XCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  {booking.status === "cancelled" ? "Request Cancelled" : "Request Rejected"}
-                </span>
+              <div className="flex gap-2">
+                <Button
+                  onClick={onCancel}
+                  variant="outline"
+                  disabled={updating}
+                  className="flex-1 rounded-xl font-bold border-gray-100 text-red-500 hover:bg-red-50 transition-all h-11"
+                >
+                  <XCircle className="w-4 h-4 mr-2" /> Cancel
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11"
+                  onClick={onMessage}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" /> Message
+                </Button>
               </div>
             </div>
+          )}
+
+          {(booking.status === "cancelled" || booking.status === "rejected") && (
             <Link href={`/services/${booking.service_id}`} className="block">
               <Button
                 variant="outline"
-                size="sm"
-                className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 h-10"
+                className="w-full rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11"
               >
-                <ArrowRight className="w-4 h-4 mr-2" />
-                View Service Again
+                <ArrowRight className="w-4 h-4 mr-2" /> View Service Again
               </Button>
             </Link>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

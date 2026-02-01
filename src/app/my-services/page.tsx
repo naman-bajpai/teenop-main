@@ -580,48 +580,6 @@ export default function MyServicesPage() {
           </Button>
         </div>
 
-        {/* Stats Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-16">
-          {[
-            { 
-              label: "Total Revenue", 
-              value: `$${services.reduce((acc, s) => acc + (s.total_bookings * s.price), 0).toLocaleString()}`, 
-              icon: DollarSign, 
-              color: "text-[#96cbc3]", 
-              bg: "bg-[#96cbc3]/10",
-              description: "Lifetime earnings"
-            },
-            { 
-              label: "Total Bookings", 
-              value: services.reduce((acc, s) => acc + s.total_bookings, 0), 
-              icon: Users, 
-              color: "text-[#434c9d]", 
-              bg: "bg-[#434c9d]/10",
-              description: "Services delivered"
-            },
-            { 
-              label: "Average Rating", 
-              value: services.some(s => s.rating) 
-                ? (services.filter(s => s.rating).reduce((acc, s) => acc + (s.rating || 0), 0) / services.filter(s => s.rating).length).toFixed(1)
-                : "New", 
-              icon: Star, 
-              color: "text-orange-500", 
-              bg: "bg-orange-50",
-              description: "Customer satisfaction"
-            },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white p-8 rounded-[32px] border border-gray-100 flex items-center gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-              <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center shrink-0", stat.bg)}>
-                <stat.icon className={cn("w-8 h-8", stat.color)} />
-              </div>
-              <div>
-                <div className="text-3xl font-black text-gray-900 leading-tight">{stat.value}</div>
-                <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] mb-1">{stat.label}</div>
-                <div className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{stat.description}</div>
-              </div>
-            </div>
-          ))}
-        </div>
 
         {/* Services Tabs */}
         <Tabs defaultValue="active" className="w-full">

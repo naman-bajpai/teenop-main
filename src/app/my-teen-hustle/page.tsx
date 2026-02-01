@@ -562,7 +562,9 @@ export default function TeenHustlePage() {
                 <TabsTrigger value="pending" className="rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm relative">
                   Pending {pendingBookings.length > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#ff725a] rounded-full" />}
                 </TabsTrigger>
-                <TabsTrigger value="scheduled" className="rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm">Scheduled</TabsTrigger>
+                <TabsTrigger value="scheduled" className="rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm relative">
+                  Scheduled {scheduledBookings.length > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#ff725a] rounded-full" />}
+                </TabsTrigger>
                 <TabsTrigger value="completed" className="rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm">History</TabsTrigger>
               </TabsList>
             </div>

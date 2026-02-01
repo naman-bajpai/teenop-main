@@ -116,8 +116,10 @@ function PaymentForm({
         description: `Payment of $${amount.toFixed(2)} for ${serviceTitle} has been completed.`,
       });
 
+      // Notify parent immediately so booking list can refetch (parent view stays in sync)
+      onPaymentSuccess?.();
+
       setTimeout(() => {
-        onPaymentSuccess?.();
         onClose();
         setPaymentSuccess(false);
       }, 2000);

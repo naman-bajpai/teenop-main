@@ -359,6 +359,14 @@ export default function ProfilePage() {
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Phone</label>
                   {isEditing ? <Input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} className="rounded-xl bg-gray-50/50 border-gray-100 focus:bg-white" /> : <p className="p-3 bg-gray-50/30 rounded-xl text-gray-900 font-medium flex items-center gap-2"><Phone className="w-4 h-4 text-gray-400" />{profile.phone || "-"}</p>}
                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">City</label>
+                  {isEditing ? <Input value={draft.city} onChange={(e) => setDraft({ ...draft, city: e.target.value })} placeholder="e.g. Austin" className="rounded-xl bg-gray-50/50 border-gray-100 focus:bg-white" /> : <p className="p-3 bg-gray-50/30 rounded-xl text-gray-900 font-medium flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" />{profile.city || "-"}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">State</label>
+                  {isEditing ? <Input value={draft.state} onChange={(e) => setDraft({ ...draft, state: e.target.value })} placeholder="e.g. TX" className="rounded-xl bg-gray-50/50 border-gray-100 focus:bg-white" /> : <p className="p-3 bg-gray-50/30 rounded-xl text-gray-900 font-medium flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" />{profile.state || "-"}</p>}
+                </div>
                 <div className="md:col-span-2 space-y-1.5">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Bio</label>
                   {isEditing ? <textarea value={draft.bio} onChange={(e) => setDraft({ ...draft, bio: e.target.value })} className="w-full rounded-xl bg-gray-50/50 border border-gray-100 p-4 min-h-[120px] focus:bg-white focus:ring-2 focus:ring-[#434c9d]/5 outline-none transition-all" /> : <p className="p-4 bg-gray-50/30 rounded-xl text-gray-900 font-medium leading-relaxed">{profile.bio || "No bio set yet."}</p>}
