@@ -150,6 +150,8 @@ export default function Footer({ user }: FooterProps) {
             <div className="flex flex-wrap justify-center gap-8">
               {[
                 { label: "Our Story", href: "/our-story" },
+                { label: "Privacy", href: "/privacy" },
+                { label: "Terms", href: "/terms" },
               ].map((link) => (
                 <Link key={link.label} href={link.href} className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hover:text-[#434c9d] transition-colors">
                   {link.label}

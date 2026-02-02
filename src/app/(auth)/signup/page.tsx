@@ -103,6 +103,11 @@ export default function SignupPage() {
     return null;
   };
 
+  const isEduEmail = (email: string): boolean => {
+    const domain = email.trim().split("@")[1] || "";
+    return domain.toLowerCase().endsWith(".edu");
+  };
+
   const validateAge = (age: string): string | null => {
     if (!age) {
       return "Age is required for teen accounts";
@@ -198,7 +203,10 @@ export default function SignupPage() {
       const error = validateName(sanitizedValue, "Last name");
       setFieldErrors(prev => ({ ...prev, lastName: error || undefined }));
     } else if (name === "email" && typeof sanitizedValue === "string") {
-      const error = validateEmail(sanitizedValue);
+      let error = validateEmail(sanitizedValue);
+      if (!error && formData.role === "teen" && sanitizedValue && !isEduEmail(sanitizedValue)) {
+        error = "Teen accounts require an .edu email address.";
+      }
       setFieldErrors(prev => ({ ...prev, email: error || undefined }));
     } else if (name === "age") {
       const error = validateAge(value);
@@ -220,8 +228,17 @@ export default function SignupPage() {
     } else if (name === "parentPhone" && typeof sanitizedValue === "string") {
       const error = validatePhone(sanitizedValue);
       setFieldErrors(prev => ({ ...prev, parentPhone: error || undefined }));
+    } else if (name === "role") {
+      // When switching to teen, re-validate email for .edu requirement
+      if (value === "teen" && formData.email) {
+        const emailErr = validateEmail(formData.email);
+        const eduErr = !emailErr && !isEduEmail(formData.email) ? "Teen accounts require an .edu email address." : null;
+        setFieldErrors(prev => ({ ...prev, email: emailErr || eduErr || undefined }));
+      } else {
+        setFieldErrors(prev => ({ ...prev, email: undefined }));
+      }
     }
-    
+
     // Clear errors when user starts typing
     if (error) setError("");
     if (success) setSuccess("");
@@ -249,6 +266,9 @@ export default function SignupPage() {
     const emailError = validateEmail(formData.email);
     if (emailError) {
       errors.email = emailError;
+      hasErrors = true;
+    } else if (formData.role === "teen" && formData.email && !isEduEmail(formData.email)) {
+      errors.email = "Teen accounts require an .edu email address.";
       hasErrors = true;
     }
 
@@ -563,7 +583,7 @@ export default function SignupPage() {
                 className={`w-full h-13 px-4 py-3 bg-gray-50 border-2 rounded-xl focus:ring-2 focus:ring-[#434c9d]/20 focus:border-[#434c9d] transition-all duration-200 placeholder:text-gray-400 text-gray-900 font-medium ${
                   fieldErrors.email ? 'border-red-400 focus:ring-red-200 focus:border-red-500' : 'border-gray-200 hover:border-gray-300'
                 }`}
-                placeholder="you@example.com"
+                placeholder={formData.role === "teen" ? "you@school.edu" : "you@example.com"}
                 disabled={isSubmitting}
                 maxLength={254}
               />
@@ -590,6 +610,11 @@ export default function SignupPage() {
                 <option value="teen">Teen (Service Provider)</option>
                 <option value="parent">Community Member</option>
               </select>
+              {formData.role === "teen" && (
+                <p className="mt-2 text-xs text-[#434c9d] font-medium">
+                  Only .edu email addresses can sign up as Teen (Service Provider).
+                </p>
+              )}
             </div>
 
             {formData.role === "teen" && (
