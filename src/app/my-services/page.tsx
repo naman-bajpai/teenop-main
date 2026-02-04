@@ -205,7 +205,7 @@ function ServiceCard({ service, onEdit, onDelete, onToggleStatus }: { service: S
           </div>
           <div className="flex items-center gap-2 text-gray-500">
             <Clock className="w-4 h-4 text-[#434c9d]" />
-            <span className="text-xs font-bold">{service.duration || 60} min</span>
+            <span className="text-xs font-bold">{(() => { const h = (service.duration || 60) / 60; return h === 1 ? "1 hr" : `${h} hrs`; })()}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-500">
             <Users className="w-4 h-4 text-[#ff725a]" />

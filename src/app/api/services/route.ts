@@ -60,16 +60,19 @@ export async function GET(request: NextRequest) {
     // Get unique user IDs to fetch profile names
     const userIds = [...new Set(services?.map((service: any) => service.user_id) || [])];
     
-    // Fetch profile names for all users
+    // Fetch profile names and role for all users (teens: first name only on listings)
     const { data: profiles } = await (supabase as any)
       .from("profiles")
-      .select("id, first_name, last_name")
+      .select("id, first_name, last_name, role")
       .in("id", userIds);
 
-    // Create map of user_id to profile name
+    // Create map of user_id to profile name (teens: first name only)
     const profileMap = new Map();
     profiles?.forEach((profile: any) => {
-      profileMap.set(profile.id, `${profile.first_name} ${profile.last_name}`);
+      const name = profile.role === "teen"
+        ? (profile.first_name || "").trim()
+        : [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
+      profileMap.set(profile.id, name || null);
     });
 
     // Get service IDs to fetch images

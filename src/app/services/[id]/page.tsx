@@ -136,13 +136,14 @@ export default function ServiceDetailsPage() {
         provider_user_id = serviceData.user_id;
         const { data: prof, error: profErr } = await supabase
           .from("profiles")
-          .select("first_name, last_name, avatar_url")
+          .select("first_name, last_name, avatar_url, role")
           .eq("id", serviceData.user_id)
           .maybeSingle();
 
         if (!profErr && prof) {
           const profileData = prof as any;
-          provider_name = [profileData.first_name, profileData.last_name].filter(Boolean).join(" ").trim() || null;
+          const isTeen = profileData.role === "teen";
+          provider_name = isTeen ? (profileData.first_name || "").trim() || null : [profileData.first_name, profileData.last_name].filter(Boolean).join(" ").trim() || null;
           provider_avatar_url = profileData.avatar_url ?? null;
         }
       }
@@ -700,7 +701,7 @@ export default function ServiceDetailsPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {[
                   { label: "Location", value: service.location, icon: MapPin, color: "text-blue-600", bg: "bg-blue-50" },
-                  { label: "Duration", value: `${service.duration} mins`, icon: Clock, color: "text-purple-600", bg: "bg-purple-50" },
+                  { label: "Duration", value: (() => { const h = service.duration / 60; return h === 1 ? "1 hr" : `${h} hrs`; })(), icon: Clock, color: "text-purple-600", bg: "bg-purple-50" },
                   { label: "Pricing", value: service.pricing_model === 'quote' ? "Custom Quote" : `${formatPrice(service.price)} / hr`, icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
                   { label: "Delivery", value: service.delivery_method === 'in_person' ? 'In Person' : 'Online', icon: CheckCircle, color: "text-orange-600", bg: "bg-orange-50" }
                 ].map((spec, i) => (
@@ -800,7 +801,7 @@ export default function ServiceDetailsPage() {
                       {[
                         { icon: Shield, text: "Secure booking process", color: "text-blue-500" },
                         { icon: CheckCircle, text: "Provider confirmation", color: "text-green-500" },
-                        { icon: Clock, text: `approx. ${service.duration} mins`, color: "text-purple-500" }
+                        { icon: Clock, text: (() => { const h = service.duration / 60; return `approx. ${h === 1 ? "1 hr" : `${h} hrs`}`; })(), color: "text-purple-500" }
                       ].map((item, i) => (
                         <div key={i} className="flex items-center gap-3">
                           <div className={cn("p-1.5 rounded-lg bg-gray-50", item.color)}>

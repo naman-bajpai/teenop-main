@@ -102,7 +102,7 @@ export async function GET(request: Request) {
     if (userIds.length > 0) {
       const { data: profiles, error: profErr } = await (supabase as any)
         .from("profiles")
-        .select("id, first_name, last_name, city, state")
+        .select("id, first_name, last_name, city, state, role")
         .in("id", userIds);
 
       if (profErr) {
@@ -110,12 +110,11 @@ export async function GET(request: Request) {
         console.warn("Warning: failed to fetch profiles:", profErr);
       } else {
         for (const p of profiles ?? []) {
-          const fullName = [p.first_name, p.last_name]
-            .filter(Boolean)
-            .join(" ")
-            .trim();
+          const name = p.role === "teen"
+            ? (p.first_name || "").trim()
+            : [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
           profileMap.set(p.id, {
-            name: fullName || "",
+            name: name || "",
             city: p.city || null,
             state: p.state || null
           });

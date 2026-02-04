@@ -49,7 +49,7 @@ export default function UserProfilePage() {
   const totalBookings = React.useRef<number>(0);
 
   const userId = params.userId as string;
-  const name = profile ? `${profile.first_name} ${profile.last_name}`.trim() : "";
+  const name = profile ? (profile.role === "teen" ? (profile.first_name || "").trim() : `${profile.first_name} ${profile.last_name}`.trim()) : "";
   const location = profile && (profile.city || profile.state) ? [profile.city, profile.state].filter(Boolean).join(", ") : "";
 
   React.useEffect(() => {

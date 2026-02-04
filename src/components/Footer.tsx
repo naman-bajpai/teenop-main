@@ -12,7 +12,6 @@ interface FooterProps {
 export default function Footer({ user }: FooterProps) {
   return (
     <footer className="bg-white border-t border-gray-100 mt-auto">
-      {/* Top CTA Section - Only for non-logged-in users */}
       {!user && (
         <div className="relative overflow-hidden">
           <div className="absolute inset-0 bg-[#434c9d]/5 -z-10" />
