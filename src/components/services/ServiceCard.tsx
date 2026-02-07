@@ -31,6 +31,15 @@ const formatDate = (dateString?: string) => {
   });
 };
 
+const formatDuration = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours === 0) return `${minutes}m`;
+  if (remainingMinutes === 0) return `${hours}h`;
+  return `${hours}h ${remainingMinutes}m`;
+};
+
 export default function ServiceCard({
   service,
   showImageUpload = false,
@@ -110,7 +119,7 @@ export default function ServiceCard({
           <Badge className={cn("text-[10px] font-black uppercase tracking-widest px-3 py-1 border-none backdrop-blur-md", categoryColor, "bg-opacity-90")}>
             {toTitle(String(service.category))}
           </Badge>
-          
+
           <div className="flex items-center gap-1 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg shadow-sm">
             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
             <span className="text-[10px] font-black text-gray-900">
@@ -136,7 +145,7 @@ export default function ServiceCard({
           <p className="text-sm text-gray-500 font-medium line-clamp-2 leading-relaxed">
             {service.description}
           </p>
-          
+
           <div className="flex flex-wrap gap-4 pt-2">
             <div className="flex items-center gap-1.5">
               <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
@@ -151,7 +160,7 @@ export default function ServiceCard({
                 <Clock className="w-3.5 h-3.5" />
               </div>
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                {service.duration || 30}m
+                {formatDuration(service.duration || 30)}
               </span>
             </div>
           </div>

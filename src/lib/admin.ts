@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import { Database, TablesUpdate } from "@/lib/database.types";
+import { Database, Tables } from "@/lib/database.types";
 
 export interface AdminUser {
   id: string;
@@ -39,27 +39,26 @@ export async function checkAdminAccess(): Promise<AdminUser | null> {
       return null;
     }
 
-    // Check if user is admin
-    if ((profile as any).role !== 'admin') {
+    if (profile.role !== 'admin') {
       return null;
     }
 
     return {
-      id: (profile as any).id,
-      first_name: (profile as any).first_name,
-      last_name: (profile as any).last_name,
-      email: (profile as any).email,
-      role: (profile as any).role as "admin",
-      status: (profile as any).status,
-      age: (profile as any).age,
-      city: (profile as any).city,
-      state: (profile as any).state,
-      phone: (profile as any).phone,
-      parent_email: (profile as any).parent_email,
-      parent_phone: (profile as any).parent_phone,
-      is_verified: (profile as any).is_verified,
-      created_at: (profile as any).created_at,
-      updated_at: (profile as any).updated_at,
+      id: profile.id,
+      first_name: profile.first_name,
+      last_name: profile.last_name,
+      email: profile.email,
+      role: profile.role as "admin",
+      status: profile.status,
+      age: profile.age,
+      city: profile.city,
+      state: profile.state,
+      phone: profile.phone,
+      parent_email: profile.parent_email,
+      parent_phone: profile.parent_phone,
+      is_verified: profile.is_verified,
+      created_at: profile.created_at,
+      updated_at: profile.updated_at,
     };
   } catch (error) {
     console.error('Error checking admin access:', error);
@@ -89,15 +88,15 @@ export async function getAllUsers() {
 
 export async function updateUserStatus(userId: string, status: Database["public"]["Enums"]["user_status"]) {
   try {
-    const supabase = createClient();
+    const response = await fetch(`/api/admin/users/${userId}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
 
-    const { error } = await (supabase as any)
-      .from('profiles')
-      .update({ status } as any)
-      .eq('id', userId);
-
-    if (error) {
-      throw new Error(`Failed to update user status: ${error.message}`);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "Failed to update user status");
     }
 
     return true;
@@ -177,10 +176,11 @@ export async function getAllServices() {
 export async function updateServiceStatus(serviceId: string, status: string) {
   try {
     const supabase = createClient();
+    const update: Partial<Tables<"services">> = { status };
 
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('services')
-      .update({ status } as any)
+      .update(update)
       .eq('id', serviceId);
 
     if (error) {

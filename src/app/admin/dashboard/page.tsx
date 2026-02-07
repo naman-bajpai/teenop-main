@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { checkAdminAccess, getAllUsers, updateUserStatus, getUserStats, getAllServices, updateServiceStatus, deleteService, deleteUser, getServiceStats } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
@@ -29,10 +29,8 @@ import {
   Star,
   Eye,
   EyeOff,
-  X,
   Wallet,
   CheckCircle,
-  XCircle,
   Loader2,
   MessageCircle,
   Send,
@@ -79,6 +77,52 @@ interface ServiceProfile {
   };
 }
 
+interface SupportMessage {
+  id: string;
+  sender_id: string;
+  sender_name?: string | null;
+  content: string | null;
+  image_url: string | null;
+  created_at: string;
+}
+
+interface SupportConversation {
+  id: string;
+  booking_id: string;
+  user: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    avatar_url?: string | null;
+  };
+  service_title: string | null;
+  last_message: {
+    content: string | null;
+    image_url: string | null;
+    created_at: string;
+    sender_id: string;
+    sender_name: string;
+  } | null;
+  unread_count: number;
+  created_at: string | null;
+}
+
+interface WithdrawalRequest {
+  id: string;
+  user_id: string | null;
+  amount: number | null;
+  platform_fee: number | null;
+  total_earnings: number | null;
+  status: string;
+  created_at: string | null;
+  profiles: {
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+  } | null;
+}
+
 export default function AdminDashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
@@ -90,13 +134,14 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [serviceStatusFilter, setServiceStatusFilter] = useState<string>("all");
   const [serviceCategoryFilter, setServiceCategoryFilter] = useState<string>("all");
+  const [withdrawalStatusFilter, setWithdrawalStatusFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<"users" | "services" | "withdrawals" | "support">("users");
-  const [supportConversations, setSupportConversations] = useState<any[]>([]);
-  const [selectedSupportConversation, setSelectedSupportConversation] = useState<any | null>(null);
-  const [supportMessages, setSupportMessages] = useState<any[]>([]);
+  const [supportConversations, setSupportConversations] = useState<SupportConversation[]>([]);
+  const [selectedSupportConversation, setSelectedSupportConversation] = useState<SupportConversation | null>(null);
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
   const [newSupportMessage, setNewSupportMessage] = useState("");
   const [sendingSupportMessage, setSendingSupportMessage] = useState(false);
-  const [withdrawalRequests, setWithdrawalRequests] = useState<any[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [processingRequest, setProcessingRequest] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState({
@@ -114,6 +159,41 @@ export default function AdminDashboard() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  const filteredSupportConversations = useMemo(() => {
+    if (!normalizedSearch) return supportConversations;
+    return supportConversations.filter((conv) => {
+      const fullName = `${conv.user.first_name} ${conv.user.last_name}`.toLowerCase();
+      const email = conv.user.email.toLowerCase();
+      const serviceTitle = (conv.service_title || "").toLowerCase();
+      const lastMessageContent = (conv.last_message?.content || "").toLowerCase();
+      return (
+        fullName.includes(normalizedSearch) ||
+        email.includes(normalizedSearch) ||
+        serviceTitle.includes(normalizedSearch) ||
+        lastMessageContent.includes(normalizedSearch)
+      );
+    });
+  }, [supportConversations, normalizedSearch]);
+
+  const filteredWithdrawalRequests = useMemo(() => {
+    let filtered = withdrawalRequests;
+    if (withdrawalStatusFilter !== "all") {
+      filtered = filtered.filter((request) => request.status === withdrawalStatusFilter);
+    }
+    if (!normalizedSearch) return filtered;
+    return filtered.filter((request) => {
+      const name = `${request.profiles?.first_name || ""} ${request.profiles?.last_name || ""}`.toLowerCase();
+      const email = (request.profiles?.email || "").toLowerCase();
+      const status = request.status.toLowerCase();
+      return (
+        name.includes(normalizedSearch) ||
+        email.includes(normalizedSearch) ||
+        status.includes(normalizedSearch)
+      );
+    });
+  }, [withdrawalRequests, withdrawalStatusFilter, normalizedSearch]);
 
   useEffect(() => {
     const initializeAdmin = async () => {
@@ -286,10 +366,10 @@ export default function AdminDashboard() {
         const updated = await fetchSupportConversations();
         setSupportConversations(updated);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({
         title: "Error sending message",
-        description: e.message,
+        description: getErrorMessage(e, "Failed to send message"),
         variant: "destructive",
       });
     } finally {
@@ -327,16 +407,16 @@ export default function AdminDashboard() {
       if (data.success) {
         toast({
           title: "Withdrawal Approved",
-          description: data.message || `Withdrawal approved. Please manually pay $${data.withdrawalRequest?.amount?.toFixed(2) || '0.00'} to ${data.withdrawalRequest?.user_name || 'the student'} via Stripe.`,
+                            description: data.message || `Withdrawal approved. Please manually pay $${Number(data.withdrawalRequest?.amount || 0).toFixed(2)} to ${data.withdrawalRequest?.user_name || 'the student'} via Stripe.`,
         });
         // Refresh withdrawal requests
         const updatedRequests = await fetchWithdrawalRequests();
         setWithdrawalRequests(updatedRequests);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({
         title: "Error processing withdrawal",
-        description: e.message,
+        description: getErrorMessage(e, "Failed to process withdrawal"),
         variant: "destructive",
       });
     } finally {
@@ -409,11 +489,11 @@ export default function AdminDashboard() {
           description: data.message || `User ${data.is_verified ? 'verified' : 'unverified'} successfully`,
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error toggling verification:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update verification status. Please try again.",
+        description: getErrorMessage(error, "Failed to update verification status. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -713,7 +793,7 @@ export default function AdminDashboard() {
                 }`}
               >
                 <Wallet className="w-4 h-4 inline mr-2" />
-                Withdrawals ({withdrawalRequests.filter((r: any) => r.status === 'processing').length})
+                Withdrawals ({withdrawalRequests.filter((r) => r.status === 'processing').length})
               </button>
               <button
                 onClick={() => setActiveTab("support")}
@@ -724,7 +804,7 @@ export default function AdminDashboard() {
                 }`}
               >
                 <HelpCircle className="w-4 h-4 inline mr-2" />
-                Support ({supportConversations.filter((c: any) => c.unread_count > 0).length})
+                Support ({supportConversations.filter((c) => c.unread_count > 0).length})
               </button>
             </div>
           </div>
@@ -768,7 +848,7 @@ export default function AdminDashboard() {
                     <option value="pending_verification">Pending</option>
                   </select>
                 </>
-              ) : (
+              ) : activeTab === "services" ? (
                 <>
                   <select
                     value={serviceStatusFilter}
@@ -795,6 +875,21 @@ export default function AdminDashboard() {
                     <option value="other">Other</option>
                   </select>
                 </>
+              ) : activeTab === "withdrawals" ? (
+                <select
+                  value={withdrawalStatusFilter}
+                  onChange={(e) => setWithdrawalStatusFilter(e.target.value)}
+                  className="px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-gray-700 text-sm"
+                >
+                  <option value="all">All Status</option>
+                  <option value="processing">Processing</option>
+                  <option value="approved">Approved</option>
+                  <option value="pending">Pending</option>
+                  <option value="failed">Failed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              ) : (
+                <div />
               )}
               
               <Button
@@ -803,9 +898,11 @@ export default function AdminDashboard() {
                   if (activeTab === "users") {
                     setRoleFilter("all");
                     setStatusFilter("all");
-                  } else {
+                  } else if (activeTab === "services") {
                     setServiceStatusFilter("all");
                     setServiceCategoryFilter("all");
+                  } else if (activeTab === "withdrawals") {
+                    setWithdrawalStatusFilter("all");
                   }
                 }}
                 variant="outline"
@@ -823,7 +920,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-              {activeTab === "users" ? `Users (${filteredUsers.length})` : activeTab === "services" ? `Services (${filteredServices.length})` : activeTab === "support" ? `Support Conversations (${supportConversations.length})` : `Withdrawal Requests (${withdrawalRequests.length})`}
+              {activeTab === "users" ? `Users (${filteredUsers.length})` : activeTab === "services" ? `Services (${filteredServices.length})` : activeTab === "support" ? `Support Conversations (${filteredSupportConversations.length})` : `Withdrawal Requests (${filteredWithdrawalRequests.length})`}
             </h3>
           </div>
           
@@ -832,13 +929,13 @@ export default function AdminDashboard() {
               {/* Conversations List */}
               <div className="w-1/3 border-r border-gray-200 overflow-y-auto">
                 <div className="p-4 space-y-2">
-                  {supportConversations.length === 0 ? (
+                  {filteredSupportConversations.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <HelpCircle className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                       <p>No support conversations yet</p>
                     </div>
                   ) : (
-                    supportConversations.map((conv: any) => (
+                    filteredSupportConversations.map((conv) => (
                       <div
                         key={conv.id}
                         onClick={() => setSelectedSupportConversation(conv)}
@@ -902,7 +999,7 @@ export default function AdminDashboard() {
                           <p>No messages yet</p>
                         </div>
                       ) : (
-                        supportMessages.map((msg: any) => {
+                        supportMessages.map((msg) => {
                           const isAdmin = msg.sender_id === currentUser?.id;
                           return (
                             <div
@@ -998,7 +1095,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {withdrawalRequests.map((request: any) => (
+                    {filteredWithdrawalRequests.map((request) => (
                       <tr key={request.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
@@ -1012,17 +1109,17 @@ export default function AdminDashboard() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-semibold text-gray-900">
-                            ${request.amount?.toFixed(2) || '0.00'}
+                            ${Number(request.amount || 0).toFixed(2)}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500">
-                            ${request.platform_fee?.toFixed(2) || '0.00'}
+                            ${Number(request.platform_fee || 0).toFixed(2)}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500">
-                            ${request.total_earnings?.toFixed(2) || '0.00'}
+                            ${Number(request.total_earnings || 0).toFixed(2)}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -1073,7 +1170,7 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
-              {withdrawalRequests.length === 0 && (
+              {filteredWithdrawalRequests.length === 0 && (
                 <div className="text-center py-16">
                   <Wallet className="mx-auto h-12 w-12 text-gray-300" />
                   <h3 className="mt-4 text-sm font-medium text-gray-900">
@@ -1436,3 +1533,7 @@ export default function AdminDashboard() {
     </>
   );
 }
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) return error.message;
+    return fallback;
+  };

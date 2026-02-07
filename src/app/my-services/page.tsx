@@ -226,10 +226,11 @@ function ServiceCard({ service, onEdit, onDelete, onToggleStatus }: { service: S
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 rounded-xl font-bold border-gray-100 hover:bg-blue-500 hover:text-white transition-all h-10"
+            className="flex-1 rounded-xl font-bold h-10 border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus-visible:ring-gray-300 transition-all"
             onClick={() => onEdit(service)}
+            aria-label={`Edit service ${service.title}`}
           >
-            <Edit className="w-4 h-4 mr-2" /> Edit
+            <Edit className="w-4 h-4 mr-2" /> Edit Service
           </Button>
           <Button
             variant="outline"
