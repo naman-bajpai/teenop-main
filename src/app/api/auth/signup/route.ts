@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { createClient, createAdminClient } from '@/lib/supabase';
+import { emailService } from '@/lib/email';
+import { randomBytes } from 'crypto';
 
 export async function POST(request: Request) {
   try {
@@ -16,7 +18,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate age for teen accounts only
+    // Validate age and parent contact for teen accounts
     if (role === 'teen') {
       if (!age) {
         return NextResponse.json(
@@ -27,6 +29,21 @@ export async function POST(request: Request) {
       if (age < 13 || age > 19) {
         return NextResponse.json(
           { error: 'Age must be between 13 and 19' },
+          { status: 400 }
+        );
+      }
+      // Teen accounts require at least one parent contact for verification
+      const hasParentEmail = parentEmail && String(parentEmail).trim().length > 0;
+      const hasParentPhone = parentPhone && String(parentPhone).trim().length > 0;
+      if (!hasParentEmail && !hasParentPhone) {
+        return NextResponse.json(
+          { error: 'Parent/guardian email or phone is required so we can send a verification link.' },
+          { status: 400 }
+        );
+      }
+      if (hasParentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(parentEmail).trim())) {
+        return NextResponse.json(
+          { error: 'Please enter a valid parent/guardian email address.' },
           { status: 400 }
         );
       }
@@ -153,15 +170,62 @@ export async function POST(request: Request) {
       console.log('Profile created by trigger');
     }
 
+    // For teen accounts: create parent verification token and send email to parent
+    if (role === 'teen' && (parentEmail?.trim() || parentPhone?.trim())) {
+      const sendToEmail = parentEmail?.trim();
+      if (sendToEmail) {
+        try {
+          const admin = createAdminClient();
+          const token = randomBytes(32).toString('hex');
+          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          const { error: tokenError } = await admin
+            .from('parent_verification_tokens')
+            .insert({
+              profile_id: authData.user.id,
+              token,
+              expires_at: expiresAt,
+            });
+          if (tokenError) {
+            console.error('Failed to create parent verification token:', tokenError);
+          } else {
+            // Use origin only so the link is always https://yourdomain.com/parent/verify?token=...
+            let origin = process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin') || '';
+            try {
+              if (origin) {
+                origin = new URL(origin).origin;
+              } else if (request.url) {
+                origin = new URL(request.url).origin;
+              }
+            } catch {
+              origin = origin.replace(/\/.*$/, '').replace(/\/+$/, '');
+            }
+            const verifyLink = origin ? `${origin}/parent/verify?token=${token}` : `/parent/verify?token=${token}`;
+            await emailService.sendParentVerificationEmail({
+              parentEmail: sendToEmail,
+              childFirstName: firstName,
+              childLastName: lastName,
+              verifyLink,
+            });
+          }
+        } catch (e) {
+          console.error('Failed to send parent verification email:', e);
+          // Don't fail signup; parent can request a new link later if we add that feature
+        }
+      }
+    }
+
     return NextResponse.json(
       { 
-        message: "Account created successfully. Please check your email for verification.",
+        message: role === 'teen'
+          ? "Account created. A verification email has been sent to your parent/guardian. They must confirm before you can log in."
+          : "Account created successfully. Please check your email for verification.",
         user: {
           id: authData.user.id,
           email: authData.user.email,
           first_name: firstName,
           last_name: lastName,
-        }
+        },
+        requiresParentVerification: role === 'teen',
       },
       { status: 201 }
     );

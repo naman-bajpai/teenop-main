@@ -406,7 +406,11 @@ export default function SignupPage() {
       // Reset retry count on successful signup
       setRetryCount(0);
 
-      setSuccess("Account created successfully! Please check your email for verification.");
+      setSuccess(
+        result.requiresParentVerification
+          ? "Account created. A verification email was sent to your parent/guardian. They must confirm before you can log in."
+          : "Account created successfully! Please check your email for verification."
+      );
       // Reset form
       setFormData({
         firstName: "",
@@ -421,17 +425,12 @@ export default function SignupPage() {
         terms: false,
       });
       
-      // For teen accounts, redirect to onboarding after signup
-      // For parent accounts, redirect to login
-      if (formData.role === "teen") {
-        setTimeout(() => {
-          router.push("/onboarding");
-        }, 2000);
-      } else {
-        setTimeout(() => {
-          router.push("/login");
-        }, 2000);
-      }
+      // Teens: parent must verify first, so send to login (they'll see "account not active" until parent confirms)
+      // Parents: go to login
+      const redirectPath = "/login";
+      setTimeout(() => {
+        router.push(redirectPath);
+      }, 3000);
     } catch (error) {
       console.error('Signup error:', error);
       setRetryCount(prev => prev + 1);
@@ -653,6 +652,9 @@ export default function SignupPage() {
                   <span className="w-2 h-2 bg-[#434c9d] rounded-full"></span>
                   Parent/Guardian Information
                 </h3>
+                <p className="text-sm text-gray-600">
+                  We&apos;ll send a verification link to the email below. Your parent or guardian must confirm before you can log in.
+                </p>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label htmlFor="parentEmail" className="block text-sm font-semibold text-gray-800">

@@ -635,6 +635,55 @@ export class EmailService {
 
     return this.sendEmail(data.providerEmail, subject, html);
   }
+
+  // Parent/guardian verification email when a teen signs up
+  async sendParentVerificationEmail(data: {
+    parentEmail: string;
+    childFirstName: string;
+    childLastName: string;
+    verifyLink: string;
+  }) {
+    const subject = `Verify your child's TeenOp account – ${data.childFirstName} ${data.childLastName}`;
+    const childName = `${data.childFirstName} ${data.childLastName}`;
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Verify your child's account</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+          .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
+          .button { display: inline-block; background: #434c9d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0; font-weight: bold; }
+          .footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
+          .highlight { color: #434c9d; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Your child has signed up for TeenOp</h1>
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p><span class="highlight">${childName}</span> has created a TeenOp account and listed you as their parent or guardian.</p>
+            <p>To activate their account and manage their information, please confirm by clicking the button below:</p>
+            <p><a href="${data.verifyLink}" class="button">Confirm and manage my child's account</a></p>
+            <p>This link will take you to a secure page where you can review and update your child's details and approve their account.</p>
+            <p>If you did not expect this email or do not consent to this account, you can ignore this message. The account will not be activated without your confirmation.</p>
+          </div>
+          <div class="footer">
+            <p>This link expires in 7 days. If it has expired, your child can sign up again and you will receive a new email.</p>
+            <p>— The TeenOp Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    return this.sendEmail(data.parentEmail, subject, html);
+  }
 }
 
 export const emailService = new EmailService();
