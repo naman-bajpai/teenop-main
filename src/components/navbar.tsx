@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export default function Navbar() {
@@ -35,29 +34,9 @@ export default function Navbar() {
       role="banner"
     >
       <nav
-        className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 sm:px-8 lg:px-10"
+        className="mx-auto flex h-16 max-w-7xl items-center justify-end px-6 sm:px-8 lg:px-10"
         aria-label="Main"
       >
-        {/* Brand */}
-        <Link
-          href="/"
-          className="flex items-center gap-2 group transition-all duration-300 hover:scale-[1.02]"
-        >
-          <div className="relative">
-            <Image
-              src="/images/newlogo.png"
-              alt="TeenOp Logo"
-              width={180}
-              height={180}
-              className={cn(
-                "h-14 w-14 object-contain transition-all duration-300",
-                !overHero && "brightness-105"
-              )}
-            />
-            <div className="absolute inset-0 bg-white/20 blur-xl rounded-full -z-10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </Link>
-
         {/* Desktop Navigation */}
         <div className="hidden items-center gap-6 md:flex">
           <Link href="/login">

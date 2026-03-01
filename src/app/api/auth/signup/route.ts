@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase';
 import { emailService } from '@/lib/email';
+import { smsService } from '@/lib/sms';
 import { randomBytes } from 'crypto';
 
 export async function POST(request: Request) {
   try {
-    const { email, password, firstName, lastName, age, role, parentEmail, parentPhone } = await request.json();
+    const { email, password, firstName, lastName, age, role, phone, parentEmail, parentPhone, parentPermission } = await request.json();
     
     console.log('Signup attempt for:', { email, firstName, lastName, age, role });
 
@@ -32,12 +33,17 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      // Teen accounts require at least one parent contact for verification
       const hasParentEmail = parentEmail && String(parentEmail).trim().length > 0;
       const hasParentPhone = parentPhone && String(parentPhone).trim().length > 0;
-      if (!hasParentEmail && !hasParentPhone) {
+      if (!hasParentEmail || !hasParentPhone) {
         return NextResponse.json(
-          { error: 'Parent/guardian email or phone is required so we can send a verification link.' },
+          { error: 'Parent/guardian email and phone are required so we can request approval.' },
+          { status: 400 }
+        );
+      }
+      if (!parentPermission) {
+        return NextResponse.json(
+          { error: 'You must confirm that you have your parent or guardian permission to sign up.' },
           { status: 400 }
         );
       }
@@ -97,14 +103,15 @@ export async function POST(request: Request) {
       email,
       password,
       options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          role: role || 'teen',
-          age: age,
-          parent_email: parentEmail,
-          parent_phone: parentPhone,
-        }
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            role: role || 'teen',
+            age: age,
+            phone: phone,
+            parent_email: parentEmail,
+            parent_phone: parentPhone,
+          }
       }
     });
 
@@ -142,7 +149,7 @@ export async function POST(request: Request) {
       .eq('id', authData.user.id)
       .maybeSingle();
 
-    // If profile doesn't exist, create it manually (fallback if trigger didn't run)
+    const nextStatus = role === 'teen' ? 'pending_verification' : 'active';
     if (!existingProfile) {
       console.log('Profile not found, creating manually...');
       const { error: profileError } = await supabase
@@ -153,26 +160,43 @@ export async function POST(request: Request) {
           first_name: firstName,
           last_name: lastName,
           age: age || null,
+          phone: phone || null,
           role: (role || 'teen') as any,
           parent_email: parentEmail || null,
           parent_phone: parentPhone || null,
-          status: 'pending_verification' as any,
+          status: nextStatus as any,
         });
 
       if (profileError) {
         console.error('Error creating profile manually:', profileError);
-        // Don't fail the signup, but log the error
-        // The user can still log in and we can fix this later
       } else {
         console.log('Profile created manually');
       }
     } else {
-      console.log('Profile created by trigger');
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({
+          first_name: firstName,
+          last_name: lastName,
+          age: age || null,
+          phone: phone || null,
+          role: (role || 'teen') as any,
+          parent_email: parentEmail || null,
+          parent_phone: parentPhone || null,
+          status: nextStatus as any,
+        })
+        .eq('id', authData.user.id);
+      if (profileUpdateError) {
+        console.error('Error updating trigger-created profile:', profileUpdateError);
+      } else {
+        console.log('Profile updated after trigger creation');
+      }
     }
 
     // For teen accounts: create parent verification token and send email to parent
     if (role === 'teen' && (parentEmail?.trim() || parentPhone?.trim())) {
       const sendToEmail = parentEmail?.trim();
+      const sendToPhone = parentPhone?.trim();
       if (sendToEmail) {
         try {
           const admin = createAdminClient();
@@ -206,10 +230,15 @@ export async function POST(request: Request) {
               childLastName: lastName,
               verifyLink,
             });
+            if (sendToPhone) {
+              await smsService.sendParentVerificationSMS({
+                parentPhone: sendToPhone,
+                verifyLink,
+              });
+            }
           }
         } catch (e) {
-          console.error('Failed to send parent verification email:', e);
-          // Don't fail signup; parent can request a new link later if we add that feature
+          console.error('Failed to send parent verification notifications:', e);
         }
       }
     }
@@ -226,6 +255,7 @@ export async function POST(request: Request) {
           last_name: lastName,
         },
         requiresParentVerification: role === 'teen',
+        pendingApproval: role === 'teen',
       },
       { status: 201 }
     );

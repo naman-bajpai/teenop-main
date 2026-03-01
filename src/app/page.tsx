@@ -2,36 +2,11 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import HeroSection from "@/components/home/HeroSection";
-import FeaturedServices from "@/components/home/FeaturedServices";
-import { Sparkles, Users, Star, ArrowRight, Search } from "lucide-react";
+import { Sparkles, Users, Star, ArrowRight, Search, Linkedin } from "lucide-react";
 import Navbar from "@/components/navbar";
-import { useState, useEffect } from "react";
-import { Service } from "@/types/service";
 import Image from "next/image";
 
 export default function Home() {
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadServices = async () => {
-      try {
-        // Cache for 30 seconds on homepage - services don't change that frequently
-        const response = await fetch("/api/services/public", { next: { revalidate: 30 } });
-        if (response.ok) {
-          const data = await response.json();
-          setServices(data.services || []);
-        }
-      } catch (error) {
-        console.error("Failed to load services:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadServices();
-  }, []);
-
   return (
     <div className="min-h-screen bg-white text-gray-700">
       <Navbar />
@@ -39,157 +14,100 @@ export default function Home() {
       {/* Hero Section */}
       <HeroSection user={null} />
 
-      {/* Featured Services */}
-      <FeaturedServices services={services} />
-
-      {/* Split Benefits: Teens/Sellers vs Community/Buyers */}
-      <section className="relative bg-gradient-to-b from-slate-50 via-white to-slate-50 py-20 overflow-hidden">
-        {/* Decorative background elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#96cbc3]/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#ff725a]/10 rounded-full blur-3xl"></div>
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-slate-50 to-white py-20">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-24 right-0 h-72 w-72 rounded-full bg-[#96cbc3]/10 blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-[#ff725a]/10 blur-3xl" />
         </div>
-        
+
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-16 text-center">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[#96cbc3]/20 to-[#434c9d]/20 text-[#434c9d] rounded-full px-6 py-2 mb-6">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-semibold">About TeenOp</span>
-            </div>
-            <h2 className="mb-4 text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-gray-900 via-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent">
-              What is TeenOp?
+          <div className="mx-auto mb-14 max-w-3xl text-center">
+            <h2 className="text-4xl font-bold tracking-tight text-gray-900 md:text-5xl">
+              Why Choose TeenOp
             </h2>
-            <p className="mx-auto max-w-3xl text-lg md:text-xl text-slate-600 leading-relaxed">
-              TeenOp (Teen Opportunity) is a digital marketplace where teens open their
-              own service-based businesses — dog walking, lawn care, tutoring, art
-              commissions, and more — and neighbors can hire them easily.
+            <p className="mt-5 text-lg leading-relaxed text-slate-600 md:text-xl">
+              TeenOp makes it easier for communities to hire capable local teens for everyday jobs while giving young people a real place to build skills, earn money, and grow their confidence.
             </p>
-            <p className="mx-auto max-w-3xl mt-4 text-base text-slate-500 italic">
-              Think of it as a modern bulletin board for your town: simple, local, and trusted.
+            <p className="mt-4 text-base italic text-slate-500">
+              Think of it like a modern town bulletin board for your town.
             </p>
           </div>
 
-          {/* Two large cards side-by-side */}
-          <div className="grid grid-cols-1 gap-8 md:gap-10 lg:grid-cols-2">
-            {/* Teens / Sellers */}
-            <div className="group relative rounded-3xl border-2 border-slate-200 bg-white p-10 shadow-lg transition-all duration-300 hover:shadow-2xl hover:border-[#434c9d]/30 hover:-translate-y-1">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#96cbc3]/5 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#96cbc3]/20 to-[#434c9d]/20 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Users className="h-10 w-10 text-[#434c9d]" aria-hidden />
-                </div>
-                <h3 className="mb-6 text-3xl font-bold bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent">TEENS / SELLERS</h3>
-                <ul className="mb-10 space-y-4 text-slate-700">
-                  <li className="flex items-center gap-3 text-lg">
-                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#96cbc3]"></div>
-                    <span>Make $</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-lg">
-                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#96cbc3]"></div>
-                    <span>Build college résumé</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-lg">
-                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#96cbc3]"></div>
-                    <span>Flexible schedule</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-lg">
-                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#96cbc3]"></div>
-                    <span>Be your own boss</span>
-                  </li>
-                </ul>
-                <Link href="/signup">
-                  <Button className="group/btn relative w-full bg-gradient-to-r from-[#434c9d] to-[#5a6bc4] hover:from-[#434c9d]/90 hover:to-[#5a6bc4]/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-6 text-base font-semibold rounded-xl overflow-hidden">
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      <Sparkles className="w-5 h-5 group-hover/btn:rotate-12 transition-transform" />
-                      Open Storefront!
-                      <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
-                    </span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700"></div>
-                  </Button>
-                </Link>
-              </div>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <div className="rounded-[32px] border border-slate-200 bg-white p-10 shadow-sm">
+              <h3 className="text-center text-3xl font-bold tracking-tight text-[#434c9d]">
+                Teens
+              </h3>
+              <ul className="mt-8 space-y-4 text-lg text-slate-700">
+                <li>Make money doing what you are already good at</li>
+                <li>Build college r&eacute;sum&eacute; experience</li>
+                <li>Gain experience</li>
+                <li>Set a schedule that works around school and life</li>
+                <li>Start learning how to run something of your own</li>
+              </ul>
+              <Link href="/signup" className="mt-10 block">
+                <Button className="group w-full rounded-xl bg-[#434c9d] px-8 py-6 text-base font-semibold text-white hover:bg-[#434c9d]/90">
+                  Offer Services
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
             </div>
 
-            {/* Community / Buyers */}
-            <div className="group relative rounded-3xl border-2 border-slate-200 bg-white p-10 shadow-lg transition-all duration-300 hover:shadow-2xl hover:border-[#ff725a]/30 hover:-translate-y-1">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#ff725a]/5 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff725a]/20 to-[#ff8a6b]/20 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Star className="h-10 w-10 text-[#ff725a]" aria-hidden />
-                </div>
-                <h3 className="mb-6 text-3xl font-bold bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] bg-clip-text text-transparent">COMMUNITY / BUYERS</h3>
-                <ul className="mb-10 space-y-4 text-slate-700">
-                  <li className="flex items-center gap-3 text-lg">
-                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#ff725a]"></div>
-                    <span>Lower service prices</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-lg">
-                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#ff725a]"></div>
-                    <span>Take tasks off your plate</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-lg">
-                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#ff725a]"></div>
-                    <span>Hire within your neighborhood</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-lg">
-                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#ff725a]"></div>
-                    <span>Support your local High School</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-lg">
-                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#ff725a]"></div>
-                    <span>Find niche services</span>
-                  </li>
-                </ul>
-                <Link href="/services">
-                  <Button className="group/btn relative w-full bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-6 text-base font-semibold rounded-xl overflow-hidden">
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      <Search className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
-                      Search Services
-                      <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
-                    </span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700"></div>
-                  </Button>
-                </Link>
-              </div>
+            <div className="rounded-[32px] border border-slate-200 bg-white p-10 shadow-sm">
+              <h3 className="text-center text-3xl font-bold tracking-tight text-[#ff725a]">
+                Community
+              </h3>
+              <ul className="mt-8 space-y-4 text-lg text-slate-700">
+                <li>Find affordable local help for everyday tasks</li>
+                <li>Hire talented teens right in your area</li>
+                <li>Support young entrepreneurs close to home</li>
+                <li>Discover specialized skills and creative services</li>
+                <li>Keep opportunity and spending inside your community</li>
+              </ul>
+              <Link href="/services" className="mt-10 block">
+                <Button className="group w-full rounded-xl bg-[#ff725a] px-8 py-6 text-base font-semibold text-white hover:bg-[#ff725a]/90">
+                  Browse Services
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Why Choose TeenOp (re-added beneath split section) */}
-      <section className="relative bg-gradient-to-br from-[#434c9d] via-[#5a6bc4] to-[#96cbc3] py-24 overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
-        </div>
-        
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white rounded-full px-6 py-2 mb-6">
-              <Star className="w-4 h-4" />
-              <span className="text-sm font-semibold">Why Choose Us</span>
+      <section className="bg-white py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 items-center gap-10 rounded-[36px] border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-orange-50/40 p-8 shadow-sm md:grid-cols-[320px_minmax(0,1fr)] md:p-12">
+            <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[28px] border-4 border-white shadow-xl">
+              <Image
+                src="/images/Founder.png"
+                alt="Kensington Wheeler, founder of TeenOp"
+                width={400}
+                height={400}
+                className="h-full w-full object-cover"
+              />
             </div>
-            <h2 className="mb-4 text-4xl md:text-5xl font-bold tracking-tight text-white">
-              Why Choose TeenOp?
-            </h2>
-            <p className="mx-auto max-w-3xl text-lg md:text-xl text-blue-100 leading-relaxed">
-              Local, trusted, and fair. Teens grow real-world skills and earn fairly,
-              while neighbors get quality help from people right down the street.
-            </p>
-          </div>
 
-          <div className="mt-12 text-center">
-            <Link href="/signup">
-              <Button size="lg" className="group relative bg-white text-[#434c9d] hover:bg-white/90 shadow-2xl hover:shadow-3xl transition-all duration-300 px-10 py-7 text-lg font-bold rounded-xl overflow-hidden">
-                <span className="relative z-10 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                  Sign Up Today
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-[#434c9d]/0 via-[#434c9d]/5 to-[#434c9d]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              </Button>
-            </Link>
+            <div className="text-center md:text-left">
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#434c9d]/60">
+                Founder Story
+              </p>
+              <h2 className="mt-3 text-4xl font-bold tracking-tight text-gray-900">
+                Built from a lunch table idea
+              </h2>
+              <blockquote className="mt-6 max-w-3xl text-2xl font-medium leading-relaxed text-slate-700">
+                &ldquo;TeenOp was born at my high school lunch table with the simple dream of helping my friends start their own businesses.&rdquo;
+              </blockquote>
+              <p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-600">
+                Kensington Wheeler started TeenOp to help talented teens turn their skills into real neighborhood opportunities while giving families a better way to find help close to home.
+              </p>
+              <Link href="/our-story" className="mt-8 inline-block">
+                <Button className="group rounded-xl bg-[#434c9d] px-8 py-6 text-base font-semibold text-white hover:bg-[#434c9d]/90">
+                  View Full Story
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -212,7 +130,7 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                <Link href="/neighborhood" className="w-full md:w-auto">
+                <Link href="/services" className="w-full md:w-auto">
                   <Button className="group relative w-full bg-gradient-to-r from-[#ff725a] to-[#ff8a6b] hover:from-[#ff725a]/90 hover:to-[#ff8a6b]/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-6 text-base font-semibold rounded-xl overflow-hidden">
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       <Search className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -252,8 +170,7 @@ export default function Home() {
               </div>
 
               <p className="mt-6 max-w-md text-base text-slate-600 leading-relaxed">
-                A trusted local marketplace where teens run service-based businesses
-                and neighbors hire with confidence.
+                Teen-powered marketplace connecting neighbors to local help
               </p>
 
               {/* Contact */}
@@ -297,13 +214,13 @@ export default function Home() {
                 </a>
 
                 <a
-                  href="#"
-                  aria-label="X"
+                  href="https://www.linkedin.com/in/teenop-teen-opportunity-2b95593a8/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="LinkedIn"
                   className="group relative rounded-xl border-2 border-slate-200 bg-white p-3 text-slate-600 hover:border-[#434c9d] hover:text-[#434c9d] hover:bg-[#434c9d]/5 transition-all duration-300 shadow-sm hover:shadow-md"
                 >
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-                    <path d="M18.9 2H22l-6.8 7.8L23 22h-6.7l-5.2-6.7L5.2 22H2l7.3-8.4L1 2h6.9l4.7 6.1L18.9 2Zm-1.2 18h1.8L7 3.9H5.1l12.6 16.1Z" />
-                  </svg>
+                  <Linkedin className="h-5 w-5" />
                 </a>
               </div>
             </div>
@@ -324,7 +241,7 @@ export default function Home() {
                       </Link>
                     </li>
                     <li>
-                      <Link href="/neighborhood" className="group flex items-center gap-2 text-sm text-slate-600 hover:text-[#434c9d] transition-colors">
+                      <Link href="/services" className="group flex items-center gap-2 text-sm text-slate-600 hover:text-[#434c9d] transition-colors">
                         <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                         <span>Explore Services</span>
                       </Link>
@@ -345,7 +262,7 @@ export default function Home() {
                       </Link>
                     </li>
                     <li>
-                      <Link href="/neighborhood" className="group flex items-center gap-2 text-sm text-slate-600 hover:text-[#434c9d] transition-colors">
+                      <Link href="/services" className="group flex items-center gap-2 text-sm text-slate-600 hover:text-[#434c9d] transition-colors">
                         <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                         <span>Hire Local</span>
                       </Link>

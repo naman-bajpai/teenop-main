@@ -1,4 +1,5 @@
 import twilio from 'twilio';
+import { PARENT_APPROVAL_TEMPLATES } from '@/lib/parent-approval-templates';
 
 // SMS service for sending text notifications
 export class SMSService {
@@ -78,6 +79,15 @@ export class SMSService {
     const message = `TeenOp: You're up soon 👏${data.serviceName} with ${data.buyerName} at ${data.time} (${locationDisplay}). Bring what you need and message your buyer through TeenOp if plans change.`;
     
     return this.sendSMS(data.providerPhone, message);
+  }
+
+  async sendParentVerificationSMS(data: { parentPhone: string; verifyLink: string }) {
+    const [line1, line2] = PARENT_APPROVAL_TEMPLATES.parentSms.body;
+    return this.sendSMS(data.parentPhone, `${line1}\n${line2} ${data.verifyLink}`);
+  }
+
+  async sendTeenApprovalSMS(data: { teenPhone: string }) {
+    return this.sendSMS(data.teenPhone, PARENT_APPROVAL_TEMPLATES.teenApprovedSms.body.join(" "));
   }
 }
 

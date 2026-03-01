@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase';
+import { emailService } from '@/lib/email';
+import { smsService } from '@/lib/sms';
 
 // GET: Fetch child info by token (for parent confirmation page)
 export async function GET(request: NextRequest) {
@@ -118,6 +120,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'This verification link has expired' }, { status: 404 });
     }
 
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('email, first_name, phone')
+      .eq('id', row.profile_id)
+      .single();
+
     const updates: { status: 'active'; first_name?: string; last_name?: string; age?: number } = {
       status: 'active',
     };
@@ -151,6 +159,27 @@ export async function POST(request: NextRequest) {
 
     if (deleteError) {
       console.error('Token delete error (non-fatal):', deleteError);
+    }
+
+    try {
+      let origin = process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin') || '';
+      if (origin) origin = new URL(origin).origin;
+      const loginLink = origin ? `${origin}/login` : '/login';
+
+      if (profile?.email && profile?.first_name) {
+        await emailService.sendTeenApprovalEmail({
+          teenEmail: profile.email,
+          teenFirstName: profile.first_name,
+          loginLink,
+        });
+      }
+      if (profile?.phone) {
+        await smsService.sendTeenApprovalSMS({
+          teenPhone: profile.phone,
+        });
+      }
+    } catch (notificationError) {
+      console.error('Teen approval notifications failed:', notificationError);
     }
 
     return NextResponse.json({

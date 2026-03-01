@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
+import { FEATURE_FLAGS } from "@/lib/feature-flags";
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
@@ -49,22 +50,26 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if ((req.nextUrl.pathname === "/login" || req.nextUrl.pathname === "/signup") && user) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
-  }
-
-  // Check if teen users need to complete onboarding
   if (user && !req.nextUrl.pathname.startsWith('/onboarding') && !req.nextUrl.pathname.startsWith('/api')) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, status')
       .eq('id', user.id)
       .maybeSingle();
 
-    // If profile doesn't exist, that's okay - it might be created by trigger
-    // If user is a teen, allow access (onboarding check removed)
-    if (profile && (profile as any).role === 'teen') {
-      // Onboarding is no longer required
+    if (profile && (profile as any).role === 'teen' && (profile as any).status === 'pending_verification') {
+      const pendingAllowedPaths = ['/pending-approval', '/parent/verify'];
+      const isPendingAllowed = pendingAllowedPaths.some((path) => req.nextUrl.pathname.startsWith(path));
+      if (!isPendingAllowed) {
+        return NextResponse.redirect(new URL('/pending-approval', req.url));
+      }
+    }
+
+    if ((req.nextUrl.pathname === "/login" || req.nextUrl.pathname === "/signup") && profile) {
+      if ((profile as any).role === 'teen' && (profile as any).status === 'pending_verification') {
+        return NextResponse.redirect(new URL('/pending-approval', req.url));
+      }
+      return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   }
 

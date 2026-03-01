@@ -28,7 +28,7 @@ export default function Footer({ user }: FooterProps) {
                   Ready to start your <span className="text-[#434c9d]">Teen Hustle?</span>
                 </h3>
                 <p className="text-gray-500 font-medium max-w-md leading-relaxed">
-                  Join thousands of teens building their micro-businesses and neighbors getting trusted local help.
+                  Teen-powered marketplace connecting neighbors to local help
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
@@ -37,7 +37,7 @@ export default function Footer({ user }: FooterProps) {
                     Get Started Free
                   </Button>
                 </Link>
-                <Link href="/neighborhood">
+                <Link href="/services">
                   <Button variant="ghost" className="w-full sm:w-auto h-14 px-8 border border-gray-100 rounded-2xl font-black text-gray-600 hover:bg-gray-50">
                     Explore Services
                   </Button>
@@ -60,7 +60,7 @@ export default function Footer({ user }: FooterProps) {
               <span className="text-2xl font-black text-gray-900 tracking-tighter">TeenOp</span>
             </Link>
             <p className="text-gray-500 font-medium leading-relaxed max-w-sm">
-              Empowering the next generation of entrepreneurs by connecting talented teens with their local community.
+              Teen-powered marketplace connecting neighbors to local help
             </p>
             <div className="flex items-center gap-4">
               {[
@@ -106,7 +106,7 @@ export default function Footer({ user }: FooterProps) {
             <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">For Neighbors</h4>
             <ul className="space-y-4">
               {[
-                { label: "Find Services", href: "/neighborhood" },
+                { label: "Find Services", href: "/services" },
                 { label: "My Requests", href: "/my-requests" },
                 { label: "Messages", href: "/messages" },
                 { label: "Support", href: "/help" }
@@ -151,6 +151,7 @@ export default function Footer({ user }: FooterProps) {
                 { label: "Our Story", href: "/our-story" },
                 { label: "Privacy", href: "/privacy" },
                 { label: "Terms", href: "/terms" },
+                { label: "Safety", href: "/safety" },
               ].map((link) => (
                 <Link key={link.label} href={link.href} className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hover:text-[#434c9d] transition-colors">
                   {link.label}
@@ -163,4 +164,3 @@ export default function Footer({ user }: FooterProps) {
     </footer>
   );
 }
-

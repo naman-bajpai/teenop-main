@@ -17,11 +17,13 @@ export default function SignupPage() {
     lastName: "",
     email: "",
     age: "",
+    phone: "",
     password: "",
     confirmPassword: "",
     role: "teen" as "teen" | "parent",
     parentEmail: "",
     parentPhone: "",
+    parentPermission: false,
     terms: false,
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -33,10 +35,12 @@ export default function SignupPage() {
     lastName?: string;
     email?: string;
     age?: string;
+    phone?: string;
     password?: string;
     confirmPassword?: string;
     parentEmail?: string;
     parentPhone?: string;
+    parentPermission?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
@@ -212,6 +216,9 @@ export default function SignupPage() {
     } else if (name === "age") {
       const error = validateAge(value);
       setFieldErrors(prev => ({ ...prev, age: error || undefined }));
+    } else if (name === "phone" && typeof sanitizedValue === "string") {
+      const error = validatePhone(sanitizedValue);
+      setFieldErrors(prev => ({ ...prev, phone: error || undefined }));
     } else if (name === "password") {
       const error = validatePassword(value);
       setFieldErrors(prev => ({ ...prev, password: error || undefined }));
@@ -280,6 +287,11 @@ export default function SignupPage() {
         errors.age = ageError;
         hasErrors = true;
       }
+
+      if (!formData.parentPermission) {
+        errors.parentPermission = "You must confirm that you have parent or guardian permission.";
+        hasErrors = true;
+      }
     }
 
     // Validate password
@@ -297,7 +309,11 @@ export default function SignupPage() {
 
     // Validate terms
     if (!formData.terms) {
-      setError("You must agree to the Terms of Service and Privacy Policy");
+      setError(
+        formData.role === "teen"
+          ? "You must agree to the Terms of Service and Privacy Agreement"
+          : "You must agree to the Terms of Service and Liability Waiver"
+      );
       hasErrors = true;
     }
 
@@ -311,7 +327,7 @@ export default function SignupPage() {
     }
 
     // Validate parent phone if provided
-    if (formData.parentPhone) {
+    if (formData.role === "teen") {
       const parentPhoneError = validatePhone(formData.parentPhone);
       if (parentPhoneError) {
         errors.parentPhone = parentPhoneError;
@@ -376,9 +392,11 @@ export default function SignupPage() {
           firstName: formData.firstName,
           lastName: formData.lastName,
           age: formData.role === "teen" ? parseInt(formData.age) : undefined,
+          phone: formData.phone || undefined,
           role: formData.role || 'teen',
           parentEmail: formData.parentEmail || undefined,
           parentPhone: formData.parentPhone || undefined,
+          parentPermission: formData.parentPermission,
         }),
       });
 
@@ -417,17 +435,19 @@ export default function SignupPage() {
         lastName: "",
         email: "",
         age: "",
+        phone: "",
         password: "",
         confirmPassword: "",
         role: "teen",
         parentEmail: "",
         parentPhone: "",
+        parentPermission: false,
         terms: false,
       });
       
       // Teens: parent must verify first, so send to login (they'll see "account not active" until parent confirms)
       // Parents: go to login
-      const redirectPath = "/login";
+      const redirectPath = result.requiresParentVerification ? "/pending-approval" : "/login";
       setTimeout(() => {
         router.push(redirectPath);
       }, 3000);
@@ -647,6 +667,33 @@ export default function SignupPage() {
             )}
 
             {formData.role === "teen" && (
+              <div className="space-y-2">
+                <label htmlFor="phone" className="block text-sm font-semibold text-gray-800">
+                  Phone <span className="text-gray-500 font-normal">(Optional for approval updates)</span>
+                </label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className={`w-full h-13 px-4 py-3 bg-gray-50 border-2 rounded-xl focus:ring-2 focus:ring-[#434c9d]/20 focus:border-[#434c9d] transition-all duration-200 placeholder:text-gray-400 text-gray-900 font-medium ${
+                    fieldErrors.phone ? 'border-red-400 focus:ring-red-200 focus:border-red-500' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  disabled={isSubmitting}
+                  placeholder="+1 (555) 123-4567"
+                  maxLength={20}
+                />
+                {fieldErrors.phone && (
+                  <p className="mt-2 text-xs text-red-600 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    {fieldErrors.phone}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {formData.role === "teen" && (
               <div className="space-y-4 p-5 bg-gradient-to-br from-[#96cbc3]/10 to-[#434c9d]/10 rounded-xl border-2 border-[#96cbc3]/30">
                 <h3 className="text-base font-bold text-[#434c9d] flex items-center gap-2">
                   <span className="w-2 h-2 bg-[#434c9d] rounded-full"></span>
@@ -685,12 +732,13 @@ export default function SignupPage() {
 
                   <div className="space-y-2">
                     <label htmlFor="parentPhone" className="block text-sm font-semibold text-gray-800">
-                      Parent/Guardian Phone <span className="text-gray-500 font-normal">(Optional)</span>
+                      Parent/Guardian Phone
                     </label>
                     <Input
                       id="parentPhone"
                       name="parentPhone"
                       type="tel"
+                      required
                       value={formData.parentPhone}
                       onChange={handleInputChange}
                       className={`w-full h-13 px-4 py-3 bg-white/80 border-2 rounded-xl focus:ring-2 focus:ring-[#434c9d]/20 focus:border-[#434c9d] transition-all duration-200 placeholder:text-gray-400 text-gray-900 font-medium ${
@@ -708,6 +756,31 @@ export default function SignupPage() {
                     )}
                   </div>
                 </div>
+                <div className="rounded-xl border border-[#434c9d]/15 bg-white/60 p-4">
+                  <label htmlFor="parentPermission" className="flex cursor-pointer items-start gap-3">
+                    <input
+                      id="parentPermission"
+                      name="parentPermission"
+                      type="checkbox"
+                      checked={formData.parentPermission}
+                      onChange={handleInputChange}
+                      className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer rounded border-gray-300 text-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20"
+                      disabled={isSubmitting}
+                    />
+                    <span className="text-sm leading-relaxed text-gray-700">
+                      I confirm that I have my parent or guardian&apos;s permission to create a TeenOp account and send them an approval request.
+                    </span>
+                  </label>
+                  {fieldErrors.parentPermission && (
+                    <p className="mt-2 text-xs text-red-600 flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      {fieldErrors.parentPermission}
+                    </p>
+                  )}
+                </div>
+                <p className="text-xs text-[#434c9d]">
+                  Pending Approval: while you wait for parent approval, your account will stay offline. You&apos;ll be able to draft your storefront once that feature is turned on.
+                </p>
               </div>
             )}
 
@@ -801,18 +874,33 @@ export default function SignupPage() {
                 required
                 checked={formData.terms}
                 onChange={handleInputChange}
-                className="h-4 w-4 text-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 border-gray-300 rounded mt-0.5 cursor-pointer transition-all duration-200"
+                className="h-4 w-4 text-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 border-gray-300 rounded mt-0.5 cursor-pointer transition-all duration-200 flex-shrink-0"
                 disabled={isSubmitting}
               />
               <label htmlFor="terms" className="text-sm text-gray-700 leading-relaxed cursor-pointer">
-                I agree to the{' '}
-                <a href="#" className="text-[#434c9d] hover:text-[#434c9d]/80 font-semibold transition-colors duration-200 hover:underline">
-                  Terms of Service
-                </a>{' '}
-                and{' '}
-                <a href="#" className="text-[#434c9d] hover:text-[#434c9d]/80 font-semibold transition-colors duration-200 hover:underline">
-                  Privacy Policy
-                </a>
+                {formData.role === "teen" ? (
+                  <>
+                    I acknowledge that TeenOp acts solely as a platform connecting teens with community members. I understand that TeenOp does not supervise, direct, or guarantee services and is not liable for services arranged through the platform. By checking this box, I agree to the{" "}
+                    <Link href="/terms" className="text-[#434c9d] hover:text-[#434c9d]/80 font-semibold transition-colors duration-200 hover:underline">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link href="/privacy" className="text-[#434c9d] hover:text-[#434c9d]/80 font-semibold transition-colors duration-200 hover:underline">
+                      Privacy Agreement
+                    </Link>.
+                  </>
+                ) : (
+                  <>
+                    I acknowledge that TeenOp acts solely as a platform connecting community members with teen service providers. I understand that TeenOp does not supervise, direct, or guarantee services and is not liable for services arranged through the platform. By checking this box, I agree to the{" "}
+                    <Link href="/terms" className="text-[#434c9d] hover:text-[#434c9d]/80 font-semibold transition-colors duration-200 hover:underline">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link href="/terms#limitation-of-liability" className="text-[#434c9d] hover:text-[#434c9d]/80 font-semibold transition-colors duration-200 hover:underline">
+                      Liability Waiver
+                    </Link>.
+                  </>
+                )}
               </label>
             </div>
 

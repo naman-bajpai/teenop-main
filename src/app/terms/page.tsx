@@ -151,7 +151,7 @@ export default function TermsPage() {
               </ul>
             </div>
 
-            <div className="space-y-4">
+            <div id="limitation-of-liability" className="space-y-4 scroll-mt-24">
               <h2 className="text-2xl font-bold text-gray-900 border-b border-gray-200 pb-2">13. Limitation of Liability</h2>
               <p>To the fullest extent permitted by law, TeenOp shall not be liable for any indirect, incidental, or consequential damages arising out of use of the Platform or services arranged through it.</p>
             </div>

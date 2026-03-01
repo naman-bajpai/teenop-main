@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { FEATURE_FLAGS } from "@/lib/feature-flags";
 
 export default function LoginPage() {
   // Wrap the hook-using component in Suspense to satisfy Next.js
@@ -265,6 +266,13 @@ function LoginInner() {
           return;
         }
 
+        if (profile.status === "pending_verification" && profile.role === "teen") {
+          setError("Pending Approval: your parent or guardian still needs to approve your TeenOp account before it can go live.");
+          router.push("/pending-approval");
+          setIsSubmitting(false);
+          return;
+        }
+
         if (data.session) {
           await supabase.auth.setSession(data.session);
           console.log("Session persisted successfully");
@@ -365,6 +373,12 @@ function LoginInner() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {FEATURE_FLAGS.enablePendingStorefrontDrafts === false && (
+            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              Teen accounts stay in <span className="font-semibold">Pending Approval</span> until a parent or guardian approves them.
             </div>
           )}
 

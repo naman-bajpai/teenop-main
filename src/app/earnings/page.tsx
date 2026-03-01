@@ -272,6 +272,14 @@ export default function EarningsPage() {
             {!accountStatus?.hasAccount ? (
               <div className="space-y-6">
                 <p className="text-sm text-gray-500 leading-relaxed">Connect your account to Stripe to enable payouts to your bank account.</p>
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 space-y-3">
+                  <p className="text-sm text-amber-900 leading-relaxed">
+                    If you are a teen, confirm that any bank account connected through Stripe is legally owned by your parent or guardian and that you have their permission to use it for TeenOp payouts.
+                  </p>
+                  <p className="text-sm text-amber-900 leading-relaxed">
+                    If you do not have a bank account in your own name, link a parent&apos;s or guardian&apos;s bank account instead so payouts are sent to an account that can be lawfully used for your earnings.
+                  </p>
+                </div>
                 <Button onClick={handleStripeConnectSetup} className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 rounded-2xl h-14 font-bold shadow-lg shadow-[#434c9d]/20">
                   Connect Stripe
                 </Button>
