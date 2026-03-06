@@ -273,7 +273,7 @@ export default function BookingDetailsPage() {
           <p className="text-sm text-gray-500 mb-4">Booking ID: {bookingId}</p>
           <Button onClick={() => router.push("/my-teen-hustle")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to My Teen Hustle
+            Back to Service Dashboard
           </Button>
         </div>
       </div>
@@ -411,7 +411,7 @@ export default function BookingDetailsPage() {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Waiting for Payment</h2>
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    Booking will be confirmed when your customer has completed payment. It will then appear on your My Teen Hustle page under Scheduled Services.
+                    Booking will be confirmed when your customer has completed payment. It will then appear on your Service Dashboard under Scheduled Services.
                   </p>
                 </div>
               </div>

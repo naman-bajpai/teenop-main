@@ -507,8 +507,10 @@ export default function TeenHustlePage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">My Teen Hustle</h1>
-            <p className="text-gray-500 font-medium">Manage your micro-business and earnings.</p>
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Service Dashboard</h1>
+            <p className="text-gray-500 font-medium">
+              Manage your services, bookings, and earnings.
+            </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/provider/quote-requests">

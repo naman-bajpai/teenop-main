@@ -15,7 +15,8 @@ import { cn } from "@/lib/utils";
 export default function NeighborhoodPage() {
   const { user, loading: userLoading } = useUser();
   const [services, setServices] = React.useState<Service[]>([]);
-  const [searchTerm, setSearchTerm] = React.useState("");
+  const [serviceQuery, setServiceQuery] = React.useState("");
+  const [locationQuery, setLocationQuery] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState("all");
   const [loading, setLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
@@ -74,17 +75,25 @@ export default function NeighborhoodPage() {
   const visibleServices = React.useMemo(() => {
     let next = [...services];
 
-    // Search filter
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase();
-      next = next.filter(
-        (s) =>
-          s.title?.toLowerCase().includes(q) ||
-          s.description?.toLowerCase().includes(q) ||
-          (s.location ?? "").toLowerCase().includes(q) ||
-          (s.provider_city ?? "").toLowerCase().includes(q) ||
-          (s.provider_state ?? "").toLowerCase().includes(q)
-      );
+    // Search filter (service type + location)
+    if (serviceQuery || locationQuery) {
+      const sq = serviceQuery.toLowerCase();
+      const lq = locationQuery.toLowerCase();
+
+      next = next.filter((s) => {
+        const matchesService =
+          !sq ||
+          s.title?.toLowerCase().includes(sq) ||
+          s.description?.toLowerCase().includes(sq);
+
+        const matchesLocation =
+          !lq ||
+          (s.location ?? "").toLowerCase().includes(lq) ||
+          (s.provider_city ?? "").toLowerCase().includes(lq) ||
+          (s.provider_state ?? "").toLowerCase().includes(lq);
+
+        return matchesService && matchesLocation;
+      });
     }
 
     // Category filter
@@ -136,19 +145,45 @@ export default function NeighborhoodPage() {
         case "relevance":
         default: {
           // If searching, prioritize title match > description/location
-          if (!searchTerm) return 0;
-          const q = searchTerm.toLowerCase();
-          const aTitle = a.title?.toLowerCase().includes(q) ? 2 : 0;
-          const bTitle = b.title?.toLowerCase().includes(q) ? 2 : 0;
-          const aOther = (a.description?.toLowerCase().includes(q) || (a.location ?? "").toLowerCase().includes(q)) ? 1 : 0;
-          const bOther = (b.description?.toLowerCase().includes(q) || (b.location ?? "").toLowerCase().includes(q)) ? 1 : 0;
-          return (bTitle + bOther) - (aTitle + aOther);
+          if (!serviceQuery && !locationQuery) return 0;
+          const sq = serviceQuery.toLowerCase();
+          const lq = locationQuery.toLowerCase();
+
+          const hasServiceQuery = sq.length > 0;
+          const hasLocationQuery = lq.length > 0;
+
+          const aTitle = hasServiceQuery && (a.title ?? "").toLowerCase().includes(sq) ? 2 : 0;
+          const bTitle = hasServiceQuery && (b.title ?? "").toLowerCase().includes(sq) ? 2 : 0;
+
+          const aOtherService = hasServiceQuery && (a.description ?? "").toLowerCase().includes(sq) ? 1 : 0;
+          const bOtherService = hasServiceQuery && (b.description ?? "").toLowerCase().includes(sq) ? 1 : 0;
+
+          const aLocation =
+            hasLocationQuery &&
+            (
+              (a.location ?? "").toLowerCase().includes(lq) ||
+              (a.provider_city ?? "").toLowerCase().includes(lq) ||
+              (a.provider_state ?? "").toLowerCase().includes(lq)
+            )
+              ? 1
+              : 0;
+          const bLocation =
+            hasLocationQuery &&
+            (
+              (b.location ?? "").toLowerCase().includes(lq) ||
+              (b.provider_city ?? "").toLowerCase().includes(lq) ||
+              (b.provider_state ?? "").toLowerCase().includes(lq)
+            )
+              ? 1
+              : 0;
+
+          return (bTitle + bOtherService + bLocation) - (aTitle + aOtherService + aLocation); 
         }
       }
     });
 
     return next;
-  }, [services, searchTerm, selectedCategory, minRating, minPrice, maxPrice, sortBy]);
+  }, [services, serviceQuery, locationQuery, selectedCategory, minRating, minPrice, maxPrice, sortBy]);
 
   return (
     <DashboardLayout user={user}>
@@ -183,15 +218,26 @@ export default function NeighborhoodPage() {
           <div className="relative mb-12 group">
             <div className="absolute inset-0 bg-gradient-to-r from-[#434c9d]/5 to-[#96cbc3]/5 rounded-[32px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative bg-white rounded-[32px] p-2 border border-gray-100 shadow-sm transition-all focus-within:shadow-xl focus-within:border-[#434c9d]/20">
-              <div className="flex flex-col md:flex-row items-center gap-2">
-                <div className="relative flex-1 w-full">
-                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-[#434c9d]" />
-                  <Input
-                    placeholder="What service do you need today?"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-14 h-14 bg-transparent border-none text-lg font-medium placeholder:text-gray-400 focus-visible:ring-0"
-                  />
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                  <div className="relative flex-1 w-full">
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-[#434c9d]" />
+                    <Input
+                      placeholder="What service do you need?"
+                      value={serviceQuery}
+                      onChange={(e) => setServiceQuery(e.target.value)}
+                      className="pl-14 h-14 bg-transparent border-none text-lg font-medium placeholder:text-gray-400 focus-visible:ring-0"
+                    />
+                  </div>
+                  <div className="relative flex-1 w-full">
+                    <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-[#434c9d]" />
+                    <Input
+                      placeholder="Where? (city, neighborhood, or ZIP)"
+                      value={locationQuery}
+                      onChange={(e) => setLocationQuery(e.target.value)}
+                      className="pl-14 h-14 bg-gray-50/80 border-none text-lg font-medium placeholder:text-gray-400 focus-visible:ring-0 md:bg-transparent md:border-l md:border-gray-100 md:rounded-none md:first:rounded-l-[24px] md:last:rounded-r-[24px]"
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 p-1 w-full md:w-auto">
                   <div className="h-10 w-px bg-gray-100 hidden md:block" />
@@ -363,7 +409,8 @@ export default function NeighborhoodPage() {
                   <p className="text-gray-500 mb-8 max-w-sm mx-auto">Try adjusting your filters or search terms to find what you're looking for.</p>
                   <Button
                     onClick={() => {
-                      setSearchTerm("");
+                      setServiceQuery("");
+                      setLocationQuery("");
                       setSelectedCategory("all");
                       setMinRating(0);
                       setMinPrice("");

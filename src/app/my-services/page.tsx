@@ -528,7 +528,7 @@ export default function MyServicesPage() {
                 <div className="flex-1 text-center md:text-left">
                   <h3 className="text-2xl font-black text-gray-900 mb-2">Complete Your Setup</h3>
                   <p className="text-gray-500 font-medium leading-relaxed max-w-xl">
-                    You're almost ready to start earning! Connect your Stripe account to safely receive payments from your neighbors.
+                    You&apos;re almost ready to start earning! Connect your Stripe account to safely receive payments from your neighbors.
                   </p>
                 </div>
                 <Button
@@ -602,7 +602,7 @@ export default function MyServicesPage() {
             
             <div className="flex items-center gap-2 text-gray-400">
               <Info className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-widest">Paused services aren't visible to customers</span>
+              <span className="text-xs font-bold uppercase tracking-widest">Paused services aren&apos;t visible to customers</span>
             </div>
           </div>
 
@@ -658,7 +658,7 @@ export default function MyServicesPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">No paused services</h3>
                 <p className="text-gray-500 max-w-sm mx-auto leading-relaxed font-medium">
-                  Take a break anytime by pausing your services. They'll appear here until you're ready to resume.
+                  Take a break anytime by pausing your services. They&apos;ll appear here until you&apos;re ready to resume.
                 </p>
               </div>
             )}
@@ -666,40 +666,63 @@ export default function MyServicesPage() {
         </Tabs>
       </div>
 
-      {/* Modern Dialog Redesign */}
+      {/* Add / Edit Service Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden border-none rounded-[40px] shadow-2xl">
-          <div className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] p-8 text-white">
-            <DialogHeader>
-              <DialogTitle className="text-3xl font-black">{editingService ? "Edit" : "Create"} Service</DialogTitle>
-              <DialogDescription className="text-white/80 text-lg font-medium">
-                {editingService ? "Update your listing details" : "Add a new skill to your profile"}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          
-          <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar bg-white">
-            <div className="space-y-10">
-              {/* Basic Info Section */}
-              <section className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-gray-50">
-                  <div className="w-10 h-10 bg-[#434c9d]/10 rounded-xl flex items-center justify-center">
-                    <Info className="w-5 h-5 text-[#434c9d]" />
-                  </div>
-                  <h3 className="text-lg font-black text-gray-900 uppercase tracking-widest text-[14px]">General Information</h3>
+        <DialogContent className="w-[96vw] sm:w-[88vw] max-w-3xl p-0 overflow-hidden border-0 rounded-3xl shadow-2xl">
+
+          {/* Header */}
+          <div className="relative bg-[#434c9d] px-6 pt-6 pb-5 text-white overflow-hidden">
+            <div className="absolute -top-14 -right-14 w-44 h-44 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-16 -left-16 w-52 h-52 rounded-full bg-[#96cbc3]/25 blur-3xl pointer-events-none" />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 bg-white/15 rounded-md flex items-center justify-center">
+                  <Sparkles className="w-3 h-3" />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Service Title</Label>
-                    <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Mathematics Tutoring" className="h-14 rounded-2xl bg-gray-50 border-none focus:bg-white transition-all text-lg font-bold" />
+                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-white/70">
+                  {editingService ? "Update Listing" : "New Listing"}
+                </span>
+              </div>
+              <DialogHeader>
+                <DialogTitle className="text-xl font-black tracking-tight mb-0.5 bg-gradient-to-r from-white to-[#96cbc3] bg-clip-text text-transparent">
+                  {editingService ? "Edit Service" : "Add New Service"}
+                </DialogTitle>
+                <DialogDescription className="text-white/60 text-sm font-medium">
+                  {editingService ? "Update your service details below" : "Fill in the details to publish your listing"}
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+          </div>
+
+          {/* Scrollable Body */}
+          <div className="overflow-y-auto max-h-[70vh] bg-gray-50/80">
+            <div className="p-5 space-y-3">
+
+              {/* General Information */}
+              <div className="bg-white rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 bg-[#434c9d]/10 rounded-lg flex items-center justify-center shrink-0">
+                    <Info className="w-3.5 h-3.5 text-[#434c9d]" />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Category</Label>
+                  <h3 className="text-[11px] font-black text-gray-800 uppercase tracking-[0.12em]">General Information</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Service Title</Label>
+                    <Input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. Mathematics Tutoring"
+                      className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-[#434c9d]/40 transition-all font-semibold text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</Label>
                     <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger className="h-14 rounded-2xl bg-gray-50 border-none focus:bg-white transition-all text-lg font-bold">
+                      <SelectTrigger className="h-11 rounded-xl bg-gray-50 border-gray-200 transition-all font-semibold text-sm">
                         <SelectValue placeholder="Select Category" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-2xl border-none shadow-xl">
+                      <SelectContent className="rounded-xl shadow-xl">
                         <SelectItem value="tutoring">Tutoring</SelectItem>
                         <SelectItem value="pet_care">Pet Care</SelectItem>
                         <SelectItem value="lawn_care">Lawn Care</SelectItem>
@@ -715,104 +738,240 @@ export default function MyServicesPage() {
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Description</Label>
-                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Tell your neighbors what makes your service great..." className="min-h-[120px] rounded-[24px] bg-gray-50 border-none focus:bg-white transition-all text-base font-medium resize-none leading-relaxed p-4" />
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Description</Label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Tell your neighbors what makes your service great..."
+                    className="min-h-[80px] rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-medium resize-none leading-relaxed"
+                  />
                 </div>
-              </section>
 
-              {/* Pricing Section */}
-              <section className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-gray-50">
-                  <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-green-600" />
-                  </div>
-                  <h3 className="text-lg font-black text-gray-900 uppercase tracking-widest text-[14px]">Pricing & Terms</h3>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Experience</Label>
+                  <Textarea
+                    value={qualifications}
+                    onChange={(e) => setQualifications(e.target.value)}
+                    placeholder="Share your experience or skills related to this service."
+                    className="min-h-[80px] rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-medium resize-none leading-relaxed"
+                  />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <Label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Pricing Model</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button variant={!isQuoteBased && pricingModel === 'per_hour' ? 'default' : 'outline'} onClick={() => { setIsQuoteBased(false); setPricingModel('per_hour'); }} className="h-14 rounded-2xl font-bold">Per Hour</Button>
-                      <Button variant={!isQuoteBased && pricingModel === 'per_job' ? 'default' : 'outline'} onClick={() => { setIsQuoteBased(false); setPricingModel('per_job'); }} className="h-14 rounded-2xl font-bold">Per Job</Button>
-                      <Button variant={isQuoteBased ? 'default' : 'outline'} onClick={() => setIsQuoteBased(true)} className="col-span-2 h-14 rounded-2xl font-bold">Quote Based (Contact for Price)</Button>
-                    </div>
+              </div>
+
+              {/* Pricing & Duration */}
+              <div className="bg-white rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
+                    <DollarSign className="w-3.5 h-3.5 text-green-600" />
                   </div>
+                  <h3 className="text-[11px] font-black text-gray-800 uppercase tracking-[0.12em]">Pricing & Duration</h3>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pricing Model</Label>
+                  <div className="flex gap-1.5 p-1 bg-gray-100 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => { setIsQuoteBased(false); setPricingModel('per_hour'); }}
+                      className={cn(
+                        "flex-1 h-9 rounded-lg text-[11px] font-black uppercase tracking-wide transition-all",
+                        !isQuoteBased && pricingModel === 'per_hour'
+                          ? "bg-white text-[#434c9d] shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      )}
+                    >
+                      Per Hour
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setIsQuoteBased(false); setPricingModel('per_job'); }}
+                      className={cn(
+                        "flex-1 h-9 rounded-lg text-[11px] font-black uppercase tracking-wide transition-all",
+                        !isQuoteBased && pricingModel === 'per_job'
+                          ? "bg-white text-[#434c9d] shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      )}
+                    >
+                      Per Job
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsQuoteBased(true)}
+                      className={cn(
+                        "flex-1 h-9 rounded-lg text-[11px] font-black uppercase tracking-wide transition-all",
+                        isQuoteBased
+                          ? "bg-white text-[#434c9d] shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      )}
+                    >
+                      Quote
+                    </button>
+                  </div>
+                  {isQuoteBased && (
+                    <p className="text-[11px] text-gray-400 font-medium pt-0.5">Customers will contact you for a custom price.</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {!isQuoteBased && (
-                    <div className="space-y-2">
-                      <Label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Price ($)</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Price ($)</Label>
                       <div className="relative">
-                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <Input type="number" value={price} onChange={(e) => setPrice(Number(e.target.value))} className="h-14 pl-12 rounded-2xl bg-gray-50 border-none focus:bg-white transition-all text-xl font-black" />
+                        <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <Input
+                          type="number"
+                          value={price}
+                          onChange={(e) => setPrice(Number(e.target.value))}
+                          className="h-11 pl-10 rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all font-bold"
+                        />
                       </div>
                     </div>
                   )}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Duration (Minutes)</Label>
+                    <Input
+                      type="number"
+                      value={duration}
+                      onChange={(e) => setDuration(Number(e.target.value))}
+                      className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all font-bold"
+                    />
+                  </div>
                 </div>
-              </section>
+              </div>
 
-              {/* Logistics Section */}
-              <section className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-gray-50">
-                  <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
-                    <MapPin className="w-5 h-5 text-indigo-600" />
+              {/* Location & Delivery */}
+              <div className="bg-white rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-600" />
                   </div>
-                  <h3 className="text-lg font-black text-gray-900 uppercase tracking-widest text-[14px]">Location & Logistics</h3>
+                  <h3 className="text-[11px] font-black text-gray-800 uppercase tracking-[0.12em]">Location & Delivery</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Location (City/Area)</Label>
-                    <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. South Windsor" className="h-14 rounded-2xl bg-gray-50 border-none focus:bg-white transition-all font-bold" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">City / Area</Label>
+                    <Input
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="e.g. South Windsor"
+                      className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all font-semibold text-sm"
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Default Duration (Min)</Label>
-                    <Input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="h-14 rounded-2xl bg-gray-50 border-none focus:bg-white transition-all font-bold" />
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Delivery Method</Label>
+                    <Select value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as "in_person" | "online")}>
+                      <SelectTrigger className="h-11 rounded-xl bg-gray-50 border-gray-200 transition-all font-semibold text-sm">
+                        <SelectValue placeholder="Select method" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl shadow-xl">
+                        <SelectItem value="in_person">In Person</SelectItem>
+                        <SelectItem value="online">Online</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </section>
+                {deliveryMethod === "in_person" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Meeting Type</Label>
+                      <Select value={locationType} onValueChange={(v) => setLocationType(v as "public_address" | "client_location")}>
+                        <SelectTrigger className="h-11 rounded-xl bg-gray-50 border-gray-200 transition-all font-semibold text-sm">
+                          <SelectValue placeholder="Select location type" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl shadow-xl">
+                          <SelectItem value="public_address">Fixed Address</SelectItem>
+                          <SelectItem value="client_location">Client Location</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {locationType === "public_address" && (
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Address (Optional)</Label>
+                        <Input
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          placeholder="e.g. 123 Main St, Suite 2"
+                          className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all font-semibold text-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
-              {/* Images Section */}
-              <section className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-gray-50">
-                  <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
-                    <ImageIcon className="w-5 h-5 text-amber-600" />
+              {/* Experience & Credentials */}
+              <div className="bg-white rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
+                    <Star className="w-3.5 h-3.5 text-purple-600" />
                   </div>
-                  <h3 className="text-lg font-black text-gray-900 uppercase tracking-widest text-[14px]">Visuals</h3>
+                  <h3 className="text-[11px] font-black text-gray-800 uppercase tracking-[0.12em]">Experience & Credentials</h3>
                 </div>
-                <div className="bg-gray-50 p-6 rounded-[32px]">
-                  <MultiImageUpload
-                    serviceId={editingService?.id || "new"}
-                    currentImages={serviceImages}
-                    onImagesChange={setServiceImages}
-                    maxImages={5}
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Education / Training</Label>
+                    <Input
+                      value={education}
+                      onChange={(e) => setEducation(e.target.value)}
+                      placeholder="e.g. AP Calculus, Peer Tutor Program"
+                      className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all font-semibold text-sm"
+                    />
+                  </div>
                 </div>
-              </section>
+              </div>
 
-              {/* Availability Section */}
-              <section className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-gray-50">
-                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-blue-600" />
+              {/* Photos */}
+              <div className="bg-white rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
+                    <ImageIcon className="w-3.5 h-3.5 text-amber-600" />
                   </div>
-                  <h3 className="text-lg font-black text-gray-900 uppercase tracking-widest text-[14px]">Weekly Availability</h3>
+                  <h3 className="text-[11px] font-black text-gray-800 uppercase tracking-[0.12em]">Photos</h3>
                 </div>
-                <div className="bg-gray-50 p-6 rounded-[32px] overflow-x-auto">
+                <MultiImageUpload
+                  serviceId={editingService?.id || "new"}
+                  currentImages={serviceImages}
+                  onImagesChange={setServiceImages}
+                  maxImages={5}
+                />
+              </div>
+
+              {/* Weekly Availability */}
+              <div className="bg-white rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                  </div>
+                  <h3 className="text-[11px] font-black text-gray-800 uppercase tracking-[0.12em]">Weekly Availability</h3>
+                </div>
+                <div className="overflow-x-auto">
                   <ServiceAvailabilityCalendar
                     serviceId={editingService?.id}
                     initialAvailability={serviceAvailability}
                     onSave={setServiceAvailability}
                   />
                 </div>
-              </section>
+              </div>
+
             </div>
           </div>
 
-          <div className="p-8 bg-gray-50/50 flex flex-col sm:flex-row gap-4 border-t border-gray-100">
-            <Button variant="ghost" onClick={() => setOpen(false)} className="h-14 rounded-2xl font-black px-10">Cancel</Button>
-            <Button onClick={handleCreateService} className="flex-1 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-2xl h-14 font-black shadow-xl shadow-[#434c9d]/20 transition-all active:scale-95">
+          {/* Footer */}
+          <div className="flex items-center gap-3 px-5 py-4 bg-white border-t border-gray-100">
+            <Button
+              variant="ghost"
+              onClick={() => setOpen(false)}
+              className="h-11 rounded-xl font-black px-6 hover:bg-gray-100 text-gray-600"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateService}
+              className="flex-1 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-xl h-11 font-black shadow-lg shadow-[#434c9d]/20 transition-all active:scale-95"
+            >
               {editingService ? "Save Changes" : "Create Listing"}
             </Button>
           </div>
+
         </DialogContent>
       </Dialog>
     </DashboardLayout>

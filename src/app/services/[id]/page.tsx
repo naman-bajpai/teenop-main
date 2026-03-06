@@ -1000,13 +1000,15 @@ export default function ServiceDetailsPage() {
                     </div>
                   </div>
 
-                  {/* Guaranteed Badge */}
-                  <div className="bg-gray-50 p-6 flex items-center gap-4">
-                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                      <Sparkles className="w-5 h-5 text-[#96cbc3]" />
+                  {/* Guaranteed Badge - hidden for now */}
+                  {false && (
+                    <div className="bg-gray-50 p-6 flex items-center gap-4">
+                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                        <Sparkles className="w-5 h-5 text-[#96cbc3]" />
+                      </div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">TeenOp Verified Quality</p>
                     </div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">TeenOp Verified Quality</p>
-                  </div>
+                  )}
                 </div>
 
                 {/* Safety Info */}

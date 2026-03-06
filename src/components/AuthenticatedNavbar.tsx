@@ -98,8 +98,13 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
     fetchUnreadCount();
     
     // Listen for custom event when messages are marked as read
-    const handleMessagesMarkedAsRead = () => {
-      fetchUnreadCount();
+    const handleMessagesMarkedAsRead = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.newCount !== undefined) {
+        setUnreadMessageCount(customEvent.detail.newCount);
+      } else {
+        fetchUnreadCount();
+      }
     };
     window.addEventListener('messagesMarkedAsRead', handleMessagesMarkedAsRead);
     
@@ -139,7 +144,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
   const secondaryNavItems = [
     ...(user?.role === "teen" ? [
       {
-        name: "My Teen Hustle",
+        name: "Service Dashboard",
         href: "/my-teen-hustle",
         icon: Briefcase,
       },
@@ -156,7 +161,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
         icon: Sparkles,
       },
       {
-        name: "Earnings",
+        name: "My Earnings",
         href: "/earnings",
         icon: Wallet,
       },
@@ -351,11 +356,13 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                   )}>
                     {user.first_name || user.name || "User"}
                   </p>
-                  <p className={cn(
-                    "text-[10px] font-black uppercase tracking-widest transition-colors duration-300",
-                    overHero ? "text-white/60" : "text-gray-400"
-                  )}>
-                    {user.role === 'teen' ? 'Hustler' : user.role || 'Member'}
+                  <p
+                    className={cn(
+                      "text-[10px] font-black uppercase tracking-widest transition-colors duration-300",
+                      overHero ? "text-white/60" : "text-gray-400"
+                    )}
+                  >
+                    {user.role === "teen" ? "Teen" : user.role || "Member"}
                   </p>
                 </div>
                 <ChevronDown className={cn(

@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
           `
             <p>Hello,</p>
             <p>Great news! A community member has scheduled your service, and payment has been completed. Your service is now officially confirmed.</p>
-            <p>You can find the details on your <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">My Teen Hustle page</a> under Scheduled Services or <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">click here</a>.</p>
+            <p>You can find the details on your <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">Service Dashboard</a> under Scheduled Services or <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">click here</a>.</p>
             <p>You'll receive an email and text reminder 1 day before and 3 hours before the service.</p>
             <p>After the service is completed, your payment will be processed and sent to you within 1–3 days.</p>
             <p>If you need to reach out to your client, you can message them anytime through <a href="${appUrl}/messages" style="color: #434c9d; text-decoration: underline;">TeenOp Messages</a>.</p>

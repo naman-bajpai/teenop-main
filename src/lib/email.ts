@@ -491,7 +491,7 @@ export class EmailService {
 
             <h3>What's next?</h3>
             <ul>
-              <li>You can find all the details on your <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">My Teen Hustle page</a> under Scheduled Services.</li>
+              <li>You can find all the details on your <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">Service Dashboard</a> under Scheduled Services.</li>
               <li>If you need to reach out to your client, you can message them anytime through <a href="${appUrl}/messages" style="color: #434c9d; text-decoration: underline;">TeenOp Messages</a>.</li>
             </ul>
           </div>

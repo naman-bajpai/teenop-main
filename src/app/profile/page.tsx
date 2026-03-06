@@ -62,6 +62,8 @@ export default function ProfilePage() {
   const name = profile ? `${profile.first_name} ${profile.last_name}`.trim() : "";
   const location = profile && (profile.city || profile.state) ? [profile.city, profile.state].filter(Boolean).join(", ") : "";
   const joinDate = profile?.created_at ? new Date(profile.created_at).toLocaleString("en-US", { month: "long", year: "numeric" }) : "";
+  const isParent = profile?.role === "parent";
+  const isTeen = profile?.role === "teen";
 
   const [rating, setRating] = React.useState<number>(0);
   const [reviewCount, setReviewCount] = React.useState<number>(0);
@@ -309,25 +311,57 @@ export default function ProfilePage() {
 
             <div className="h-px bg-gray-50 w-full mb-8" />
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-gray-50/50 rounded-2xl p-4 text-center border border-gray-50">
-                <div className="text-2xl font-bold text-gray-900">{totalServices.current}</div>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Services</div>
-              </div>
-              <div className="bg-gray-50/50 rounded-2xl p-4 text-center border border-gray-50">
-                <div className="text-2xl font-bold text-gray-900">{totalBookings.current}</div>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Bookings</div>
-              </div>
-              <div className="bg-gray-50/50 rounded-2xl p-4 text-center border border-gray-50 col-span-2 sm:col-span-2 flex items-center justify-center gap-4">
-                <div className="text-left">
-                  <div className="text-2xl font-bold text-gray-900">{rating.toFixed(1)}</div>
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Avg Rating</div>
-                </div>
-                <div className="flex flex-col items-center">
-                  <RatingDisplay rating={rating} size="sm" showCount={false} />
-                  <span className="text-[10px] font-bold text-[#96cbc3] mt-1 uppercase tracking-tight">{reviewCount} Reviews</span>
-                </div>
-              </div>
+            <div
+              className={cn(
+                "grid gap-4",
+                isParent ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2 sm:grid-cols-4"
+              )}
+            >
+              {isParent ? (
+                <>
+                  <div className="bg-gray-50/50 rounded-2xl p-4 text-center border border-gray-50">
+                    <div className="text-2xl font-bold text-gray-900">{totalBookings.current}</div>
+                    <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+                      Services booked on TeenOp
+                    </div>
+                  </div>
+                  <div className="bg-gray-50/50 rounded-2xl p-4 text-center border border-gray-50 col-span-2 sm:col-span-2 flex items-center justify-center gap-4">
+                    <div className="text-left">
+                      <div className="text-2xl font-bold text-gray-900">{rating.toFixed(1)}</div>
+                      <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Avg Rating</div>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <RatingDisplay rating={rating} size="sm" showCount={false} />
+                      <span className="text-[10px] font-bold text-[#96cbc3] mt-1 uppercase tracking-tight">
+                        {reviewCount} Reviews
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-gray-50/50 rounded-2xl p-4 text-center border border-gray-50">
+                    <div className="text-2xl font-bold text-gray-900">{totalServices.current}</div>
+                    <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Services</div>
+                  </div>
+                  <div className="bg-gray-50/50 rounded-2xl p-4 text-center border border-gray-50">
+                    <div className="text-2xl font-bold text-gray-900">{totalBookings.current}</div>
+                    <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Bookings</div>
+                  </div>
+                  <div className="bg-gray-50/50 rounded-2xl p-4 text-center border border-gray-50 col-span-2 sm:col-span-2 flex items-center justify-center gap-4">
+                    <div className="text-left">
+                      <div className="text-2xl font-bold text-gray-900">{rating.toFixed(1)}</div>
+                      <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Avg Rating</div>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <RatingDisplay rating={rating} size="sm" showCount={false} />
+                      <span className="text-[10px] font-bold text-[#96cbc3] mt-1 uppercase tracking-tight">
+                        {reviewCount} Reviews
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -406,26 +440,28 @@ export default function ProfilePage() {
                   </DialogContent>
                 </Dialog>
 
-                <Dialog open={isPrivacySettingsOpen} onOpenChange={setIsPrivacySettingsOpen}>
-                  <DialogTrigger asChild>
-                    <button className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-all text-left group">
-                      <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-white transition-colors"><Lock className="w-4 h-4 text-gray-500" /></div>
-                      <div className="flex-1">
-                        <div className="text-sm font-bold text-gray-900">Privacy</div>
-                        <div className="text-xs text-gray-500">Profile visibility</div>
+                {isTeen && (
+                  <Dialog open={isPrivacySettingsOpen} onOpenChange={setIsPrivacySettingsOpen}>
+                    <DialogTrigger asChild>
+                      <button className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-all text-left group">
+                        <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-white transition-colors"><Lock className="w-4 h-4 text-gray-500" /></div>
+                        <div className="flex-1">
+                          <div className="text-sm font-bold text-gray-900">Privacy</div>
+                          <div className="text-xs text-gray-500">Storefront visibility</div>
+                        </div>
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-2xl border-none rounded-[32px] p-0 overflow-hidden">
+                      <div className="p-8 bg-[#96cbc3] text-white">
+                        <DialogTitle className="text-2xl font-bold">Privacy Settings</DialogTitle>
+                        <DialogDescription className="text-white/70">Control who can see your profile</DialogDescription>
                       </div>
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-2xl border-none rounded-[32px] p-0 overflow-hidden">
-                    <div className="p-8 bg-[#96cbc3] text-white">
-                      <DialogTitle className="text-2xl font-bold">Privacy Settings</DialogTitle>
-                      <DialogDescription className="text-white/70">Control who can see your profile</DialogDescription>
-                    </div>
-                    <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                      <PrivacySettings />
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                      <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                        <PrivacySettings />
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
 
                 {profile?.role === "teen" && (
                   <>

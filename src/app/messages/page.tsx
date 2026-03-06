@@ -287,7 +287,7 @@ function MessagesPageContent() {
       const response = await fetch("/api/messages/mark-read-all", { method: "POST" });
       if (response.ok) {
         setConversations(prev => prev.map(c => ({ ...c, unread_count: 0 })));
-        window.dispatchEvent(new CustomEvent("messagesMarkedAsRead"));
+        window.dispatchEvent(new CustomEvent("messagesMarkedAsRead", { detail: { newCount: 0 } }));
         toast({ title: "Done", description: "All messages marked as read." });
       } else {
         const data = await response.json().catch(() => ({}));

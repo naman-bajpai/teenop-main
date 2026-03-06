@@ -4,7 +4,7 @@ import React from "react";
 import Navbar from "@/components/navbar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, LayoutGrid, List, ChevronDown } from "lucide-react";
+import { Search, Filter, LayoutGrid, List, ChevronDown, MapPin } from "lucide-react";
 import CategoryFilter from "@/components/services/CategoryFilter";
 import ServiceCard from "@/components/services/ServiceCard";
 import { Service } from "@/types/service";
@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 
 export default function ServicesPage() {
   const [services, setServices] = React.useState<Service[]>([]);
-  const [searchTerm, setSearchTerm] = React.useState("");
+  const [serviceQuery, setServiceQuery] = React.useState("");
+  const [locationQuery, setLocationQuery] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState("all");
   const [loading, setLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
@@ -53,16 +54,23 @@ export default function ServicesPage() {
   const visibleServices = React.useMemo(() => {
     let next = [...services];
 
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase();
-      next = next.filter(
-        (s) =>
-          s.title?.toLowerCase().includes(q) ||
-          s.description?.toLowerCase().includes(q) ||
-          (s.location ?? "").toLowerCase().includes(q) ||
-          (s.provider_city ?? "").toLowerCase().includes(q) ||
-          (s.provider_state ?? "").toLowerCase().includes(q)
-      );
+    if (serviceQuery || locationQuery) {
+      const sq = serviceQuery.toLowerCase();
+      const lq = locationQuery.toLowerCase();
+      next = next.filter((s) => {
+        const matchesService =
+          !sq ||
+          s.title?.toLowerCase().includes(sq) ||
+          s.description?.toLowerCase().includes(sq);
+
+        const matchesLocation =
+          !lq ||
+          (s.location ?? "").toLowerCase().includes(lq) ||
+          (s.provider_city ?? "").toLowerCase().includes(lq) ||
+          (s.provider_state ?? "").toLowerCase().includes(lq);
+
+        return matchesService && matchesLocation;
+      });
     }
 
     if (selectedCategory !== "all") {
@@ -107,27 +115,41 @@ export default function ServicesPage() {
         }
         case "relevance":
         default: {
-          if (!searchTerm) return 0;
-          const q = searchTerm.toLowerCase();
-          const aTitle = a.title?.toLowerCase().includes(q) ? 2 : 0;
-          const bTitle = b.title?.toLowerCase().includes(q) ? 2 : 0;
-          const aOther =
-            a.description?.toLowerCase().includes(q) ||
-            (a.location ?? "").toLowerCase().includes(q)
+          if (!serviceQuery && !locationQuery) return 0;
+          const sq = serviceQuery.toLowerCase();
+          const lq = locationQuery.toLowerCase();
+
+          const aTitle = sq && a.title?.toLowerCase().includes(sq) ? 2 : 0;
+          const bTitle = sq && b.title?.toLowerCase().includes(sq) ? 2 : 0;
+
+          const aOtherService = sq && a.description?.toLowerCase().includes(sq) ? 1 : 0;
+          const bOtherService = sq && b.description?.toLowerCase().includes(sq) ? 1 : 0;
+
+          const aLocation =
+            lq &&
+            (
+              (a.location ?? "").toLowerCase().includes(lq) ||
+              (a.provider_city ?? "").toLowerCase().includes(lq) ||
+              (a.provider_state ?? "").toLowerCase().includes(lq)
+            )
               ? 1
               : 0;
-          const bOther =
-            b.description?.toLowerCase().includes(q) ||
-            (b.location ?? "").toLowerCase().includes(q)
+          const bLocation =
+            lq &&
+            (
+              (b.location ?? "").toLowerCase().includes(lq) ||
+              (b.provider_city ?? "").toLowerCase().includes(lq) ||
+              (b.provider_state ?? "").toLowerCase().includes(lq)
+            )
               ? 1
               : 0;
-          return bTitle + bOther - (aTitle + aOther);
+          return bTitle + bOtherService + bLocation - (aTitle + aOtherService + aLocation);
         }
       }
     });
 
     return next;
-  }, [services, searchTerm, selectedCategory, minRating, minPrice, maxPrice, sortBy]);
+  }, [services, serviceQuery, locationQuery, selectedCategory, minRating, minPrice, maxPrice, sortBy]);
 
   return (
     <div className="min-h-screen bg-white text-gray-700">
@@ -154,15 +176,26 @@ export default function ServicesPage() {
           <div className="relative mb-12 group">
             <div className="absolute inset-0 rounded-[32px] bg-gradient-to-r from-[#434c9d]/5 to-[#96cbc3]/5 blur-2xl opacity-0 transition-opacity group-hover:opacity-100" />
             <div className="relative rounded-[32px] border border-gray-100 bg-white p-2 shadow-sm transition-all focus-within:border-[#434c9d]/20 focus-within:shadow-xl">
-              <div className="flex flex-col items-center gap-2 md:flex-row">
-                <div className="relative w-full flex-1">
-                  <Search className="absolute left-6 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    placeholder="What service do you need today?"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-14 border-none bg-transparent pl-14 text-lg font-medium placeholder:text-gray-400 focus-visible:ring-0"
-                  />
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                  <div className="relative w-full flex-1">
+                    <Search className="absolute left-6 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      placeholder="What service do you need?"
+                      value={serviceQuery}
+                      onChange={(e) => setServiceQuery(e.target.value)}
+                      className="h-14 border-none bg-transparent pl-14 text-lg font-medium placeholder:text-gray-400 focus-visible:ring-0"
+                    />
+                  </div>
+                  <div className="relative w-full flex-1">
+                    <MapPin className="absolute left-6 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      placeholder="Where? (city, neighborhood, or ZIP)"
+                      value={locationQuery}
+                      onChange={(e) => setLocationQuery(e.target.value)}
+                      className="h-14 border-none bg-gray-50/80 pl-14 text-lg font-medium placeholder:text-gray-400 focus-visible:ring-0 md:bg-transparent md:border-l md:border-gray-100 md:rounded-none md:first:rounded-l-[24px] md:last:rounded-r-[24px]"
+                    />
+                  </div>
                 </div>
                 <div className="flex w-full items-center gap-2 p-1 md:w-auto">
                   <div className="hidden h-10 w-px bg-gray-100 md:block" />
@@ -349,7 +382,8 @@ export default function ServicesPage() {
                   </p>
                   <Button
                     onClick={() => {
-                      setSearchTerm("");
+                      setServiceQuery("");
+                      setLocationQuery("");
                       setSelectedCategory("all");
                       setMinRating(0);
                       setMinPrice("");
