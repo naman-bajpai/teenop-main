@@ -12,7 +12,7 @@ export default function ParentDashboardPage() {
         <Navbar />
         <section className="py-24">
           <div className="mx-auto max-w-3xl px-4 text-center">
-            <h1 className="text-4xl font-bold text-gray-900">Parent Dashboard</h1>
+            <h1 className="page-title text-gray-900">Parent Dashboard</h1>
             <p className="mt-4 text-lg text-slate-600">
               Parent dashboard access scaffolding exists, but the feature is currently hidden.
             </p>
@@ -32,7 +32,7 @@ export default function ParentDashboardPage() {
       <Navbar />
       <section className="py-24">
         <div className="mx-auto max-w-5xl px-4">
-          <h1 className="text-4xl font-bold text-gray-900">Parent Dashboard</h1>
+          <h1 className="page-title text-gray-900">Parent Dashboard</h1>
           <p className="mt-4 text-lg text-slate-600">
             Hidden parent access to teen account and bookings will be surfaced here when the feature is enabled.
           </p>

@@ -27,7 +27,7 @@ export default function TermsPage() {
               <FileText className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold tracking-tight md:text-5xl text-gray-900">
+              <h1 className="page-title text-gray-900">
                 Terms of Service
               </h1>
               <p className="mt-1 text-sm font-medium text-gray-500">Last Updated: November 13, 2025</p>

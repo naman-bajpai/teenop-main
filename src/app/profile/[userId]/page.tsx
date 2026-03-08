@@ -140,7 +140,7 @@ export default function UserProfilePage() {
                 </div>
               </div>
 
-              <h1 className="text-3xl font-extrabold text-gray-900 mb-2">{name}</h1>
+              <h1 className="page-title text-gray-900 mb-2">{name}</h1>
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-6">
                 <Badge className="bg-[#434c9d]/10 text-[#434c9d] border-none px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">{profile.role}</Badge>
                 {reviewCount > 0 && (

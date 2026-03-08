@@ -28,7 +28,7 @@ export default function OurStoryPage() {
             <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-[#434c9d] to-[#96cbc3] shadow-lg">
               <Sparkles className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+            <h1 className="page-title">
               <span className="bg-gradient-to-r from-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent">
                 Our Story
               </span>

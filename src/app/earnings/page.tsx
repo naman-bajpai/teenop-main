@@ -223,7 +223,7 @@ export default function EarningsPage() {
         <div className="mb-12">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-[#434c9d]/10 rounded-xl"><Wallet className="w-5 h-5 text-[#434c9d]" /></div>
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Earnings & Payouts</h1>
+            <h1 className="page-title text-gray-900">Earnings & Payouts</h1>
           </div>
           <p className="text-gray-500 font-medium ml-12">Manage your revenue and track your transaction history.</p>
         </div>

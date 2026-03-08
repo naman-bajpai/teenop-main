@@ -169,7 +169,7 @@ export default function HomePage() {
                   <Zap className="w-4 h-4" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Neighborhood Services</span>
                 </div>
-                <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+                <h2 className="page-title text-gray-900">
                   Discover Talent <span className="text-[#434c9d]">Near You</span>
                 </h2>
                 <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">

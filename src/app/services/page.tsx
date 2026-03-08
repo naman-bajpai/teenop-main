@@ -161,7 +161,7 @@ export default function ServicesPage() {
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#434c9d]/60">
               Services
             </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight text-gray-900 md:text-5xl">
+            <h1 className="page-title text-gray-900 mt-3">
               Browse Teen Services
             </h1>
             <p className="mt-5 text-lg leading-relaxed text-slate-600">

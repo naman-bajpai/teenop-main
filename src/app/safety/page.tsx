@@ -27,7 +27,7 @@ export default function SafetyPage() {
               <Shield className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold tracking-tight text-gray-900 md:text-5xl">
+              <h1 className="page-title text-gray-900">
                 Safety
               </h1>
               <p className="mt-1 text-sm font-medium text-gray-500">

@@ -507,7 +507,7 @@ export default function TeenHustlePage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Service Dashboard</h1>
+            <h1 className="page-title text-gray-900 mb-2">Service Dashboard</h1>
             <p className="text-gray-500 font-medium">
               Manage your services, bookings, and earnings.
             </p>

@@ -270,7 +270,7 @@ function QuoteRequestsContent() {
                 <FileText className="w-4 h-4" />
                 <span className="text-[10px] font-black uppercase tracking-[0.15em]">Provider Dashboard</span>
               </div>
-              <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+              <h1 className="page-title text-gray-900">
                 Quote <span className="text-[#434c9d]">Requests</span>
               </h1>
               <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">

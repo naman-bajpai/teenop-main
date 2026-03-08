@@ -66,7 +66,7 @@ export default function ProviderPage() {
               <Sparkles className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Teen Hustle Hub</h1>
+              <h1 className="page-title text-gray-900">Teen Hustle Hub</h1>
               <p className="text-slate-600">Create and manage your services</p>
             </div>
           </div>

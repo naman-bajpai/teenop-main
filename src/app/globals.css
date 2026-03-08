@@ -44,7 +44,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-sans: var(--font-geist-sans, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial);
+  --font-sans: var(--font-montserrat, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial);
   --font-mono: var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
   --radius: var(--radius);
 }
@@ -74,6 +74,20 @@ body {
 /* Smooth transitions on theme-y elements */
 * {
   transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
+}
+
+/* Consistent page title style */
+.page-title {
+  font-size: 1.875rem;       /* text-3xl */
+  font-weight: 700;
+  letter-spacing: -0.025em;  /* tracking-tight */
+  line-height: 1.2;
+}
+
+@media (min-width: 768px) {
+  .page-title {
+    font-size: 2.25rem;      /* text-4xl */
+  }
 }
 
 /* Custom Scrollbar */

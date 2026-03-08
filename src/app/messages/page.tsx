@@ -527,7 +527,7 @@ function MessagesPageContent() {
           {/* Header */}
           <div className="p-5 border-b border-gray-50">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <h1 className="page-title text-gray-900 flex items-center gap-2">
                 Messages
                 {conversations.reduce((sum, c) => sum + c.unread_count, 0) > 0 && (
                   <span className="flex h-2 w-2 rounded-full bg-[#ff725a] animate-pulse" />

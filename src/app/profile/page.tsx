@@ -283,7 +283,7 @@ export default function ProfilePage() {
 
                 <div className="text-center sm:text-left pb-2">
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
-                    <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">{name}</h1>
+                    <h1 className="page-title text-gray-900">{name}</h1>
                     <Badge className="bg-[#434c9d]/10 text-[#434c9d] border-none px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">{profile.role}</Badge>
                   </div>
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-sm font-medium text-gray-500">

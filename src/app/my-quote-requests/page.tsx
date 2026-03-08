@@ -234,7 +234,7 @@ export default function MyQuoteRequestsPage() {
                 <FileText className="w-7 h-7 text-[#434c9d]" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent">
+                <h1 className="page-title bg-gradient-to-r from-gray-900 via-[#434c9d] to-[#96cbc3] bg-clip-text text-transparent">
                   My Quote Requests
                 </h1>
                 <p className="text-lg text-gray-600 mt-1">
