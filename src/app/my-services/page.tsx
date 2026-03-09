@@ -553,7 +553,7 @@ export default function MyServicesPage() {
               My <span className="text-[#434c9d]">Services</span>
             </h1>
             <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">
-              Build your local reputation and manage your professional offerings.
+              Create, manage, or pause your services.
             </p>
           </div>
 

@@ -48,6 +48,7 @@ import {
   ChevronRight,
   Info,
   Loader2,
+  Briefcase,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -504,11 +505,15 @@ export default function TeenHustlePage() {
   return (
     <DashboardLayout user={user}>
       <div className="max-w-6xl mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <div>
-            <h1 className="page-title text-gray-900 mb-2">Service Dashboard</h1>
-            <p className="text-gray-500 font-medium">
+        {/* Page Header */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 mb-12">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 bg-[#434c9d]/10 text-[#434c9d] rounded-full px-4 py-1.5">
+              <Briefcase className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-[0.15em]">Service Dashboard</span>
+            </div>
+            <h1 className="page-title text-gray-900">Service Dashboard</h1>
+            <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">
               Manage your services, bookings, and earnings.
             </p>
           </div>

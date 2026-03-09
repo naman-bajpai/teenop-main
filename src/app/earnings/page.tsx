@@ -220,12 +220,18 @@ export default function EarningsPage() {
   return (
     <DashboardLayout user={user}>
       <div className="max-w-6xl mx-auto px-4 py-12">
-        <div className="mb-12">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-[#434c9d]/10 rounded-xl"><Wallet className="w-5 h-5 text-[#434c9d]" /></div>
+        {/* Page Header */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 mb-12">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 bg-[#434c9d]/10 text-[#434c9d] rounded-full px-4 py-1.5">
+              <Wallet className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-[0.15em]">Earnings Dashboard</span>
+            </div>
             <h1 className="page-title text-gray-900">Earnings & Payouts</h1>
+            <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">
+              Manage your revenue and track your transaction history.
+            </p>
           </div>
-          <p className="text-gray-500 font-medium ml-12">Manage your revenue and track your transaction history.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
@@ -264,10 +270,14 @@ export default function EarningsPage() {
 
           <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#434c9d]/5 rounded-full -mr-16 -mt-16" />
-            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-3">
               <CreditCard className="w-5 h-5 text-[#434c9d]" />
-              Payout Account
+              Transfer Money to Bank Account
             </h3>
+            <p className="text-sm text-gray-500 leading-relaxed mb-6">
+              Earnings from services will be held in Stripe until you manually transfer funds to your bank account.
+              For a step-by-step on how to do this view payout quick guide.
+            </p>
 
             {!accountStatus?.hasAccount ? (
               <div className="space-y-6">
