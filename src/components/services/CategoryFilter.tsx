@@ -13,7 +13,7 @@ const categories = [
   { id: 'tutoring', label: 'Tutoring', icon: '📚' },
   { id: 'cleaning', label: 'Cleaning', icon: '🧹' },
   { id: 'tech_support', label: 'Tech Support', icon: '💻' },
-  { id: 'delivery', label: 'Delivery', icon: '📦' },
+  { id: 'sports_coaching', label: 'Sports Coaching', icon: '🏆' },
   { id: 'art_commissions', label: 'Art Commissions', icon: '🎨' },
   { id: 'beauty', label: 'Beauty', icon: '💄' },
   { id: 'photography', label: 'Photography', icon: '📷' },

@@ -22,17 +22,17 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 lg:py-32 w-full">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-4 py-6 lg:py-10 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
           {/* Left: Logo + Tagline + Buttons */}
-          <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 lg:-ml-4">
             <Image
               src="/images/newlogo.png"
               alt="TeenOp Logo"
               width={320}
               height={320}
-              className="w-44 h-44 sm:w-52 sm:h-52 lg:w-60 lg:h-60 drop-shadow-2xl -mt-10"
+              className="w-44 h-44 sm:w-52 sm:h-52 lg:w-60 lg:h-60 drop-shadow-2xl -mt-16"
             />
 
             <p className="text-xl sm:text-2xl md:text-3xl text-white/90 font-medium max-w-xs leading-relaxed backdrop-blur-md bg-white/10 px-6 py-4 rounded-2xl ring-1 ring-white/20">
@@ -72,15 +72,39 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
 
           {/* Right: TeenOp Definition Box */}
           <div className="flex justify-center lg:justify-end">
-            <div className="w-full max-w-md rounded-[28px] bg-white px-8 py-8 text-left shadow-2xl ring-1 ring-black/5">
-              <p className="text-xs font-bold uppercase tracking-[0.35em] text-[#434c9d]/50">TeenOp</p>
-              <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <p className="text-2xl font-bold text-slate-900">teen·op</p>
-                <p className="text-sm italic text-slate-400">| ˈten-ˌap | noun</p>
+            <div className="w-full max-w-md rounded-[28px] bg-white/95 backdrop-blur-sm px-8 py-8 text-left shadow-2xl ring-1 ring-black/5">
+              {/* Header */}
+              <div className="border-b border-slate-100 pb-4">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <p className="text-3xl font-extrabold text-slate-900 tracking-tight">teen·op</p>
+                  <p className="text-xs font-medium italic text-slate-400 tracking-wide">| ˈtēn äp | noun</p>
+                </div>
+                <p className="mt-1 text-xs text-slate-400 uppercase tracking-widest font-semibold">teen opportunity</p>
               </div>
-              <p className="mt-4 text-base leading-relaxed text-slate-700 sm:text-lg">
-                A neighborhood platform where talented teens offer services to local community members, making it easier to hire help close to home while creating real work opportunities for young people.
-              </p>
+
+              {/* Services */}
+              <div className="mt-4">
+                <p className="text-xs uppercase tracking-widest font-semibold text-[#434c9d] mb-3">Services by teens</p>
+                <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  {[
+                    "Dog walking",
+                    "Kids sports training",
+                    "Lawn care",
+                    "Senior/family photography",
+                    "Furniture moving",
+                    "Kids party assistant",
+                    "Car washing/detailing",
+                    "Graphic & web design",
+                    "Social media creation",
+                    "Event setup/cleanup",
+                  ].map((service) => (
+                    <li key={service} className="flex items-center gap-2 text-sm text-slate-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#ff725a] flex-shrink-0" />
+                      {service}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
 

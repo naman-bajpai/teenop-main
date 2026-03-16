@@ -39,11 +39,18 @@ export default function Home() {
                 Teens
               </h3>
               <ul className="mt-8 space-y-4 text-lg text-slate-700">
-                <li>Make money doing what you are already good at</li>
-                <li>Build college r&eacute;sum&eacute; experience</li>
-                <li>Gain experience</li>
-                <li>Set a schedule that works around school and life</li>
-                <li>Start learning how to run something of your own</li>
+                {[
+                  "Start a small business in under 10 minutes",
+                  "Make money using existing skills/talents",
+                  "Choose when you work",
+                  "Gain experience",
+                  "Build College Resume",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3">
+                    <span className="mt-2 w-2 h-2 rounded-full bg-[#434c9d] flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
               </ul>
               <Link href="/signup" className="mt-10 block">
                 <Button className="group w-full rounded-xl bg-[#434c9d] px-8 py-6 text-base font-semibold text-white hover:bg-[#434c9d]/90">
@@ -58,11 +65,18 @@ export default function Home() {
                 Community
               </h3>
               <ul className="mt-8 space-y-4 text-lg text-slate-700">
-                <li>Find affordable local help for everyday tasks</li>
-                <li>Hire talented teens right in your area</li>
-                <li>Support young entrepreneurs close to home</li>
-                <li>Discover specialized skills and creative services</li>
-                <li>Keep opportunity and spending inside your community</li>
+                {[
+                  "Find affordable help for everyday tasks",
+                  "Hire talented teens in your community",
+                  "Support students at your local high schools",
+                  "Discover unique and creative services",
+                  "Keep opportunity in your community",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3">
+                    <span className="mt-2 w-2 h-2 rounded-full bg-[#ff725a] flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
               </ul>
               <Link href="/services" className="mt-10 block">
                 <Button className="group w-full rounded-xl bg-[#ff725a] px-8 py-6 text-base font-semibold text-white hover:bg-[#ff725a]/90">
@@ -93,7 +107,7 @@ export default function Home() {
                 Founder Story
               </p>
               <h2 className="mt-3 text-4xl font-bold tracking-tight text-gray-900">
-                Built from a lunch table idea
+                The TeenOp Story
               </h2>
               <blockquote className="mt-6 max-w-3xl text-2xl font-medium leading-relaxed text-slate-700">
                 &ldquo;TeenOp was born at my high school lunch table with the simple dream of helping my friends start their own businesses.&rdquo;

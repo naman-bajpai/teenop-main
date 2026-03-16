@@ -323,196 +323,124 @@ function LoginInner() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 flex flex-col justify-center py-12 sm:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Animated background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-[#434c9d]/20 via-[#96cbc3]/20 to-transparent rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-[#ff725a]/20 via-[#434c9d]/20 to-transparent rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-[#96cbc3]/10 via-[#434c9d]/10 to-[#ff725a]/10 rounded-full blur-3xl"></div>
+    <div className="min-h-screen flex relative overflow-hidden">
+      {/* Full-page background */}
+      <Image src="/images/Sign In Background1.jpg" alt="" fill className="object-cover" priority aria-hidden />
+      <div className="absolute inset-0 bg-black/10" />
+
+      {/* Left branding panel — desktop only */}
+      <div className="hidden lg:flex lg:w-1/2 relative z-10 flex-col justify-between px-14 py-12">
+        <Link href="/">
+          <Image src="/images/newlogo.png" alt="TeenOp" width={72} height={72} className="drop-shadow-2xl" />
+        </Link>
+        <div>
+          <h1 className="text-6xl font-extrabold text-white leading-tight drop-shadow-lg">
+            Welcome<br />back.
+          </h1>
+          <p className="mt-4 text-lg text-white/75 max-w-xs leading-relaxed">
+            Sign back in and keep connecting with your community.
+          </p>
+        </div>
+        <p className="text-sm text-white/40">© {new Date().getFullYear()} TeenOp</p>
       </div>
 
-      <div className="relative z-10 sm:mx-auto sm:w-full sm:max-w-md">
-        {/* Logo */}
-        <div className="flex justify-center mb-10">
-          <Link
-            href="/"
-            className="group flex items-center gap-3 bg-white/90 backdrop-blur-md px-6 py-4 rounded-2xl shadow-xl border border-white/40 hover:bg-white transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl"
-          >
-            <Image
-              src="/images/newlogo.png"
-              alt="TeenOp Logo"
-              width={200}
-              height={200}
-              className="h-16 w-16 transition-transform duration-300 group-hover:scale-110"
-            />
-          </Link>
-        </div>
-
-        {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-5xl font-extrabold bg-gradient-to-r from-[#434c9d] via-[#96cbc3] to-[#ff725a] bg-clip-text text-transparent mb-4">
-            Welcome back!
-          </h1>
-          <p className="text-xl text-gray-600 font-medium">Sign in to continue your teen hustle journey</p>
-        </div>
-
-        {/* Form Card */}
-        <div className="bg-white/95 backdrop-blur-md py-10 px-6 sm:px-10 shadow-2xl rounded-3xl border border-gray-200/50 relative overflow-hidden">
-          {/* Decorative gradient overlay */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#ff725a] via-[#434c9d] to-[#96cbc3]"></div>
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg flex items-start gap-3 animate-in slide-in-from-top-2 duration-300">
-              <div className="p-1.5 bg-red-100 rounded-full flex-shrink-0">
-                <AlertCircle className="w-4 h-4 text-red-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm text-red-800 font-medium block">{error}</span>
-                {countdown && countdown > 0 && (
-                  <div className="mt-1.5 text-xs text-red-600">
-                    Retry available in {countdown} second{countdown !== 1 ? 's' : ''}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {FEATURE_FLAGS.enablePendingStorefrontDrafts === false && (
-            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              Teen accounts stay in <span className="font-semibold">Pending Approval</span> until a parent or guardian approves them.
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-            <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-800">
-                Email address
-              </label>
-              <div className="relative">
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className={`w-full h-13 px-4 py-3 bg-gray-50 border-2 rounded-xl focus:ring-2 focus:ring-[#434c9d]/20 focus:border-[#434c9d] transition-all duration-200 placeholder:text-gray-400 text-gray-900 font-medium ${
-                    fieldErrors.email ? 'border-red-400 focus:ring-red-200 focus:border-red-500' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  placeholder="you@example.com"
-                  disabled={isSubmitting}
-                  maxLength={254}
-                />
-                {fieldErrors.email && (
-                  <p className="mt-2 text-xs text-red-600 flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                    {fieldErrors.email}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-800">
-                Password
-              </label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className={`w-full h-13 px-4 py-3 pr-12 bg-gray-50 border-2 rounded-xl focus:ring-2 focus:ring-[#434c9d]/20 focus:border-[#434c9d] transition-all duration-200 placeholder:text-gray-400 text-gray-900 font-medium ${
-                    fieldErrors.password ? 'border-red-400 focus:ring-red-200 focus:border-red-500' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  placeholder="Enter your password"
-                  disabled={isSubmitting}
-                  maxLength={128}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-gray-100/50 rounded-r-xl transition-colors duration-200"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isSubmitting}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-500 hover:text-gray-700" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-500 hover:text-gray-700" />
-                  )}
-                </button>
-                {fieldErrors.password && (
-                  <p className="mt-2 text-xs text-red-600 flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                    {fieldErrors.password}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
-              <div className="flex items-center group">
-                <input
-                  id="rememberMe"
-                  name="rememberMe"
-                  type="checkbox"
-                  checked={formData.rememberMe}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 border-gray-300 rounded cursor-pointer transition-all duration-200"
-                  disabled={isSubmitting}
-                />
-                <label htmlFor="rememberMe" className="ml-3 block text-sm font-medium text-gray-700 cursor-pointer group-hover:text-gray-900 transition-colors">
-                  Remember me
-                </label>
-              </div>
-
-              <Link
-                href="/forgot-password"
-                className="text-sm font-semibold text-[#434c9d] hover:text-[#434c9d]/80 transition-colors duration-200 hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
-
-            <div className="pt-2">
-              <Button
-                type="submit"
-                className="w-full h-13 bg-gradient-to-r from-[#434c9d] via-[#5a6bc4] to-[#96cbc3] hover:from-[#434c9d]/95 hover:via-[#5a6bc4]/95 hover:to-[#96cbc3]/95 text-white font-bold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed relative overflow-hidden group"
-                disabled={isSubmitting || (countdown !== null && countdown > 0)}  
-              >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Signing in...
-                    </>
-                  ) : countdown && countdown > 0 ? (
-                    `Wait ${countdown}s`
-                  ) : (
-                    "Sign in"
-                  )}
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              </Button>
-            </div>
-          </form>
-        </div>
-
-        {/* Sign up link */}
-        <div className="mt-8 text-center">
-          <p className="text-gray-600 text-base">
-            Don&apos;t have an account yet?{" "}
-            <Link
-              href="/signup"
-              className="font-bold text-[#434c9d] hover:text-[#434c9d]/80 transition-colors duration-200 hover:underline"
-            >
-              Create one
+      {/* Right form panel */}
+      <div className="relative z-10 w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-10">
+        <div className="w-full max-w-md">
+          {/* Mobile logo */}
+          <div className="lg:hidden flex justify-center mb-8">
+            <Link href="/">
+              <Image src="/images/newlogo.png" alt="TeenOp" width={64} height={64} className="drop-shadow-xl" />
             </Link>
-          </p>
+          </div>
+
+          {/* Glass card */}
+          <div className="bg-white/85 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/60 overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-[#ff725a] via-[#434c9d] to-[#96cbc3]" />
+            <div className="px-8 py-9">
+              <div className="mb-7">
+                <h2 className="text-3xl font-extrabold text-slate-900">Sign in</h2>
+                <p className="mt-1 text-slate-500 text-sm">Enter your credentials to continue</p>
+              </div>
+
+              {error && (
+                <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-sm text-red-700">{error}</span>
+                    {countdown && countdown > 0 && (
+                      <div className="mt-1 text-xs text-red-500">Retry in {countdown}s</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {FEATURE_FLAGS.enablePendingStorefrontDrafts === false && (
+                <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-900">
+                  Teen accounts stay in <span className="font-semibold">Pending Approval</span> until a parent approves them.
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
+                  <Input
+                    id="email" name="email" type="email" autoComplete="email" required
+                    value={formData.email} onChange={handleInputChange}
+                    className={`w-full h-12 px-4 bg-white/70 border rounded-xl text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.email ? 'border-red-400' : 'border-slate-200'}`}
+                    placeholder="you@example.com" disabled={isSubmitting} maxLength={254}
+                  />
+                  {fieldErrors.email && <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.email}</p>}
+                </div>
+
+                {/* Password */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label htmlFor="password" className="block text-sm font-semibold text-slate-700">Password</label>
+                    <Link href="/forgot-password" className="text-xs font-medium text-[#434c9d] hover:underline">Forgot password?</Link>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
+                      value={formData.password} onChange={handleInputChange}
+                      className={`w-full h-12 px-4 pr-11 bg-white/70 border rounded-xl text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.password ? 'border-red-400' : 'border-slate-200'}`}
+                      placeholder="Your password" disabled={isSubmitting} maxLength={128}
+                    />
+                    <button type="button" className="absolute inset-y-0 right-0 pr-3.5 flex items-center" onClick={() => setShowPassword(!showPassword)} disabled={isSubmitting} aria-label={showPassword ? "Hide password" : "Show password"}>
+                      {showPassword ? <EyeOff className="h-4 w-4 text-slate-400" /> : <Eye className="h-4 w-4 text-slate-400" />}
+                    </button>
+                  </div>
+                  {fieldErrors.password && <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.password}</p>}
+                </div>
+
+                {/* Remember me */}
+                <div className="flex items-center gap-2.5">
+                  <input id="rememberMe" name="rememberMe" type="checkbox" checked={formData.rememberMe} onChange={handleInputChange} className="h-4 w-4 rounded border-slate-300 text-[#434c9d] focus:ring-[#434c9d]/20 cursor-pointer" disabled={isSubmitting} />
+                  <label htmlFor="rememberMe" className="text-sm text-slate-600 cursor-pointer select-none">Remember me</label>
+                </div>
+
+                {/* Submit */}
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-gradient-to-r from-[#434c9d] to-[#6b76c9] hover:opacity-90 text-white font-bold rounded-xl shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  disabled={isSubmitting || (countdown !== null && countdown > 0)}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Signing in...
+                    </span>
+                  ) : countdown && countdown > 0 ? `Wait ${countdown}s` : "Sign in"}
+                </Button>
+              </form>
+
+              <p className="mt-6 text-center text-sm text-slate-500">
+                Don&apos;t have an account?{" "}
+                <Link href="/signup" className="font-semibold text-[#434c9d] hover:underline">Create one</Link>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
