@@ -285,7 +285,7 @@ export default function MyServicesPage() {
   const [location, setLocation] = useState("Online");
   const [category, setCategory] = useState("tutoring");
   const [status, setStatus] = useState<"active" | "paused">("active");
-  const [duration, setDuration] = useState<number>(1);
+  const [duration, setDuration] = useState<number>(60);
   const [education, setEducation] = useState("");
   const [qualifications, setQualifications] = useState("");
   const [address, setAddress] = useState("");
@@ -351,7 +351,7 @@ export default function MyServicesPage() {
     setLocation("Online");
     setCategory("tutoring");
     setStatus("active");
-    setDuration(1);
+    setDuration(60);
     setEducation("");
     setQualifications("");
     setAddress("");
@@ -373,7 +373,7 @@ export default function MyServicesPage() {
     setLocation(service.location);
     setCategory(service.category);
     setStatus(service.status);
-    setDuration(service.duration || 1);
+    setDuration(service.duration || 60);
     setEducation(service.education || "");
     setQualifications(service.qualifications || "");
     setAddress(service.address || "");

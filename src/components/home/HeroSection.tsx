@@ -26,20 +26,20 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
           {/* Left: Logo + Tagline + Buttons */}
-          <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 lg:-ml-4">
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 lg:-ml-24">
             <Image
               src="/images/newlogo.png"
               alt="TeenOp Logo"
-              width={480}
-              height={480}
-              className="w-[264px] h-[264px] sm:w-[312px] sm:h-[312px] lg:w-[360px] lg:h-[360px] drop-shadow-2xl -mt-16"
+              width={560}
+              height={560}
+              className="w-[320px] h-[360px] sm:w-[400px] sm:h-[440px] lg:w-[480px] lg:h-[540px] drop-shadow-2xl -mt-16"
             />
 
-            <p className="text-xl sm:text-2xl md:text-3xl text-white/90 font-medium max-w-xs leading-relaxed backdrop-blur-md bg-white/10 px-6 py-4 rounded-2xl ring-1 ring-white/20">
+            <p className="text-lg sm:text-xl text-white/90 font-medium w-full max-w-sm sm:max-w-md leading-snug backdrop-blur-md bg-white/10 px-6 py-3 rounded-2xl ring-1 ring-white/20">
               Talented teens offering services to their community
             </p>
 
-            <div className="flex flex-col gap-4 pt-2 w-full max-w-xs">
+            <div className="flex flex-col gap-4 pt-2 w-full max-w-sm sm:max-w-md">
               <Link href="/services" className="w-full">
                 <Button
                   size="lg"
