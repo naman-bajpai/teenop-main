@@ -77,7 +77,6 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
               <div className="border-b border-slate-100 pb-4">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <p className="text-3xl font-extrabold text-slate-900 tracking-tight">teen·op</p>
-                  <p className="text-xs font-medium italic text-slate-400 tracking-wide">| ˈtēn äp | noun</p>
                 </div>
                 <p className="mt-1 text-xs text-slate-400 uppercase tracking-widest font-semibold">teen opportunity</p>
               </div>
