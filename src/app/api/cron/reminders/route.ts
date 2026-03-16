@@ -4,9 +4,11 @@ import { createServerClient } from "@/lib/supabase/server";
 // Cron job endpoint for sending reminder notifications
 export async function GET(request: NextRequest) {
   try {
-    // Verify this is a legitimate cron request (you might want to add authentication)
+    // Verify this is a legitimate cron request
+    // Vercel sends Authorization: Bearer <CRON_SECRET> when configured in vercel.json
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
@@ -34,15 +36,6 @@ export async function GET(request: NextRequest) {
     
     const threeHoursEnd = new Date(threeHoursFromNow);
     threeHoursEnd.setMinutes(threeHoursEnd.getMinutes() + 30);
-
-    const oneHourFromNow = new Date(now);
-    oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
-    
-    const oneHourStart = new Date(oneHourFromNow);
-    oneHourStart.setMinutes(oneHourStart.getMinutes() - 15);
-    
-    const oneHourEnd = new Date(oneHourFromNow);
-    oneHourEnd.setMinutes(oneHourEnd.getMinutes() + 15);
 
     // Get all confirmed and paid bookings that might need reminders
     // We'll filter by date/time in JavaScript since we need to combine date and time
@@ -117,27 +110,11 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Filter bookings for 1-hour reminders (1 hour ± 15 minutes)
-    const oneHourBookings = (allBookings || []).filter((booking: any) => {
-      try {
-        const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
-        const isInRange = bookingDateTime >= oneHourStart && bookingDateTime <= oneHourEnd;
-        if (isInRange) {
-          console.log(`Booking ${booking.id} is in 1-hour reminder window: ${bookingDateTime.toISOString()}`);
-        }
-        return isInRange;
-      } catch (error) {
-        console.error(`Error parsing date/time for booking ${booking.id}:`, error);
-        return false;
-      }
-    });
-
-    console.log(`Filtered to ${tomorrowBookings.length} bookings for 24-hour reminders, ${threeHourBookings.length} for 3-hour reminders, and ${oneHourBookings.length} for 1-hour reminders`);
+    console.log(`Filtered to ${tomorrowBookings.length} bookings for 24-hour reminders and ${threeHourBookings.length} for 3-hour reminders`);
 
     const results = {
       tomorrowReminders: 0,
       threeHourReminders: 0,
-      oneHourReminders: 0,
       errors: [] as string[]
     };
 
@@ -279,48 +256,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Send 1-hour reminders
-    if (oneHourBookings && oneHourBookings.length > 0) {
-      for (const booking of oneHourBookings) {
-        try {
-          const bookingData = booking as any;
-          const service = bookingData.services;
-          const customer = bookingData.profiles;
-          const provider = service?.profiles;
-
-          // Send buyer 1-hour reminder
-          if (customer?.email) {
-            try {
-              const buyerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.CRON_SECRET}`
-                },
-                body: JSON.stringify({
-                  type: 'buyer_1_hour_reminder',
-                  bookingId: bookingData.id
-                })
-              });
-
-              if (buyerResponse.ok) {
-                results.oneHourReminders++;
-                console.log(`Sent 1-hour reminder to buyer for booking ${bookingData.id}`);
-              } else {
-                const errorData = await buyerResponse.json().catch(() => ({}));
-                results.errors.push(`Buyer 1h reminder failed for booking ${bookingData.id}: ${buyerResponse.status} - ${errorData.error || 'Unknown error'}`);
-              }
-            } catch (fetchError) {
-              results.errors.push(`Buyer 1h reminder fetch error for booking ${bookingData.id}: ${fetchError}`);
-            }
-          }
-        } catch (error) {
-          console.error("Error sending 1-hour reminder:", error);
-          results.errors.push(`1-hour reminder error for booking ${(booking as any).id}: ${error}`);
-        }
-      }
-    }
-
     // Check for paid bookings that have passed their scheduled time and need completion
     const { data: paidBookings, error: paidBookingsError } = await supabase
       .from("bookings")
@@ -391,7 +326,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(`Reminder cron job completed: ${results.tomorrowReminders} 24-hour reminders, ${results.threeHourReminders} 3-hour reminders, ${results.oneHourReminders} 1-hour reminders, ${completionReminders} completion reminders, ${results.errors.length} errors`);
+    console.log(`Reminder cron job completed: ${results.tomorrowReminders} 24-hour reminders, ${results.threeHourReminders} 3-hour reminders, ${completionReminders} completion reminders, ${results.errors.length} errors`);
 
     return NextResponse.json({
       success: true,
@@ -400,7 +335,6 @@ export async function GET(request: NextRequest) {
         ...results,
         processed24h: tomorrowBookings.length,
         processed3h: threeHourBookings.length,
-        processed1h: oneHourBookings.length,
         completionReminders
       }
     });

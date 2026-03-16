@@ -138,10 +138,6 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
       href: "/messages",
       icon: MessageCircle,
     },
-  ];
-
-  // Secondary navigation items (in "More" menu)
-  const secondaryNavItems = [
     ...(user?.role === "teen" ? [
       {
         name: "Service Dashboard",
@@ -149,6 +145,10 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
         icon: Briefcase,
       },
     ] : []),
+  ];
+
+  // Secondary navigation items (in "More" menu)
+  const secondaryNavItems = [
     {
       name: "My Requests",
       href: "/my-requests",

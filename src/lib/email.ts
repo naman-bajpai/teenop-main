@@ -254,8 +254,9 @@ export class EmailService {
     location: string;
     bookingId: string;
   }) {
-    const subject = 'Reminder: Your TeenOp booking is tomorrow!';
-    
+    const subject = 'Reminder: Scheduled Service Tomorrow';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -269,103 +270,37 @@ export class EmailService {
           .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
           .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
           .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
+          .button { display: inline-block; background: #434c9d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0; font-weight: bold; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>Reminder: Your TeenOp booking is tomorrow!</h1>
+            <h1>Reminder: Scheduled Service Tomorrow</h1>
           </div>
-          
+
           <div class="content">
-            <p>Hi ${data.buyerName},</p>
-            
-            <p>This is a reminder that your TeenOp booking is tomorrow. The details are listed below!</p>
-            
+            <p>Hello,</p>
+
+            <p>You have an upcoming service with TeenOp scheduled for tomorrow!</p>
+
             <div class="booking-details">
-              <h3>Booking Details</h3>
               <p><strong>Service:</strong> ${data.serviceName}</p>
-              <p><strong>With:</strong> ${data.teenName}</p>
-              <p><strong>Date & Time:</strong> ${data.date}, ${data.time} ${data.timeZone}</p>
-              <p><strong>Location:</strong> ${data.location}</p>
-              <p><strong>Booking ID:</strong> #${data.bookingId}</p>
+              <p><strong>Time:</strong> ${data.date}, ${data.time} ${data.timeZone}</p>
+              <p><strong>Teen Provider:</strong> ${data.teenName}</p>
             </div>
 
-            <p>Need to make a change? View or manage your booking in TeenOp.</p>
-            <p>Please keep all communication and payments on TeenOp for safety.</p>
-            
-            <p>Thanks for supporting the new wave of teen entrepreneurs!</p>
+            <p>If you would like to review the details or send a message to your teen provider, you can do so below.</p>
+
+            <p style="text-align: center;">
+              <a href="${appUrl}/my-bookings" class="button">View Booking</a>
+            </p>
+
+            <p>Thank you for supporting local teen entrepreneurs on TeenOp!</p>
           </div>
 
           <div class="footer">
             <p>Best,<br>The TeenOp Team</p>
-            <p>teenop.co@gmail.com | www.teenop.com</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    return this.sendEmail(data.buyerEmail, subject, html);
-  }
-
-  // Buyer 1-hour reminder email
-  async sendBuyer1HourReminder(data: {
-    buyerName: string;
-    buyerEmail: string;
-    serviceName: string;
-    teenName: string;
-    time: string;
-    timeZone: string;
-    location: string;
-    bookingId: string;
-  }) {
-    const subject = 'Reminder: Your TeenOp booking is in 1 hour!';
-    
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Booking Reminder</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-          .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
-          .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
-          .button { display: inline-block; background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>⏰ Reminder: Your TeenOp booking is in 1 hour!</h1>
-            <p>Your TeenOp booking is starting in 1 hour! Make sure you're ready.</p>
-          </div>
-          
-          <div class="content">
-            <p>Hi ${data.buyerName},</p>
-            
-            <div class="booking-details">
-              <h3>Booking Details</h3>
-              <p><strong>Service:</strong> ${data.serviceName}</p>
-              <p><strong>With:</strong> ${data.teenName}</p>
-              <p><strong>Time:</strong> ${data.time} ${data.timeZone}</p>
-              <p><strong>Location:</strong> ${data.location}</p>
-              <p><strong>Booking ID:</strong> #${data.bookingId}</p>
-            </div>
-
-            <p>Please be on time and ready for your service. If you need to make changes, contact the provider through TeenOp messages.</p>
-            <p>Remember to keep all communication and payments on TeenOp for safety.</p>
-            
-            <p>Thanks for supporting the new wave of teen entrepreneurs!</p>
-          </div>
-
-          <div class="footer">
-            <p>Best,<br>The TeenOp Team</p>
-            <p>teenop.co@gmail.com | www.teenop.com</p>
           </div>
         </div>
       </body>
@@ -386,14 +321,15 @@ export class EmailService {
     location: string;
     bookingId: string;
   }) {
-    const subject = 'Starts soon: Your TeenOp booking today';
-    
+    const subject = 'Your service starts in 3 hours';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
+
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Booking Starts Soon</title>
+        <title>Your service starts in 3 hours</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -401,37 +337,37 @@ export class EmailService {
           .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
           .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
           .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
+          .button { display: inline-block; background: #434c9d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0; font-weight: bold; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>Starts soon: Your TeenOp booking today</h1>
+            <h1>Your service starts in 3 hours</h1>
           </div>
-          
+
           <div class="content">
-            <p>Hi ${data.buyerName},</p>
-            
-            <p>Your TeenOp booking starts in about 3 hours.</p>
-            
+            <p>Hello,</p>
+
+            <p>Your scheduled TeenOp service will begin soon!</p>
+
             <div class="booking-details">
-              <h3>Booking Details</h3>
               <p><strong>Service:</strong> ${data.serviceName}</p>
-              <p><strong>With:</strong> ${data.teenName}</p>
               <p><strong>Time:</strong> ${data.time} ${data.timeZone}</p>
-              <p><strong>Location:</strong> ${data.location}</p>
-              <p><strong>Booking ID:</strong> #${data.bookingId}</p>
+              <p><strong>Teen Helper:</strong> ${data.teenName}</p>
             </div>
 
-            <p>Questions or updates? Message your provider in TeenOp.</p>
-            <p>For any changes, please manage your booking in the app.</p>
-            
-            <p>We hope you enjoy your service!</p>
+            <p>You can review your booking or send a message to your teen provider through TeenOp.</p>
+
+            <p style="text-align: center;">
+              <a href="${appUrl}/my-bookings" class="button">View Booking</a>
+            </p>
+
+            <p>Thank you for using TeenOp. We hope you enjoy your service!</p>
           </div>
 
           <div class="footer">
             <p>Best,<br>The TeenOp Team</p>
-            <p>teenop.co@gmail.com | www.teenop.com</p>
           </div>
         </div>
       </body>
@@ -447,22 +383,22 @@ export class EmailService {
     providerEmail: string;
     serviceName: string;
     buyerName: string;
+    date: string;
     time: string;
     timeZone: string;
     location: string;
+    bookingId: string;
   }) {
-    const subject = 'Reminder for tomorrow 🗓️';
+    const subject = 'REMINDER: Scheduled Service Tomorrow!';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
-    
-    // Format location: show "Online" if location is "Online", otherwise show the location
-    const locationDisplay = data.location === "Online" ? "Online" : data.location;
-    
+    const locationDisplay = data.location === 'Online' ? 'Online' : data.location;
+
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Reminder for tomorrow</title>
+        <title>REMINDER: Scheduled Service Tomorrow!</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -470,35 +406,38 @@ export class EmailService {
           .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
           .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
           .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
-          .button { display: inline-block; background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+          .button { display: inline-block; background: #434c9d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0; font-weight: bold; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>Reminder for tomorrow 🗓️</h1>
-            <p>TeenOp: Reminder for tomorrow 🗓️— ${data.serviceName} with ${data.buyerName} at ${data.time} ${data.timeZone} (${locationDisplay}). Review details or message the buyer through TeenOp if you need anything.</p>
+            <h1>REMINDER: Scheduled Service Tomorrow!</h1>
           </div>
-          
+
           <div class="content">
+            <p>Hello,</p>
+
+            <p>This is a reminder that you have an upcoming service scheduled for tomorrow!</p>
+
             <div class="booking-details">
-              <h3>Booking Details</h3>
               <p><strong>Service:</strong> ${data.serviceName}</p>
-              <p><strong>With:</strong> ${data.buyerName}</p>
-              <p><strong>Time:</strong> ${data.time} ${data.timeZone}</p>
+              <p><strong>Customer:</strong> ${data.buyerName}</p>
+              <p><strong>Time:</strong> ${data.date}, ${data.time} ${data.timeZone}</p>
               <p><strong>Location:</strong> ${locationDisplay}</p>
             </div>
 
-            <h3>What's next?</h3>
-            <ul>
-              <li>You can find all the details on your <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">Service Dashboard</a> under Scheduled Services.</li>
-              <li>If you need to reach out to your client, you can message them anytime through <a href="${appUrl}/messages" style="color: #434c9d; text-decoration: underline;">TeenOp Messages</a>.</li>
-            </ul>
+            <p>Take a moment to review the details and prepare.</p>
+
+            <p style="text-align: center;">
+              <a href="${appUrl}/my-teen-hustle" class="button">View Booking</a>
+            </p>
+
+            <p>We hope everything goes great!</p>
           </div>
 
           <div class="footer">
             <p>Best,<br>The TeenOp Team</p>
-            <p>teenop.co@gmail.com | www.teenop.com</p>
           </div>
         </div>
       </body>
@@ -515,20 +454,19 @@ export class EmailService {
     serviceName: string;
     buyerName: string;
     time: string;
+    timeZone?: string;
     location: string;
+    bookingId: string;
   }) {
-    const subject = "You're up soon 👏";
+    const subject = 'Your service starts in 3 hours!';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
-    
-    // Format location: show "Online" if location is "Online", otherwise show the location
-    const locationDisplay = data.location === "Online" ? "Online" : data.location;
-    
+
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <title>You're up soon</title>
+        <title>Your service starts in 3 hours!</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -536,35 +474,37 @@ export class EmailService {
           .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
           .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
           .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
-          .button { display: inline-block; background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+          .button { display: inline-block; background: #434c9d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0; font-weight: bold; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>You're up soon 👏</h1>
-            <p>TeenOp: You're up soon 👏${data.serviceName} with ${data.buyerName} at ${data.time} (${locationDisplay}). Bring what you need and message your buyer through TeenOp if plans change.</p>
+            <h1>Your service starts in 3 hours!</h1>
           </div>
-          
+
           <div class="content">
+            <p>Hi,</p>
+
+            <p>Your service is coming up soon!</p>
+
             <div class="booking-details">
-              <h3>Booking Details</h3>
               <p><strong>Service:</strong> ${data.serviceName}</p>
-              <p><strong>With:</strong> ${data.buyerName}</p>
-              <p><strong>Time:</strong> ${data.time}</p>
-              <p><strong>Location:</strong> ${locationDisplay}</p>
+              <p><strong>Time:</strong> ${data.time}${data.timeZone ? ' ' + data.timeZone : ''}</p>
+              <p><strong>Customer:</strong> ${data.buyerName}</p>
             </div>
 
-            <h3>What's next?</h3>
-            <ul>
-              <li>Make sure you have everything you need for the service.</li>
-              <li>If you need to make any changes, you can message your buyer through <a href="${appUrl}/messages" style="color: #434c9d; text-decoration: underline;">TeenOp Messages</a>.</li>
-            </ul>
+            <p>Please make sure you arrive on time or message your customer on TeenOp if anything changes.</p>
+
+            <p style="text-align: center;">
+              <a href="${appUrl}/my-teen-hustle" class="button">View Booking</a>
+            </p>
+
+            <p>Good luck!</p>
           </div>
 
           <div class="footer">
             <p>Best,<br>The TeenOp Team</p>
-            <p>teenop.co@gmail.com | www.teenop.com</p>
           </div>
         </div>
       </body>

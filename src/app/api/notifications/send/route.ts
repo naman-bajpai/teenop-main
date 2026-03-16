@@ -172,26 +172,6 @@ export async function POST(request: NextRequest) {
         });
         break;
 
-      case 'buyer_1_hour_reminder':
-        if (!customer?.email) {
-          return NextResponse.json(
-            { success: false, error: "Customer email not found" },
-            { status: 400 }
-          );
-        }
-
-        result = await emailService.sendBuyer1HourReminder({
-          buyerName: `${customer.first_name} ${customer.last_name}`.trim(),
-          buyerEmail: customer.email,
-          serviceName: service.title,
-          teenName: `${provider.first_name} ${provider.last_name}`.trim(),
-          time: formattedTime,
-          timeZone,
-          location: service.location || 'Online',
-          bookingId: bookingData.id,
-        });
-        break;
-
       case 'buyer_3_hour_reminder':
         if (!customer?.email) {
           return NextResponse.json(
@@ -225,9 +205,11 @@ export async function POST(request: NextRequest) {
           providerEmail: provider.email,
           serviceName: service.title,
           buyerName: `${customer.first_name} ${customer.last_name}`.trim(),
+          date: formattedDate,
           time: formattedTime,
           timeZone,
           location: service.location || 'Online',
+          bookingId: bookingData.id,
         });
         break;
 
@@ -245,7 +227,9 @@ export async function POST(request: NextRequest) {
           serviceName: service.title,
           buyerName: `${customer.first_name} ${customer.last_name}`.trim(),
           time: formattedTime,
+          timeZone,
           location: service.location || 'Online',
+          bookingId: bookingData.id,
         });
         break;
 
