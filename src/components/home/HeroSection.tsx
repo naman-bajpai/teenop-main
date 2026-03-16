@@ -30,9 +30,9 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
             <Image
               src="/images/newlogo.png"
               alt="TeenOp Logo"
-              width={320}
-              height={320}
-              className="w-44 h-44 sm:w-52 sm:h-52 lg:w-60 lg:h-60 drop-shadow-2xl -mt-16"
+              width={480}
+              height={480}
+              className="w-[264px] h-[264px] sm:w-[312px] sm:h-[312px] lg:w-[360px] lg:h-[360px] drop-shadow-2xl -mt-16"
             />
 
             <p className="text-xl sm:text-2xl md:text-3xl text-white/90 font-medium max-w-xs leading-relaxed backdrop-blur-md bg-white/10 px-6 py-4 rounded-2xl ring-1 ring-white/20">
