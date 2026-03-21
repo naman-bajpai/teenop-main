@@ -549,9 +549,7 @@ export default function MyServicesPage() {
               <LayoutGrid className="w-4 h-4" />
               <span className="text-[10px] font-black uppercase tracking-[0.15em]">Provider Dashboard</span>
             </div>
-            <h1 className="page-title text-gray-900">
-              My <span className="text-[#434c9d]">Services</span>
-            </h1>
+            <h1 className="page-title text-gray-900">My Services</h1>
             <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">
               Create, manage, or pause your services.
             </p>
@@ -684,7 +682,7 @@ export default function MyServicesPage() {
                 </span>
               </div>
               <DialogHeader>
-                <DialogTitle className="text-xl font-black tracking-tight mb-0.5 bg-gradient-to-r from-white to-[#96cbc3] bg-clip-text text-transparent">
+                <DialogTitle className="text-xl font-black tracking-tight mb-0.5 text-white">
                   {editingService ? "Edit Service" : "Add New Service"}
                 </DialogTitle>
                 <DialogDescription className="text-white/60 text-sm font-medium">

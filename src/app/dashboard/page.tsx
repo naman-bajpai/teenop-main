@@ -2,8 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Star, Sparkles, TrendingUp, Users, Shield, Zap, ArrowRight, Heart, AlertCircle } from "lucide-react";
+import { Search, MapPin, Star, Sparkles, Shield, Zap, ArrowRight, Heart, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { createPageUrl } from "@/utils";
 import { useUser } from "@/hooks/useUser";
@@ -20,7 +19,8 @@ export default function HomePage() {
   const { user, loading: userLoading, error: userError } = useUser();
   const [services, setServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [serviceQuery, setServiceQuery] = useState("");
+  const [locationQuery, setLocationQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,21 +52,30 @@ export default function HomePage() {
 
   const filterServices = useCallback(() => {
     let filtered = services;
-    
-    if (searchTerm) {
-      filtered = filtered.filter(service =>
-        service.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.location?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+
+    const sq = serviceQuery.trim().toLowerCase();
+    const lq = locationQuery.trim().toLowerCase();
+    if (sq || lq) {
+      filtered = filtered.filter((service) => {
+        const matchesService =
+          !sq ||
+          service.title?.toLowerCase().includes(sq) ||
+          service.description?.toLowerCase().includes(sq);
+        const matchesLocation =
+          !lq ||
+          (service.location ?? "").toLowerCase().includes(lq) ||
+          (service.provider_city ?? "").toLowerCase().includes(lq) ||
+          (service.provider_state ?? "").toLowerCase().includes(lq);
+        return matchesService && matchesLocation;
+      });
     }
-    
+
     if (selectedCategory !== "all") {
       filtered = filtered.filter(service => service.category === selectedCategory);
     }
-    
+
     setFilteredServices(filtered);
-  }, [services, searchTerm, selectedCategory]);
+  }, [services, serviceQuery, locationQuery, selectedCategory]);
 
   useEffect(() => {
     fetchServices();
@@ -181,30 +190,44 @@ export default function HomePage() {
                 <Link href={createPageUrl("Provider")}>
                   <Button className="group bg-[#434c9d] hover:bg-[#434c9d]/90 text-white shadow-xl shadow-[#434c9d]/20 px-8 h-14 font-bold rounded-[20px] transition-all active:scale-95 flex items-center gap-3">
                     <Sparkles className="w-5 h-5" />
-                    Start Your Teen Hustle
+                    Start Offering Services
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
               )}
             </div>
 
-            {/* Search Bar */}
+            {/* Search Bar — aligned with /services browse UI */}
             <div className="relative group mb-10">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#434c9d]/5 to-[#96cbc3]/5 rounded-[32px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative bg-white rounded-[32px] p-2 border border-gray-100 shadow-sm transition-all focus-within:shadow-xl focus-within:border-[#434c9d]/20">
-                <div className="flex flex-col md:flex-row items-center gap-2">
-                  <div className="relative flex-1 w-full">
-                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 w-6 h-6 group-focus-within:text-[#434c9d] transition-colors" />
-                    <Input
-                      placeholder="Search for a city, zip code, or service..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-16 h-14 bg-transparent border-none text-lg font-medium placeholder:text-gray-400 focus-visible:ring-0"
-                    />
+              <div className="absolute inset-0 rounded-[32px] bg-gradient-to-r from-[#434c9d]/5 to-[#96cbc3]/5 blur-2xl opacity-0 transition-opacity group-hover:opacity-100" />
+              <div className="relative rounded-[32px] border border-gray-100 bg-white p-2 shadow-sm transition-all focus-within:border-[#434c9d]/20 focus-within:shadow-xl">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                  <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                    <div className="relative w-full flex-1">
+                      <Search className="absolute left-6 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        placeholder="What service do you need?"
+                        value={serviceQuery}
+                        onChange={(e) => setServiceQuery(e.target.value)}
+                        className="h-14 border-none bg-transparent pl-14 text-lg font-medium placeholder:text-gray-400 focus-visible:ring-0"
+                      />
+                    </div>
+                    <div className="relative w-full flex-1">
+                      <MapPin className="absolute left-6 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        placeholder="Where? (city, neighborhood, or ZIP)"
+                        value={locationQuery}
+                        onChange={(e) => setLocationQuery(e.target.value)}
+                        className="h-14 border-none bg-gray-50/80 pl-14 text-lg font-medium placeholder:text-gray-400 focus-visible:ring-0 md:bg-transparent md:border-l md:border-gray-100 md:rounded-none"
+                      />
+                    </div>
                   </div>
-                  <Button className="h-12 px-8 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-2xl font-bold w-full md:w-auto shadow-lg shadow-[#434c9d]/20">
-                    Find Help
-                  </Button>
+                  <div className="flex w-full items-center gap-2 p-1 md:w-auto">
+                    <div className="hidden h-10 w-px bg-gray-100 md:block" />
+                    <Button className="h-12 w-full rounded-2xl bg-[#434c9d] px-8 font-bold text-white shadow-lg shadow-[#434c9d]/20 transition-all hover:bg-[#434c9d]/90 md:w-auto">
+                      Search
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -268,7 +291,8 @@ export default function HomePage() {
                     <Button
                       variant="outline"
                       onClick={() => {
-                        setSearchTerm("");
+                        setServiceQuery("");
+                        setLocationQuery("");
                         setSelectedCategory("all");
                       }}
                       className="rounded-2xl px-8 h-12 font-bold border-gray-200 text-gray-600 hover:bg-white"
@@ -299,8 +323,8 @@ export default function HomePage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
-                { icon: Shield, title: "Safe & Verified", desc: "All teen providers are verified and background checked for your peace of mind.", color: "bg-white/10" },
-                { icon: Star, title: "Quality Guaranteed", desc: "Every service is rated and reviewed by real customers in your neighborhood.", color: "bg-white/10" },
+                { icon: Shield, title: "Safe & Filtered", desc: "All teen providers are verified students of your school community. All community buyers given access through school code.", color: "bg-white/10" },
+                { icon: Star, title: "Community Rated", desc: "Services are rated and reviewed by real customers in your school community.", color: "bg-white/10" },
                 { icon: Heart, title: "Support Local", desc: "Empower local teens to build valuable skills while earning their own money.", color: "bg-white/10" }
               ].map((badge, i) => (
                 <div key={i} className={cn("rounded-[32px] p-8 border border-white/10 text-white transition-all hover:translate-y-[-8px] duration-300", badge.color)}>

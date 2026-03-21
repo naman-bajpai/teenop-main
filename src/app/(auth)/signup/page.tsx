@@ -556,15 +556,6 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
-              <Input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleInputChange}
-                className={`w-full h-11 px-4 border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.email ? 'border-red-400' : 'border-slate-200'}`}
-                placeholder={formData.role === "teen" ? "you@sses.saintstephens.org" : "you@example.com"} disabled={isSubmitting} maxLength={254} />
-              {fieldErrors.email && <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.email}</p>}
-            </div>
-
             {/* Account type */}
             <div>
               <label htmlFor="role" className="block text-sm font-semibold text-slate-700 mb-1.5">Account Type</label>
@@ -575,6 +566,15 @@ export default function SignupPage() {
                 <option value="parent">Community Member</option>
               </select>
               {formData.role === "teen" && <p className="mt-1.5 text-xs text-[#434c9d]">Only @sses.saintstephens.org emails can sign up as Teen.</p>}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
+              <Input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleInputChange}
+                className={`w-full h-11 px-4 border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.email ? 'border-red-400' : 'border-slate-200'}`}
+                placeholder={formData.role === "teen" ? "you@sses.saintstephens.org" : "you@example.com"} disabled={isSubmitting} maxLength={254} />
+              {fieldErrors.email && <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.email}</p>}
             </div>
 
             {/* Teen-only fields */}

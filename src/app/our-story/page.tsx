@@ -51,7 +51,7 @@ export default function OurStoryPage() {
               </div>
               
               <p>
-                My senior year of high school, TeenOp, short for "teen opportunity," began gaining traction and support from my school community. What started as an idea shared between friends is now becoming a real platform, with our first beta version officially launching in January 2026. I am incredibly excited to help teens create their own ventures while also giving community members a way to find affordable and reliable help from a teen down the street.
+                During my senior year at Saint Stephen&apos;s Episcopal School, I developed the idea for TeenOp, short for teen opportunity, with guidance from a faculty advisor. What started as an idea shared between friends is now becoming a real platform, with our first beta version officially launching in April 2026. I am incredibly excited to help teens create their own ventures while also giving community members a way to find affordable and reliable help from a teen down the street.
               </p>
               
               <div className="rounded-xl bg-gradient-to-r from-[#434c9d]/10 to-[#96cbc3]/10 p-6">

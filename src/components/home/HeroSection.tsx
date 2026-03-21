@@ -38,22 +38,22 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
           />
 
           {/* Tagline */}
-          <p className="mt-5 text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight max-w-xs lg:max-w-sm">
-            Talented teens offering services to their community
+          <p className="mt-5 text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight max-w-md lg:max-w-lg">
+            Talented Teens Offering Services to Their Community
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col gap-3 mt-8 w-[220px] sm:w-[260px]">
+          <div className="flex flex-col gap-3 mt-8 w-full max-w-[min(100%,320px)] sm:max-w-[360px]">
             {/* Browse Services — white/outlined */}
             <Link href="/services" className="w-full">
               <Button
                 size="lg"
-                className="group w-full h-13 px-6 text-sm font-bold bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 shadow-lg hover:scale-105 transition-all duration-200 rounded-2xl"
+                className="group w-full min-h-14 px-8 text-base sm:text-lg font-bold bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 shadow-lg hover:scale-105 transition-all duration-200 rounded-2xl"
               >
                 <span className="flex items-center gap-2">
-                  <Search className="w-4 h-4" />
+                  <Search className="w-5 h-5 shrink-0" />
                   Browse Services
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform ml-auto" />
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform ml-auto shrink-0" />
                 </span>
               </Button>
             </Link>
@@ -62,12 +62,12 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
             <Link href="/signup" className="w-full">
               <Button
                 size="lg"
-                className="group w-full h-13 px-6 text-sm font-bold bg-[#E8634A] hover:bg-[#d45539] text-white shadow-lg hover:scale-105 transition-all duration-200 rounded-2xl"
+                className="group w-full min-h-14 px-8 text-base sm:text-lg font-bold bg-[#E8634A] hover:bg-[#d45539] text-white shadow-lg hover:scale-105 transition-all duration-200 rounded-2xl"
               >
                 <span className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-5 h-5 shrink-0" />
                   Offer Services
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform ml-auto" />
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform ml-auto shrink-0" />
                 </span>
               </Button>
             </Link>
@@ -113,6 +113,14 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
                   </li>
                 ))}
               </ul>
+              <p className="mt-4 text-center">
+                <Link
+                  href="/services"
+                  className="text-[11px] font-bold uppercase tracking-wider text-[#434c9d] hover:text-[#E8634A] transition-colors"
+                >
+                  Master list of services →
+                </Link>
+              </p>
             </div>
           </div>
         </div>

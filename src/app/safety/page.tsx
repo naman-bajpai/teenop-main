@@ -50,7 +50,9 @@ export default function SafetyPage() {
               <h2 className="text-2xl font-bold text-gray-900">Protected Community</h2>
             </div>
             <div className="space-y-3 text-base leading-relaxed text-slate-600">
-              <p>TeenOp is designed specifically to connect teen service providers with community members in a neighborhood-based setting, not a broad anonymous marketplace.</p>
+              <p>
+                TeenOp is designed specifically to connect teen service providers with community members from their local school community, not a broad anonymous marketplace. Only students with a school email can offer services, and only parents and trusted school community members can join using an invite code.
+              </p>
               <p>Teen accounts include parent or guardian contact collection during signup, and communication happens through the platform rather than through immediately exposed personal contact details.</p>
               <p>Platform rules prohibit harassment, off-platform circumvention, and inappropriate contact-sharing, and accounts may be restricted or removed when they create safety concerns.</p>
             </div>
