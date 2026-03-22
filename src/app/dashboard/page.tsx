@@ -122,10 +122,10 @@ export default function HomePage() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="min-h-screen bg-white">
-        {/* Hero Section */}
-        <HeroSection user={user} />
-        
+      {/* Hero Section */}
+      <HeroSection user={user} />
+
+      <div className="bg-white">
         {/* Stats Bar */}
         <div className="relative overflow-hidden bg-white py-12">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full bg-[#434c9d]/5 rounded-full blur-3xl -z-10" />

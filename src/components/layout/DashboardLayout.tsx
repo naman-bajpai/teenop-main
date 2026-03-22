@@ -30,9 +30,9 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, user, hideFooter = false }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-orange-50/20 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-orange-50/20">
       <AuthenticatedNavbar user={user} />
-      <main className="flex-1">
+      <main>
         {children}
       </main>
       {!hideFooter && <Footer user={user} />}

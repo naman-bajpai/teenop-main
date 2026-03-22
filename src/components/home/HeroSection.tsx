@@ -11,22 +11,25 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
   return (
     <section
       id="hero"
-      className="relative min-h-screen flex flex-col overflow-hidden -mt-17 pt-17"
+      className="relative min-h-screen flex flex-col overflow-hidden -mt-[72px] pt-[72px]"
     >
-      {/* Background image */}
+      {/* Background image — positioned to show subjects, less bright sky */}
       <div className="absolute inset-0">
         <div
-          className="h-full w-full bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/images/dog.png')" }}
+          className="h-full w-full bg-cover bg-no-repeat"
+          style={{
+            backgroundImage: "url('/images/dog.png')",
+            backgroundPosition: "center 35%",
+          }}
           aria-hidden
         />
       </div>
 
-      {/* Content wrapper — full height, flex column */}
-      <div className="relative z-10 flex flex-col min-h-[calc(100vh-68px)] w-full">
+      {/* Content wrapper — full height, flex row */}
+      <div className="relative z-10 flex flex-row min-h-[calc(100vh-72px)] w-full">
 
-        {/* Top-left: Logo + Tagline + Buttons */}
-        <div className="flex flex-col items-start px-8 sm:px-12 lg:px-16 pt-10 lg:pt-14 max-w-xl">
+        {/* Left: Logo + Tagline + Buttons */}
+        <div className="flex flex-col items-start justify-start px-8 sm:px-12 lg:px-16 pt-10 lg:pt-14 max-w-xl">
 
           {/* Logo */}
           <Image
@@ -74,24 +77,24 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
           </div>
         </div>
 
-        {/* Spacer pushes card to bottom */}
+        {/* Spacer pushes card to the right */}
         <div className="flex-1" />
 
-        {/* Bottom-right: Definition Card */}
-        <div className="flex justify-end px-8 sm:px-12 lg:px-16 pb-10 lg:pb-14">
+        {/* Middle-right: Definition Card */}
+        <div className="flex items-center px-8 sm:px-12 lg:px-16">
           <div className="w-full max-w-sm rounded-3xl bg-white/90 backdrop-blur-md px-7 py-6 shadow-2xl ring-1 ring-black/5">
             {/* Card header */}
             <div className="border-b border-slate-100 pb-4">
               <div className="flex items-baseline gap-2 flex-wrap">
-                <span className="text-2xl font-black text-slate-900 tracking-tight">teen-op</span>
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">[teen opportunity]</span>
+                <span className="text-3xl font-black text-slate-900 tracking-tight">teen-op</span>
+                <span className="text-sm font-semibold text-slate-400 uppercase tracking-widest">[teen opportunity]</span>
               </div>
-              <p className="mt-0.5 text-xs text-slate-400 italic">noun.</p>
+              <p className="mt-0.5 text-sm text-slate-400 italic">noun.</p>
             </div>
 
             {/* Services list */}
             <div className="mt-4">
-              <p className="text-[10px] font-black text-[#E8634A] uppercase tracking-[0.15em] mb-3">
+              <p className="text-xs font-black text-[#E8634A] uppercase tracking-[0.15em] mb-3">
                 Services by teens
               </p>
               <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5">
@@ -107,20 +110,12 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
                   "Social media creation",
                   "Event setup/cleanup",
                 ].map((service) => (
-                  <li key={service} className="flex items-center gap-2 text-xs text-slate-700 font-medium">
+                  <li key={service} className="flex items-center gap-2 text-sm text-slate-700 font-medium">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#E8634A] shrink-0" />
                     {service}
                   </li>
                 ))}
               </ul>
-              <p className="mt-4 text-center">
-                <Link
-                  href="/services"
-                  className="text-[11px] font-bold uppercase tracking-wider text-[#434c9d] hover:text-[#E8634A] transition-colors"
-                >
-                  Master list of services →
-                </Link>
-              </p>
             </div>
           </div>
         </div>

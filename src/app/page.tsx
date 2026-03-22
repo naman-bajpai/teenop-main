@@ -52,8 +52,31 @@ export default function Home() {
       {/* Why TeenOp */}
       <section className="relative overflow-hidden bg-gradient-to-b from-white via-slate-50 to-white py-20">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-24 right-0 h-72 w-72 rounded-full bg-[#96cbc3]/10 blur-3xl" />
-          <div className="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-[#ff725a]/10 blur-3xl" />
+          {/* Animated floating orbs */}
+          <motion.div
+            className="absolute rounded-full bg-[#96cbc3]/20 blur-3xl"
+            style={{ width: 500, height: 500, top: "-10%", right: "-5%" }}
+            animate={{ x: [0, 60, -30, 0], y: [0, -40, 60, 0], scale: [1, 1.15, 0.95, 1] }}
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute rounded-full bg-[#434c9d]/15 blur-3xl"
+            style={{ width: 420, height: 420, top: "30%", left: "-8%" }}
+            animate={{ x: [0, -50, 40, 0], y: [0, 60, -30, 0], scale: [1, 0.9, 1.1, 1] }}
+            transition={{ duration: 22, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+          />
+          <motion.div
+            className="absolute rounded-full bg-[#ff725a]/15 blur-3xl"
+            style={{ width: 380, height: 380, bottom: "-5%", right: "20%" }}
+            animate={{ x: [0, 40, -60, 0], y: [0, -50, 20, 0], scale: [1, 1.2, 0.9, 1] }}
+            transition={{ duration: 20, repeat: Infinity, ease: "easeInOut", delay: 6 }}
+          />
+          <motion.div
+            className="absolute rounded-full bg-[#96cbc3]/10 blur-2xl"
+            style={{ width: 260, height: 260, top: "50%", right: "35%" }}
+            animate={{ x: [0, -30, 50, 0], y: [0, 40, -40, 0], scale: [1, 1.1, 0.95, 1] }}
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 9 }}
+          />
         </div>
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
