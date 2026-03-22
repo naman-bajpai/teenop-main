@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, CheckCircle, ArrowRight, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import TeenProviderDisclaimer from "@/components/auth/TeenProviderDisclaimer";
 export default function SignupPage() {
@@ -470,224 +470,277 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left panel — image + branding (desktop only) */}
-      <div className="hidden lg:flex lg:w-[45%] relative flex-col">
-        <Image src="/images/hands together9.jpg" alt="" fill className="object-cover object-center" priority aria-hidden />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#434c9d]/70 via-[#434c9d]/50 to-[#ff725a]/40" />
-        <div className="relative z-10 flex flex-col h-full px-12 py-10">
-          <Link href="/">
-            <Image src="/images/newlogo.png" alt="TeenOp" width={72} height={72} className="drop-shadow-2xl" />
-          </Link>
-          <div className="flex-1 flex flex-col justify-end pb-14">
-            <h1 className="text-5xl font-extrabold text-white leading-tight mb-4">
-              Join<br />TeenOp.
-            </h1>
-            <p className="text-base text-white/75 leading-relaxed max-w-xs">
-              Talented teens offering services to their community. Start earning today.
-            </p>
-            <div className="mt-8 flex flex-col gap-2.5">
-              {["Dog walking & lawn care", "Graphic & web design", "Photography & more"].map((s) => (
-                <div key={s} className="flex items-center gap-2.5 text-white/70 text-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#ff725a] flex-shrink-0" />
-                  {s}
-                </div>
-              ))}
-            </div>
-          </div>
-          <p className="text-xs text-white/30">© {new Date().getFullYear()} TeenOp</p>
-        </div>
+    <div className="relative min-h-screen overflow-hidden bg-white">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute left-[-6rem] top-8 h-72 w-72 rounded-full bg-[#434c9d]/10 blur-3xl" />
+        <div className="absolute right-[-4rem] top-1/3 h-80 w-80 rounded-full bg-[#E8634A]/10 blur-3xl" />
+        <div className="absolute bottom-[-5rem] left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[#96cbc3]/18 blur-3xl" />
       </div>
 
-      {/* Right panel — form */}
-      <div className="flex-1 bg-white flex flex-col overflow-y-auto">
-        {/* Mobile background */}
-        <div className="lg:hidden fixed inset-0 -z-10">
-          <Image src="/images/hands together9.jpg" alt="" fill className="object-cover" aria-hidden />
-          <div className="absolute inset-0 bg-white/85 backdrop-blur-sm" />
-        </div>
-
-        <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 py-10 max-w-xl mx-auto w-full">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex justify-center mb-8">
-            <Link href="/">
-              <Image src="/images/newlogo.png" alt="TeenOp" width={64} height={64} className="drop-shadow-xl" />
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col lg:grid lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="flex flex-col justify-between px-6 pb-8 pt-6 sm:px-10 lg:px-12 lg:pb-12 lg:pt-10">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="inline-flex items-center">
+              <Image src="/images/newlogo copy.png" alt="TeenOp" width={220} height={48} className="h-8 w-auto sm:h-9" priority />
+            </Link>
+            <Link href="/login" className="hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 lg:inline-flex">
+              Sign in
             </Link>
           </div>
 
-          <div className="mb-7">
-            <h2 className="text-3xl font-extrabold text-slate-900">Create your account</h2>
-            <p className="mt-1 text-slate-500 text-sm">Start your TeenOp journey today</p>
+          <div className="mt-12 lg:mt-0">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#E8634A]/10 px-3 py-1 text-xs font-semibold text-[#E8634A]">
+              <Sparkles className="h-3.5 w-3.5" />
+              Start your TeenOp journey
+            </div>
+            <h1 className="mt-6 max-w-xl text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+              Build your profile. Get approved. Start earning.
+            </h1>
+            <p className="mt-5 max-w-lg text-base leading-7 text-slate-600 sm:text-lg">
+              TeenOp helps teens launch real services and helps families find trusted local help, all in one place.
+            </p>
+
+            <div className="mt-8 space-y-3">
+              <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
+                <ShieldCheck className="mt-0.5 h-5 w-5 text-[#434c9d]" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Parent-aware setup</p>
+                  <p className="mt-1 text-sm text-slate-500">Teen accounts stay safe with parent or guardian verification.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
+                <Users className="mt-0.5 h-5 w-5 text-[#E8634A]" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Real neighborhood demand</p>
+                  <p className="mt-1 text-sm text-slate-500">From dog walking to design work, teens can turn skills into paid jobs.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 max-w-xl">
+              <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.08)]">
+                <div className="relative aspect-[16/10]">
+                  <Image
+                    src="/images/hands together9.jpg"
+                    alt="TeenOp community teamwork"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-slate-900/10 to-transparent" />
+                  <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-800 shadow-sm backdrop-blur">
+                    New teen creators welcome
+                  </div>
+                  <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-white/92 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur">
+                      Dog walking
+                    </span>
+                    <span className="rounded-full bg-white/92 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur">
+                      Tutoring
+                    </span>
+                    <span className="rounded-full bg-white/92 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur">
+                      Design work
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {error && (
-            <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-              <div>
-                <span className="text-sm text-red-700">{error}</span>
-                {countdown && countdown > 0 && <div className="mt-1 text-xs text-red-500">Retry in {countdown}s</div>}
-              </div>
-            </div>
-          )}
+          <div className="mt-12 hidden items-end justify-between text-sm text-slate-400 lg:flex">
+            <p>© {new Date().getFullYear()} TeenOp</p>
+            <p>Teen-powered marketplace</p>
+          </div>
+        </div>
 
-          {success && (
-            <div className="mb-5 p-3.5 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2.5">
-              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-              <span className="text-sm text-green-700">{success}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name row */}
-            <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center justify-center px-6 pb-10 sm:px-10 lg:px-12 lg:py-10">
+          <div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:p-8">
+            <div className="mb-7 flex items-start justify-between gap-4">
               <div>
-                <label htmlFor="firstName" className="block text-sm font-semibold text-slate-700 mb-1.5">First name</label>
-                <Input id="firstName" name="firstName" type="text" autoComplete="given-name" required value={formData.firstName} onChange={handleInputChange}
-                  className={`w-full h-11 px-4 border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.firstName ? 'border-red-400' : 'border-slate-200'}`}
-                  placeholder="John" disabled={isSubmitting} maxLength={50} />
-                {fieldErrors.firstName && <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.firstName}</p>}
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#434c9d]">Create account</p>
+                <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Join TeenOp</h2>
+                <p className="mt-2 text-sm text-slate-500">Set up your account and get ready to connect locally.</p>
               </div>
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-semibold text-slate-700 mb-1.5">Last name</label>
-                <Input id="lastName" name="lastName" type="text" autoComplete="family-name" required value={formData.lastName} onChange={handleInputChange}
-                  className={`w-full h-11 px-4 border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.lastName ? 'border-red-400' : 'border-slate-200'}`}
-                  placeholder="Doe" disabled={isSubmitting} maxLength={50} />
-                {fieldErrors.lastName && <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.lastName}</p>}
+              <div className="rounded-2xl bg-slate-50 p-3">
+                <ArrowRight className="h-5 w-5 text-slate-400" />
               </div>
             </div>
 
-            {/* Account type */}
-            <div>
-              <label htmlFor="role" className="block text-sm font-semibold text-slate-700 mb-1.5">Account Type</label>
-              <select id="role" name="role" value={formData.role} onChange={handleInputChange}
-                className="w-full h-11 px-4 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all cursor-pointer"
-                disabled={isSubmitting}>
-                <option value="teen">Teen (Service Provider)</option>
-                <option value="parent">Community Member</option>
-              </select>
-              {formData.role === "teen" && <p className="mt-1.5 text-xs text-[#434c9d]">Only @sses.saintstephens.org emails can sign up as Teen.</p>}
-            </div>
-
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
-              <Input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleInputChange}
-                className={`w-full h-11 px-4 border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.email ? 'border-red-400' : 'border-slate-200'}`}
-                placeholder={formData.role === "teen" ? "you@sses.saintstephens.org" : "you@example.com"} disabled={isSubmitting} maxLength={254} />
-              {fieldErrors.email && <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.email}</p>}
-            </div>
-
-            {/* Teen-only fields */}
-            {formData.role === "teen" && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="age" className="block text-sm font-semibold text-slate-700 mb-1.5">Age</label>
-                    <Input id="age" name="age" type="number" min="13" max="19" required value={formData.age} onChange={handleInputChange}
-                      className={`w-full h-11 px-4 border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.age ? 'border-red-400' : 'border-slate-200'}`}
-                      placeholder="16" disabled={isSubmitting} />
-                    {fieldErrors.age && <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.age}</p>}
-                  </div>
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-semibold text-slate-700 mb-1.5">Phone <span className="text-slate-400 font-normal text-xs">(optional)</span></label>
-                    <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange}
-                      className={`w-full h-11 px-4 border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.phone ? 'border-red-400' : 'border-slate-200'}`}
-                      placeholder="+1 555 0100" disabled={isSubmitting} maxLength={20} />
-                    {fieldErrors.phone && <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.phone}</p>}
-                  </div>
+            {error && (
+              <div className="mb-5 flex items-start gap-2.5 rounded-2xl border border-red-200 bg-red-50 p-3.5">
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
+                <div>
+                  <span className="text-sm text-red-700">{error}</span>
+                  {countdown && countdown > 0 && <div className="mt-1 text-xs text-red-500">Retry in {countdown}s</div>}
                 </div>
-
-                {/* Parent info */}
-                <div className="p-4 rounded-2xl bg-[#434c9d]/5 border border-[#434c9d]/15 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#434c9d]" />
-                    <h3 className="text-sm font-bold text-[#434c9d]">Parent / Guardian</h3>
-                  </div>
-                  <p className="text-xs text-slate-500">A verification link will be sent below. Your parent must confirm before you can log in.</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="parentEmail" className="block text-sm font-semibold text-slate-700 mb-1.5">Parent Email</label>
-                      <Input id="parentEmail" name="parentEmail" type="email" autoComplete="email" required value={formData.parentEmail} onChange={handleInputChange}
-                        className={`w-full h-11 px-4 border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.parentEmail ? 'border-red-400' : 'border-slate-200'}`}
-                        placeholder="parent@example.com" disabled={isSubmitting} maxLength={254} />
-                      {fieldErrors.parentEmail && <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.parentEmail}</p>}
-                    </div>
-                    <div>
-                      <label htmlFor="parentPhone" className="block text-sm font-semibold text-slate-700 mb-1.5">Parent Phone</label>
-                      <Input id="parentPhone" name="parentPhone" type="tel" required value={formData.parentPhone} onChange={handleInputChange}
-                        className={`w-full h-11 px-4 border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.parentPhone ? 'border-red-400' : 'border-slate-200'}`}
-                        placeholder="+1 555 0100" disabled={isSubmitting} maxLength={20} />
-                      {fieldErrors.parentPhone && <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.parentPhone}</p>}
-                    </div>
-                  </div>
-                  <label htmlFor="parentPermission" className="flex items-start gap-3 cursor-pointer p-3 rounded-xl bg-white border border-slate-200">
-                    <input id="parentPermission" name="parentPermission" type="checkbox" checked={formData.parentPermission} onChange={handleInputChange}
-                      className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-slate-300 text-[#434c9d] focus:ring-[#434c9d]/20 cursor-pointer" disabled={isSubmitting} />
-                    <span className="text-xs text-slate-600 leading-relaxed">I confirm I have my parent or guardian&apos;s permission to create a TeenOp account.</span>
-                  </label>
-                  {fieldErrors.parentPermission && <p className="text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.parentPermission}</p>}
-                </div>
-              </>
+              </div>
             )}
 
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-1.5">Password</label>
-              <div className="relative">
-                <Input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="new-password" required value={formData.password} onChange={handleInputChange}
-                  className={`w-full h-11 px-4 pr-11 border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.password ? 'border-red-400' : 'border-slate-200'}`}
-                  placeholder="Create a strong password" disabled={isSubmitting} maxLength={128} />
-                <button type="button" className="absolute inset-y-0 right-0 pr-3.5 flex items-center" onClick={() => setShowPassword(!showPassword)} disabled={isSubmitting}>
-                  {showPassword ? <EyeOff className="h-4 w-4 text-slate-400" /> : <Eye className="h-4 w-4 text-slate-400" />}
-                </button>
+            {success && (
+              <div className="mb-5 flex items-center gap-2.5 rounded-2xl border border-green-200 bg-green-50 p-3.5">
+                <CheckCircle className="h-4 w-4 flex-shrink-0 text-green-600" />
+                <span className="text-sm text-green-700">{success}</span>
               </div>
-              {fieldErrors.password && <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.password}</p>}
-            </div>
+            )}
 
-            {/* Confirm password */}
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-slate-700 mb-1.5">Confirm password</label>
-              <div className="relative">
-                <Input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" required value={formData.confirmPassword} onChange={handleInputChange}
-                  className={`w-full h-11 px-4 pr-11 border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#434c9d]/30 focus:border-[#434c9d] transition-all ${fieldErrors.confirmPassword ? 'border-red-400' : 'border-slate-200'}`}
-                  placeholder="Confirm your password" disabled={isSubmitting} maxLength={128} />
-                <button type="button" className="absolute inset-y-0 right-0 pr-3.5 flex items-center" onClick={() => setShowConfirmPassword(!showConfirmPassword)} disabled={isSubmitting}>
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4 text-slate-400" /> : <Eye className="h-4 w-4 text-slate-400" />}
-                </button>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                <label htmlFor="role" className="mb-2 block text-sm font-semibold text-slate-700">Account type</label>
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleInputChange}
+                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-slate-900 transition-all focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20"
+                  disabled={isSubmitting}
+                >
+                  <option value="teen">Teen (Service Provider)</option>
+                  <option value="parent">Community Member</option>
+                </select>
+                <p className="mt-2 text-xs text-slate-500">
+                  {formData.role === "teen"
+                    ? "Teen accounts currently require an @sses.saintstephens.org email address."
+                    : "Choose this if you want to book or support teen services in your area."}
+                </p>
               </div>
-              {fieldErrors.confirmPassword && <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.confirmPassword}</p>}
-            </div>
 
-            {/* Terms */}
-            <label htmlFor="terms" className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
-              <input id="terms" name="terms" type="checkbox" required checked={formData.terms} onChange={handleInputChange}
-                className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-slate-300 text-[#434c9d] focus:ring-[#434c9d]/20 cursor-pointer" disabled={isSubmitting} />
-              <span className="text-xs text-slate-600 leading-relaxed">
-                {formData.role === "teen" ? (
-                  <>I agree to the <Link href="/terms" className="text-[#434c9d] font-semibold hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-[#434c9d] font-semibold hover:underline">Privacy Agreement</Link>. TeenOp is a platform only and is not liable for arranged services.</>
-                ) : (
-                  <>I agree to the <Link href="/terms" className="text-[#434c9d] font-semibold hover:underline">Terms of Service</Link> and <Link href="/terms#limitation-of-liability" className="text-[#434c9d] font-semibold hover:underline">Liability Waiver</Link>. TeenOp is a platform only and is not liable for arranged services.</>
-                )}
-              </span>
-            </label>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="firstName" className="mb-1.5 block text-sm font-semibold text-slate-700">First name</label>
+                  <Input id="firstName" name="firstName" type="text" autoComplete="given-name" required value={formData.firstName} onChange={handleInputChange}
+                    className={`h-12 rounded-2xl border bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.firstName ? "border-red-400" : "border-slate-200"}`}
+                    placeholder="John" disabled={isSubmitting} maxLength={50} />
+                  {fieldErrors.firstName && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.firstName}</p>}
+                </div>
+                <div>
+                  <label htmlFor="lastName" className="mb-1.5 block text-sm font-semibold text-slate-700">Last name</label>
+                  <Input id="lastName" name="lastName" type="text" autoComplete="family-name" required value={formData.lastName} onChange={handleInputChange}
+                    className={`h-12 rounded-2xl border bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.lastName ? "border-red-400" : "border-slate-200"}`}
+                    placeholder="Doe" disabled={isSubmitting} maxLength={50} />
+                  {fieldErrors.lastName && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.lastName}</p>}
+                </div>
+              </div>
 
-            {/* Submit */}
-            <Button type="submit"
-              className="w-full h-12 bg-gradient-to-r from-[#ff725a] to-[#434c9d] hover:opacity-90 text-white font-bold rounded-xl shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled={isSubmitting || (countdown !== null && countdown > 0)}>
-              {isSubmitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Creating account...
+              <div>
+                <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-slate-700">Email</label>
+                <Input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleInputChange}
+                  className={`h-12 w-full rounded-2xl border bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.email ? "border-red-400" : "border-slate-200"}`}
+                  placeholder={formData.role === "teen" ? "you@sses.saintstephens.org" : "you@example.com"} disabled={isSubmitting} maxLength={254} />
+                {fieldErrors.email && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.email}</p>}
+              </div>
+
+              {formData.role === "teen" && (
+                <div className="space-y-5 rounded-2xl border border-[#434c9d]/15 bg-[#434c9d]/5 p-5">
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#434c9d] shadow-sm">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Teen verification
+                    </div>
+                    <p className="mt-3 text-sm text-slate-600">
+                      We’ll collect a few extra details so your parent or guardian can approve your account.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="age" className="mb-1.5 block text-sm font-semibold text-slate-700">Age</label>
+                      <Input id="age" name="age" type="number" min="13" max="19" required value={formData.age} onChange={handleInputChange}
+                        className={`h-12 rounded-2xl border bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.age ? "border-red-400" : "border-slate-200"}`}
+                        placeholder="16" disabled={isSubmitting} />
+                      {fieldErrors.age && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.age}</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="phone" className="mb-1.5 block text-sm font-semibold text-slate-700">Phone <span className="text-xs font-normal text-slate-400">(optional)</span></label>
+                      <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange}
+                        className={`h-12 rounded-2xl border bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.phone ? "border-red-400" : "border-slate-200"}`}
+                        placeholder="+1 555 0100" disabled={isSubmitting} maxLength={20} />
+                      {fieldErrors.phone && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.phone}</p>}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="parentEmail" className="mb-1.5 block text-sm font-semibold text-slate-700">Parent email</label>
+                      <Input id="parentEmail" name="parentEmail" type="email" autoComplete="email" required value={formData.parentEmail} onChange={handleInputChange}
+                        className={`h-12 rounded-2xl border bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.parentEmail ? "border-red-400" : "border-slate-200"}`}
+                        placeholder="parent@example.com" disabled={isSubmitting} maxLength={254} />
+                      {fieldErrors.parentEmail && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.parentEmail}</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="parentPhone" className="mb-1.5 block text-sm font-semibold text-slate-700">Parent phone</label>
+                      <Input id="parentPhone" name="parentPhone" type="tel" required value={formData.parentPhone} onChange={handleInputChange}
+                        className={`h-12 rounded-2xl border bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.parentPhone ? "border-red-400" : "border-slate-200"}`}
+                        placeholder="+1 555 0100" disabled={isSubmitting} maxLength={20} />
+                      {fieldErrors.parentPhone && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.parentPhone}</p>}
+                    </div>
+                  </div>
+
+                  <label htmlFor="parentPermission" className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                    <input id="parentPermission" name="parentPermission" type="checkbox" checked={formData.parentPermission} onChange={handleInputChange}
+                      className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-slate-300 text-[#434c9d] focus:ring-[#434c9d]/20" disabled={isSubmitting} />
+                    <span className="text-sm leading-relaxed text-slate-600">I confirm I have my parent or guardian&apos;s permission to create a TeenOp account.</span>
+                  </label>
+                  {fieldErrors.parentPermission && <p className="flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.parentPermission}</p>}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="password" className="mb-1.5 block text-sm font-semibold text-slate-700">Password</label>
+                  <div className="relative">
+                    <Input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="new-password" required value={formData.password} onChange={handleInputChange}
+                      className={`h-12 rounded-2xl border bg-slate-50 px-4 pr-11 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.password ? "border-red-400" : "border-slate-200"}`}
+                      placeholder="Create a strong password" disabled={isSubmitting} maxLength={128} />
+                    <button type="button" className="absolute inset-y-0 right-0 flex items-center pr-3.5" onClick={() => setShowPassword(!showPassword)} disabled={isSubmitting}>
+                      {showPassword ? <EyeOff className="h-4 w-4 text-slate-400" /> : <Eye className="h-4 w-4 text-slate-400" />}
+                    </button>
+                  </div>
+                  {fieldErrors.password && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.password}</p>}
+                </div>
+
+                <div>
+                  <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-semibold text-slate-700">Confirm password</label>
+                  <div className="relative">
+                    <Input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" required value={formData.confirmPassword} onChange={handleInputChange}
+                      className={`h-12 rounded-2xl border bg-slate-50 px-4 pr-11 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.confirmPassword ? "border-red-400" : "border-slate-200"}`}
+                      placeholder="Confirm your password" disabled={isSubmitting} maxLength={128} />
+                    <button type="button" className="absolute inset-y-0 right-0 flex items-center pr-3.5" onClick={() => setShowConfirmPassword(!showConfirmPassword)} disabled={isSubmitting}>
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4 text-slate-400" /> : <Eye className="h-4 w-4 text-slate-400" />}
+                    </button>
+                  </div>
+                  {fieldErrors.confirmPassword && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.confirmPassword}</p>}
+                </div>
+              </div>
+
+              <label htmlFor="terms" className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <input id="terms" name="terms" type="checkbox" required checked={formData.terms} onChange={handleInputChange}
+                  className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-slate-300 text-[#434c9d] focus:ring-[#434c9d]/20" disabled={isSubmitting} />
+                <span className="text-sm leading-relaxed text-slate-600">
+                  {formData.role === "teen" ? (
+                    <>I agree to the <Link href="/terms" className="font-semibold text-[#434c9d] hover:underline">Terms of Service</Link> and <Link href="/privacy" className="font-semibold text-[#434c9d] hover:underline">Privacy Agreement</Link>. TeenOp is a platform only and is not liable for arranged services.</>
+                  ) : (
+                    <>I agree to the <Link href="/terms" className="font-semibold text-[#434c9d] hover:underline">Terms of Service</Link> and <Link href="/terms#limitation-of-liability" className="font-semibold text-[#434c9d] hover:underline">Liability Waiver</Link>. TeenOp is a platform only and is not liable for arranged services.</>
+                  )}
                 </span>
-              ) : countdown && countdown > 0 ? `Wait ${countdown}s` : "Create account"}
-            </Button>
+              </label>
 
-            <p className="text-center text-sm text-slate-500">
-              Already have an account?{" "}
-              <Link href="/login" className="font-semibold text-[#434c9d] hover:underline">Sign in</Link>
-            </p>
-          </form>
+              <Button type="submit"
+                className="h-12 w-full rounded-2xl bg-[#E8634A] font-bold text-white shadow-lg shadow-[#E8634A]/20 transition-all duration-200 hover:bg-[#d45539] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSubmitting || (countdown !== null && countdown > 0)}>
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Creating account...
+                  </span>
+                ) : countdown && countdown > 0 ? `Wait ${countdown}s` : "Create account"}
+              </Button>
+
+              <p className="text-center text-sm text-slate-500">
+                Already have an account?{" "}
+                <Link href="/login" className="font-semibold text-[#434c9d] hover:underline">Sign in</Link>
+              </p>
+            </form>
+          </div>
         </div>
       </div>
 

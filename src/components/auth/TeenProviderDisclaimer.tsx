@@ -88,20 +88,22 @@ export default function TeenProviderDisclaimer({ isOpen, onClose, onAccept }: Te
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-[#434c9d] flex items-center gap-3">
-            <Shield className="w-6 h-6" />
+          <DialogTitle className="flex items-center gap-3 border-b border-slate-100 px-6 pt-6 text-2xl font-bold text-slate-900 sm:px-8">
+            <span className="rounded-2xl bg-[#434c9d]/10 p-2 text-[#434c9d]">
+              <Shield className="h-5 w-5" />
+            </span>
             Teen Provider Disclaimer
           </DialogTitle>
-          <DialogDescription className="text-base text-gray-600 mt-2">
+          <DialogDescription className="px-6 pb-2 pt-3 text-base text-slate-500 sm:px-8">
             Please read and check each box before using TeenOp. This is the last step in creating your profile.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6 px-6 py-4 sm:px-8">
           {/* Accept All Toggle */}
-          <div className="flex items-center space-x-3 p-4 bg-[#96cbc3]/10 rounded-lg border border-[#96cbc3]/20">
+          <div className="flex items-center space-x-3 rounded-2xl border border-[#434c9d]/15 bg-[#434c9d]/5 p-4">
             <Checkbox
               id="accept-all"
               checked={allAccepted}
@@ -110,7 +112,7 @@ export default function TeenProviderDisclaimer({ isOpen, onClose, onAccept }: Te
             />
             <label
               htmlFor="accept-all"
-              className="text-sm font-semibold text-[#434c9d] cursor-pointer"
+              className="cursor-pointer text-sm font-semibold text-[#434c9d]"
             >
               Accept All Terms
             </label>
@@ -121,7 +123,7 @@ export default function TeenProviderDisclaimer({ isOpen, onClose, onAccept }: Te
             {disclaimerItems.map((item, index) => (
               <div
                 key={item.id}
-                className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                className="flex items-start space-x-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:bg-slate-100"
               >
                 <Checkbox
                   id={item.id}
@@ -135,7 +137,7 @@ export default function TeenProviderDisclaimer({ isOpen, onClose, onAccept }: Te
                   </div>
                   <label
                     htmlFor={item.id}
-                    className="text-sm text-gray-700 leading-relaxed cursor-pointer flex-1"
+                    className="flex-1 cursor-pointer text-sm leading-relaxed text-slate-700"
                   >
                     {item.text}
                   </label>
@@ -145,9 +147,9 @@ export default function TeenProviderDisclaimer({ isOpen, onClose, onAccept }: Te
           </div>
 
           {/* Warning Notice */}
-          <div className="p-4 bg-[#ff725a]/10 border border-[#ff725a]/20 rounded-lg">
+          <div className="rounded-2xl border border-[#ff725a]/20 bg-[#ff725a]/10 p-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-[#ff725a] mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#ff725a]" />
               <div className="text-sm text-[#ff725a]">
                 <p className="font-semibold mb-1">Important Notice</p>
                 <p>
@@ -159,18 +161,18 @@ export default function TeenProviderDisclaimer({ isOpen, onClose, onAccept }: Te
           </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-3">
+        <DialogFooter className="flex-col gap-3 border-t border-slate-100 px-6 py-6 sm:flex-row sm:px-8">
           <Button
             variant="outline"
             onClick={onClose}
-            className="w-full sm:w-auto border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="w-full rounded-2xl border-slate-300 text-slate-700 hover:bg-slate-50 sm:w-auto"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={!allAccepted}
-            className="w-full sm:w-auto bg-gradient-to-r from-[#ff725a] to-[#434c9d] hover:from-[#ff725a]/90 hover:to-[#434c9d]/90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-2xl bg-[#E8634A] text-white hover:bg-[#d45539] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {allAccepted ? "Accept & Continue" : `Accept ${acceptedItems.size} of ${disclaimerItems.length} terms`}
           </Button>
