@@ -364,12 +364,6 @@ function LoginInner() {
               </div>
             )}
 
-            {FEATURE_FLAGS.enablePendingStorefrontDrafts === false && (
-              <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-900">
-                Teen accounts stay in <span className="font-semibold">Pending Approval</span> until a parent approves them.
-              </div>
-            )}
-
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-slate-700">Email</label>
