@@ -116,7 +116,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
     ...(user?.role === "teen"
       ? [
           { name: "Services", href: "/my-services", icon: Sparkles },
-          { name: "Hustle", href: "/my-teen-hustle", icon: Briefcase },
+          { name: "Bookings", href: "/my-teen-hustle", icon: Briefcase },
           { name: "Earnings", href: "/earnings", icon: Wallet },
         ]
       : []),

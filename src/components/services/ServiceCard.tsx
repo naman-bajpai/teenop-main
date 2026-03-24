@@ -195,8 +195,7 @@ export default function ServiceCard({
                 <User className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hustler</p>
-                <p className="text-xs font-bold text-gray-700">{service.provider_name}</p>
+                <p className="text-sm font-bold text-gray-700">{service.provider_name}</p>
               </div>
               <Sparkles className="w-3.5 h-3.5 text-[#96cbc3] opacity-0 group-hover/provider:opacity-100 transition-opacity" />
             </div>

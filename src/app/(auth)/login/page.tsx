@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff, AlertCircle, ArrowRight, ShieldCheck, Sparkles, MessageCircle } from "lucide-react";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
 
@@ -323,97 +323,33 @@ function LoginInner() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 left-[-8rem] h-72 w-72 rounded-full bg-[#434c9d]/10 blur-3xl" />
-        <div className="absolute right-[-5rem] top-24 h-80 w-80 rounded-full bg-[#E8634A]/12 blur-3xl" />
-        <div className="absolute bottom-[-4rem] left-1/3 h-64 w-64 rounded-full bg-[#96cbc3]/16 blur-3xl" />
-      </div>
+    <div className="relative min-h-screen overflow-hidden bg-slate-950">
+      <Image
+        src="/images/Sign In Background1.jpg"
+        alt=""
+        fill
+        priority
+        aria-hidden
+        className="object-cover"
+        sizes="100vw"
+      />
+      <div className="absolute inset-0 bg-slate-950/35" />
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-slate-950/20 to-slate-950/55" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col lg:grid lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="flex flex-col justify-between px-6 pb-8 pt-6 sm:px-10 lg:px-12 lg:pb-12 lg:pt-10">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="inline-flex items-center">
-              <Image src="/images/newlogo copy.png" alt="TeenOp" width={220} height={48} className="h-8 w-auto sm:h-9" priority />
-            </Link>
-            <Link href="/signup" className="hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 lg:inline-flex">
-              Create account
-            </Link>
-          </div>
-
-          <div className="mt-12 lg:mt-0">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#434c9d]/10 px-3 py-1 text-xs font-semibold text-[#434c9d]">
-              <Sparkles className="h-3.5 w-3.5" />
-              Built for ambitious teens
-            </div>
-            <h1 className="mt-6 max-w-xl text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-              Jump back in and keep your{" "}
-              <span className="text-[#E8634A]">hustle moving</span>.
-            </h1>
-            <p className="mt-5 max-w-lg text-base leading-7 text-slate-600 sm:text-lg">
-              Sign in to manage your services, reply to messages, and stay connected with neighbors in your community.
-            </p>
-
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-                <ShieldCheck className="h-5 w-5 text-[#434c9d]" />
-                <p className="mt-3 text-sm font-semibold text-slate-900">Trusted accounts</p>
-                <p className="mt-1 text-sm text-slate-500">Parent approval and safer sign-ins.</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-                <MessageCircle className="h-5 w-5 text-[#E8634A]" />
-                <p className="mt-3 text-sm font-semibold text-slate-900">Fast replies</p>
-                <p className="mt-1 text-sm text-slate-500">Keep conversations and jobs moving.</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-                <Sparkles className="h-5 w-5 text-[#0f766e]" />
-                <p className="mt-3 text-sm font-semibold text-slate-900">Grow locally</p>
-                <p className="mt-1 text-sm text-slate-500">Build trust right in your neighborhood.</p>
-              </div>
-            </div>
-
-            <div className="mt-8 max-w-xl">
-              <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.08)]">
-                <div className="relative aspect-[16/10]">
-                  <Image
-                    src="/images/Sign In Background1.jpg"
-                    alt="TeenOp community members collaborating"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/45 via-slate-900/10 to-transparent" />
-                  <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-800 shadow-sm backdrop-blur">
-                    Active teen marketplace
-                  </div>
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <div className="inline-flex max-w-sm items-center gap-2 rounded-2xl bg-white/92 px-4 py-3 text-sm text-slate-700 shadow-lg backdrop-blur">
-                      <span className="h-2 w-2 rounded-full bg-[#E8634A]" />
-                      Jump back into messages, bookings, and local opportunities.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-12 hidden items-end justify-between text-sm text-slate-400 lg:flex">
-            <p>© {new Date().getFullYear()} TeenOp</p>
-            <p>Teen-powered marketplace</p>
-          </div>
+      <div className="relative z-10 flex min-h-screen flex-col px-6 py-6 sm:px-10">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="inline-flex items-center">
+            <Image src="/images/newlogo copy.png" alt="TeenOp" width={220} height={48} className="h-8 w-auto brightness-0 invert sm:h-9" priority />
+          </Link>
+          <Link href="/signup" className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/15">
+            Sign up
+          </Link>
         </div>
 
-        <div className="flex items-center justify-center px-6 pb-10 sm:px-10 lg:px-12 lg:py-10">
-          <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:p-8">
-            <div className="mb-7 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#434c9d]">Welcome back</p>
-                <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Sign in</h2>
-                <p className="mt-2 text-sm text-slate-500">Use your account details to continue.</p>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-3">
-                <ArrowRight className="h-5 w-5 text-slate-400" />
-              </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_24px_80px_rgba(15,23,42,0.28)] sm:p-8">
+            <div className="mb-7">
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Login</h2>
             </div>
 
             {error && (
@@ -498,9 +434,9 @@ function LoginInner() {
               </Button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-slate-500">
+            <p className="mt-6 text-center text-sm text-slate-600">
               Don&apos;t have an account?{" "}
-              <Link href="/signup" className="font-semibold text-[#434c9d] hover:underline">Create one</Link>
+              <Link href="/signup" className="font-semibold text-[#434c9d] hover:underline">Sign up</Link>
             </p>
           </div>
         </div>
