@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { stripe } from '@/lib/stripe';
 
 // Process a withdrawal request (admin only)
 export async function POST(
@@ -61,18 +62,40 @@ export async function POST(
     // Get user profile separately
     const { data: userProfile, error: userProfileError } = await supabase 
       .from('profiles')
-      .select('id, first_name, last_name, email')
+      .select('id, first_name, last_name, email, stripe_connect_account_id')
       .eq('id', (withdrawalRequest as any).user_id)
       .single();
 
-    if (profileError || !userProfile) {
+    if (userProfileError || !userProfile) {
       return NextResponse.json(
         { success: false, error: "User profile not found" },
         { status: 400 }
       );
     }
-    
-    // Note: Admin will manually pay the student, so Stripe Connect account is not required
+
+    const connectedAccountId =
+      (withdrawalRequest as any).stripe_connect_account_id ||
+      (userProfile as any).stripe_connect_account_id;
+
+    if (!connectedAccountId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "This teen has not connected Stripe yet. They need to connect a payout account before this withdrawal can be approved."
+        },
+        { status: 400 }
+      );
+    }
+
+    if ((withdrawalRequest as any).stripe_transfer_id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "This withdrawal request already has a Stripe transfer attached."
+        },
+        { status: 400 }
+      );
+    }
 
     // Get the earnings IDs that were included in this withdrawal request
     // They should be stored in the notes field as JSON
@@ -276,12 +299,41 @@ export async function POST(
     // Continue using service role client for updates (already created above)
 
     try {
-      // Update withdrawal request status to 'approved' (admin has approved)
-      // Admin will manually pay the student via Stripe, so we don't create automatic transfer
+      const transferAmountCents = Math.round(parseFloat((withdrawalRequest as any).amount || 0) * 100);
+
+      if (transferAmountCents < 50) {
+        return NextResponse.json(
+          { success: false, error: "Transfer amount must be at least $0.50" },
+          { status: 400 }
+        );
+      }
+
+      const transfer = await stripe.transfers.create(
+        {
+          amount: transferAmountCents,
+          currency: 'usd',
+          destination: connectedAccountId,
+          transfer_group: `withdrawal_request_${requestId}`,
+          metadata: {
+            withdrawal_request_id: requestId,
+            user_id: (withdrawalRequest as any).user_id,
+            approved_by: user.id,
+            earnings_count: String(pendingEarnings.length),
+            total_earnings: String(totalEarningsAmount)
+          }
+        },
+        {
+          idempotencyKey: `withdrawal-request-${requestId}`
+        }
+      );
+
+      // Update withdrawal request status to 'approved' after the Stripe transfer succeeds
       const { error: updateRequestError } = await (supabaseService as any)
         .from('withdrawal_requests')
         .update({
           status: 'approved',
+          stripe_connect_account_id: connectedAccountId,
+          stripe_transfer_id: transfer.id,
           processed_at: new Date().toISOString(),
           processed_by: user.id,
           notes: (withdrawalRequest as any).notes // Keep existing notes with earnings IDs
@@ -315,17 +367,18 @@ export async function POST(
         );
       }
 
-      console.log(`Successfully processed withdrawal request. ${earningIds.length} earnings marked as withdrawn. Admin should manually pay $${((withdrawalRequest as any).amount).toFixed(2)} to the student via Stripe.`);
+      console.log(`Successfully processed withdrawal request ${requestId}. Created Stripe transfer ${transfer.id} for $${((withdrawalRequest as any).amount).toFixed(2)}.`);
 
       return NextResponse.json({
         success: true,
-        message: `Withdrawal request approved. Please manually pay $${((withdrawalRequest as any).amount).toFixed(2)} to the student via Stripe.`,
+        message: `Withdrawal request approved and $${((withdrawalRequest as any).amount).toFixed(2)} was transferred to the teen's Stripe account.`,
         withdrawalRequest: {
           id: requestId,
           amount: (withdrawalRequest as any).amount,
           user_id: (withdrawalRequest as any).user_id,
           user_name: `${userProfile.first_name} ${userProfile.last_name}`,
-          user_email: userProfile.email
+          user_email: userProfile.email,
+          stripe_transfer_id: transfer.id
         }
       });
 

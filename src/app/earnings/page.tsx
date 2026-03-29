@@ -287,10 +287,10 @@ export default function EarningsPage() {
                       <Clock className="w-6 h-6 text-blue-600" />
                     </div>
                     <div className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-wider">
-                      In Transit
+                      Available
                     </div>
                   </div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Incoming Funds</p>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Available to Withdraw</p>
                   <h2 className="text-5xl font-black text-slate-900 tracking-tight">
                     ${earningsStats.pendingEarnings.toFixed(2)}
                   </h2>
@@ -345,7 +345,7 @@ export default function EarningsPage() {
                           <td className="py-6 px-8">
                             <div className="flex items-center gap-2">
                               <div className="h-2 w-2 rounded-full bg-blue-400" />
-                              <span className="text-sm font-semibold text-slate-600">Admin Payout</span>
+                              <span className="text-sm font-semibold text-slate-600">Withdrawal Request</span>
                             </div>
                           </td>
                           <td className="py-6 px-8 text-base font-black text-slate-900 text-right">${(r.amount || 0).toFixed(2)}</td>
@@ -382,7 +382,7 @@ export default function EarningsPage() {
               </div>
 
               <p className="text-sm font-medium text-slate-400 leading-relaxed mb-8">
-                Securely transfer your earnings directly to your bank account using Stripe Connect.
+                Connect Stripe once, then approved withdrawals are transferred automatically to your payout account.
               </p>
 
               {!accountStatus?.hasAccount ? (
@@ -440,9 +440,9 @@ export default function EarningsPage() {
               <div className="space-y-6">
                 {[
                   { step: "01", title: "Service Booked", desc: "Buyer pays for your service upfront." },
-                  { step: "02", title: "Completion", desc: "Mark as completed to release funds." },
-                  { step: "03", title: "Transfer", desc: "Funds move to Stripe within 48 hours." },
-                  { step: "04", title: "Bank Deposit", desc: "Payout to your bank from Stripe." },
+                  { step: "02", title: "Withdrawal Request", desc: "Request a payout once funds are available." },
+                  { step: "03", title: "Admin Approval", desc: "Approved requests trigger an automatic Stripe transfer." },
+                  { step: "04", title: "Bank Deposit", desc: "Stripe pays out to your connected bank account." },
                 ].map((item, i) => (
                   <div key={i} className="flex gap-4">
                     <span className="text-xs font-black text-slate-300 mt-1">{item.step}</span>

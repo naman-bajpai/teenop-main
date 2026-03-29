@@ -39,8 +39,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Note: Students don't need Stripe Connect account anymore since admin handles payments
-    // But we'll keep this check for now in case it's needed for other purposes
+    // Stripe Connect is required because admin approval now triggers an automatic
+    // Stripe transfer instead of a manual payout from the Stripe Dashboard.
+    if (!(profile as any).stripe_connect_account_id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Please connect your Stripe account before requesting a withdrawal.",
+          requiresStripeSetup: true
+        },
+        { status: 400 }
+      );
+    }
 
     // Get pending earnings for withdrawal (only those with status 'pending', not 'requested' or 'withdrawn')
     const { data: pendingEarnings, error: earningsError } = await supabase
