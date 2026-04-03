@@ -489,7 +489,7 @@ export default function MyRequestsPage() {
                 <p className="text-sm text-gray-400 font-medium italic">
                   Looking for requests for your own services? Visit the{" "}
                   <Link href="/my-teen-hustle" className="text-[#434c9d] hover:underline font-bold">
-                    Service Dashboard
+                    Booking Dashboard
                   </Link>{" "}
                   page.
                 </p>

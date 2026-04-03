@@ -931,7 +931,7 @@ export default function ServiceDetailsPage() {
                               className="w-full h-16 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-2xl font-black text-lg shadow-xl shadow-[#434c9d]/20 active:scale-95 transition-all"
                               disabled={service.status !== "active"}
                             >
-                              Reserve Now
+                              Request Booking
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="sm:max-w-md border-none rounded-[40px] p-0 overflow-hidden shadow-2xl">

@@ -158,14 +158,9 @@ export default function ServicesPage() {
       <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#434c9d]/60">
-              Services
-            </p>
-            <h1 className="page-title text-gray-900 mt-3">
-              Browse Teen Services
-            </h1>
+            <h1 className="page-title text-gray-900">Browse Services</h1>
             <p className="mt-5 text-lg leading-relaxed text-slate-600">
-              Explore talented local teens offering everything from tutoring and pet care to creative work and neighborhood help.
+              Explore talented local teens offering everything from tutoring and pet care to creative work and kids sports coaching.
             </p>
           </div>
         </div>

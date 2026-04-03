@@ -2,20 +2,24 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Wallet,
   DollarSign,
-  TrendingUp,
   Clock,
   CheckCircle,
-  XCircle,
   AlertCircle,
   ExternalLink,
   Loader2,
   CreditCard,
-  Building2,
-  ChevronRight,
   Info,
   ArrowUpRight,
   History,
@@ -74,6 +78,8 @@ export default function EarningsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshingAccount, setRefreshingAccount] = useState(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<any[]>([]);
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [withdrawSubmitting, setWithdrawSubmitting] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -196,6 +202,30 @@ export default function EarningsPage() {
     } catch (error) { console.error("Error fetching requests:", error); }
   }
 
+  async function handleWithdrawCashSubmit() {
+    setWithdrawSubmitting(true);
+    try {
+      const res = await fetch("/api/withdrawal-requests", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error((data as { error?: string }).error || "Could not submit withdrawal request");
+      }
+      toast({
+        title: "Withdrawal requested",
+        description: (data as { message?: string }).message || "An admin will review your request shortly.",
+      });
+      setWithdrawDialogOpen(false);
+      await fetchEarningsData(true);
+      await fetchWithdrawalRequests(true);
+      await fetchWithdrawals(true);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Something went wrong";
+      toast({ title: "Request failed", description: message, variant: "destructive" });
+    } finally {
+      setWithdrawSubmitting(false);
+    }
+  }
+
   function getStatusBadge(status: string) {
     const s = status.toLowerCase();
     return (
@@ -237,7 +267,7 @@ export default function EarningsPage() {
           </motion.div>
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div>
-              <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-slate-900">Earnings & Payouts</h1>
+              <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-slate-900">Earnings</h1>
               <p className="mt-4 text-lg font-medium text-slate-500 max-w-2xl">
                 Track your revenue, manage your Stripe connection, and monitor your transaction history in real-time.
               </p>
@@ -249,7 +279,7 @@ export default function EarningsPage() {
           {/* Main Stats Area */}
           <div className="lg:col-span-8 space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Total Balance Card */}
+              {/* Total Revenue Card */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -257,16 +287,12 @@ export default function EarningsPage() {
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 opacity-50" />
                 <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-8">
+                  <div className="mb-8">
                     <div className="h-12 w-12 rounded-2xl bg-emerald-50 flex items-center justify-center">
                       <DollarSign className="w-6 h-6 text-emerald-600" />
                     </div>
-                    <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                      <TrendingUp className="w-3 h-3" />
-                      Available
-                    </div>
                   </div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Total Balance</p>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Total Revenue</p>
                   <h2 className="text-5xl font-black text-slate-900 tracking-tight">
                     ${earningsStats.totalEarned.toFixed(2)}
                   </h2>
@@ -282,21 +308,83 @@ export default function EarningsPage() {
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50" />
                 <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-8">
+                  <div className="mb-8">
                     <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center">
                       <Clock className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-wider">
-                      Available
                     </div>
                   </div>
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Available to Withdraw</p>
                   <h2 className="text-5xl font-black text-slate-900 tracking-tight">
                     ${earningsStats.pendingEarnings.toFixed(2)}
                   </h2>
+                  {earningsStats.pendingEarnings > 0 && (
+                    <Button
+                      type="button"
+                      onClick={() => setWithdrawDialogOpen(true)}
+                      className="mt-8 w-full h-12 rounded-2xl bg-[#434c9d] font-black text-white hover:bg-[#434c9d]/90 shadow-lg shadow-[#434c9d]/20"
+                    >
+                      Withdraw Cash
+                    </Button>
+                  )}
                 </div>
               </motion.div>
             </div>
+
+            <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
+              <DialogContent className="sm:max-w-md rounded-[28px] border-slate-200">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-black text-slate-900">Withdraw cash?</DialogTitle>
+                  <DialogDescription className="text-base text-slate-600 leading-relaxed">
+                    You&apos;re requesting a payout of{" "}
+                    <span className="font-bold text-slate-900">
+                      ${earningsStats.pendingEarnings.toFixed(2)}
+                    </span>
+                    . Your Stripe account must be connected. An admin will approve the request before funds are sent to your bank.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 sm:gap-2 flex-col sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-xl font-bold"
+                    onClick={() => setWithdrawDialogOpen(false)}
+                    disabled={withdrawSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="rounded-xl font-black bg-[#434c9d] hover:bg-[#434c9d]/90"
+                    onClick={handleWithdrawCashSubmit}
+                    disabled={
+                      withdrawSubmitting ||
+                      !accountStatus?.hasAccount ||
+                      !(accountStatus.accountStatus?.chargesEnabled && accountStatus.accountStatus?.payoutsEnabled)
+                    }
+                  >
+                    {withdrawSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting…
+                      </>
+                    ) : (
+                      "Confirm withdrawal"
+                    )}
+                  </Button>
+                </DialogFooter>
+                {accountStatus?.hasAccount &&
+                  !(accountStatus.accountStatus?.chargesEnabled && accountStatus.accountStatus?.payoutsEnabled) && (
+                    <p className="text-xs text-amber-700 font-medium -mt-2">
+                      Complete your Stripe setup before you can withdraw.
+                    </p>
+                  )}
+                {!accountStatus?.hasAccount && (
+                  <p className="text-xs text-amber-700 font-medium -mt-2">
+                    Connect your Stripe account in the sidebar before withdrawing.
+                  </p>
+                )}
+              </DialogContent>
+            </Dialog>
 
             {/* Transaction History Table */}
             <motion.div
@@ -366,29 +454,74 @@ export default function EarningsPage() {
             </motion.div>
           </div>
 
-          {/* Sidebar Area */}
+          {/* Sidebar Area — How it works first, then Stripe */}
           <div className="lg:col-span-4 space-y-8">
-            {/* Stripe Connection Card */}
+            {/* Help/Info Card */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
+              className="rounded-[40px] border border-slate-200 bg-slate-50 p-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                  <Info className="w-5 h-5 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900">How it works</h3>
+              </div>
+
+              <div className="space-y-6">
+                {[
+                  { step: "01", title: "Service Booked", desc: "Buyer pays for your service upfront." },
+                  {
+                    step: "02",
+                    title: "Withdrawal Request",
+                    desc: "Click the Withdraw Cash button to transfer earnings to bank account.",
+                  },
+                  {
+                    step: "03",
+                    title: "Admin Approval",
+                    desc: "Admin approves request for cash withdrawal.",
+                  },
+                  {
+                    step: "04",
+                    title: "Bank Deposit",
+                    desc: "Stripe will transfer funds to connected bank account within 5 days.",
+                  },
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-4">
+                    <span className="text-xs font-black text-slate-300 mt-1">{item.step}</span>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">{item.title}</p>
+                      <p className="text-xs font-medium text-slate-500 leading-relaxed mt-0.5">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Stripe account card */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.05 }}
               className="rounded-[40px] border border-slate-200 bg-slate-900 p-8 text-white shadow-xl shadow-slate-900/10"
             >
               <div className="flex items-center gap-3 mb-8">
                 <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <CreditCard className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-xl font-black">Payout Method</h3>
+                <h3 className="text-xl font-black">Stripe Account</h3>
               </div>
 
               <p className="text-sm font-medium text-slate-400 leading-relaxed mb-8">
-                Connect Stripe once, then approved withdrawals are transferred automatically to your payout account.
+                After Stripe account is set up, approved withdrawals will be directly transferred to your bank account.
+                You can manage your bank details within Stripe.
               </p>
 
               {!accountStatus?.hasAccount ? (
                 <div className="space-y-6">
-                  <Button 
-                    onClick={handleStripeConnectSetup} 
+                  <Button
+                    onClick={handleStripeConnectSetup}
                     className="w-full h-14 rounded-2xl bg-white text-slate-900 font-black hover:bg-slate-100 transition-all shadow-lg"
                   >
                     Connect with Stripe
@@ -411,9 +544,9 @@ export default function EarningsPage() {
                       </div>
                     )}
                   </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={handleStripeConnectLogin} 
+                  <Button
+                    variant="outline"
+                    onClick={handleStripeConnectLogin}
                     className="w-full h-14 rounded-2xl border-2 border-white/10 bg-transparent font-black text-white hover:bg-white/5 transition-all"
                   >
                     Manage Stripe Account
@@ -421,38 +554,6 @@ export default function EarningsPage() {
                   </Button>
                 </div>
               )}
-            </motion.div>
-
-            {/* Help/Info Card */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="rounded-[40px] border border-slate-200 bg-slate-50 p-8"
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-sm">
-                  <Info className="w-5 h-5 text-slate-400" />
-                </div>
-                <h3 className="text-lg font-black text-slate-900">How it works</h3>
-              </div>
-              
-              <div className="space-y-6">
-                {[
-                  { step: "01", title: "Service Booked", desc: "Buyer pays for your service upfront." },
-                  { step: "02", title: "Withdrawal Request", desc: "Request a payout once funds are available." },
-                  { step: "03", title: "Admin Approval", desc: "Approved requests trigger an automatic Stripe transfer." },
-                  { step: "04", title: "Bank Deposit", desc: "Stripe pays out to your connected bank account." },
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-4">
-                    <span className="text-xs font-black text-slate-300 mt-1">{item.step}</span>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{item.title}</p>
-                      <p className="text-xs font-medium text-slate-500 leading-relaxed mt-0.5">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </motion.div>
           </div>
         </div>

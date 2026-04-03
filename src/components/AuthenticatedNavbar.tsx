@@ -22,9 +22,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
 
-interface User {
+interface UserProfile {
   id: string;
   first_name?: string;
   last_name?: string;
@@ -44,33 +43,49 @@ interface User {
 }
 
 interface AuthenticatedNavbarProps {
-  user?: User | null;
+  user?: UserProfile | null;
 }
 
 export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [attentionCount, setAttentionCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  const [shape, setShape] = useState("rounded-full");
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const shapeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onHeroPage = pathname === "/dashboard";
+  const showLogo = !onHeroPage || scrolled;
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
+    const handler = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", handler, { passive: true });
+    handler();
+    return () => window.removeEventListener("scroll", handler);
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    if (shapeTimer.current) clearTimeout(shapeTimer.current);
+    if (mobileOpen) {
+      setShape("rounded-[28px]");
+    } else {
+      shapeTimer.current = setTimeout(() => setShape("rounded-full"), 280);
+    }
+    return () => { if (shapeTimer.current) clearTimeout(shapeTimer.current); };
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setIsUserMenuOpen(false);
+        setUserMenuOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   useEffect(() => {
@@ -81,9 +96,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.conversations) {
-            setUnreadMessageCount(
-              data.conversations.reduce((s: number, c: any) => s + (c.unread_count || 0), 0)
-            );
+            setUnreadCount(data.conversations.reduce((s: number, c: any) => s + (c.unread_count || 0), 0));
           }
         }
       } catch {}
@@ -91,21 +104,33 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
     fetchUnread();
     const handler = (e: Event) => {
       const ce = e as CustomEvent;
-      ce.detail?.newCount !== undefined ? setUnreadMessageCount(ce.detail.newCount) : fetchUnread();
+      ce.detail?.newCount !== undefined ? setUnreadCount(ce.detail.newCount) : fetchUnread();
     };
     window.addEventListener("messagesMarkedAsRead", handler);
     const interval = setInterval(fetchUnread, 60000);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("messagesMarkedAsRead", handler);
+    return () => { clearInterval(interval); window.removeEventListener("messagesMarkedAsRead", handler); };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || user.role !== "teen") { setAttentionCount(0); return; }
+    const fetch_ = async () => {
+      try {
+        const res = await fetch("/api/bookings/provider-attention", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && typeof data.count === "number") setAttentionCount(data.count);
+        }
+      } catch {}
     };
+    fetch_();
+    window.addEventListener("providerAttentionRefresh", fetch_);
+    window.addEventListener("focus", fetch_);
+    const interval = setInterval(fetch_, 60000);
+    return () => { clearInterval(interval); window.removeEventListener("providerAttentionRefresh", fetch_); window.removeEventListener("focus", fetch_); };
   }, [user]);
 
   const handleLogout = async () => {
-    try {
-      await createClient().auth.signOut();
-      router.push("/login");
-    } catch {}
+    try { await createClient().auth.signOut(); router.push("/login"); } catch {}
   };
 
   const navItems = [
@@ -126,325 +151,297 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
   const initials = (user?.first_name?.charAt(0) || user?.name?.charAt(0) || "U").toUpperCase();
   const displayName = user?.first_name || user?.name || "User";
   const roleLabel = user?.role === "teen" ? "Teen Provider" : user?.role || "Member";
+  const closeMenus = () => { setMobileOpen(false); setUserMenuOpen(false); };
 
-  const closeMenus = () => {
-    setIsMobileMenuOpen(false);
-    setIsUserMenuOpen(false);
-  };
+  const badgeFor = (name: string) =>
+    name === "Messages" ? unreadCount : name === "Bookings" ? attentionCount : 0;
 
   return (
-    <header
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        scrolled
-          ? "bg-white/80 backdrop-blur-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border-b border-slate-200/60"
-          : "bg-white/50 backdrop-blur-md border-b border-transparent"
-      }`}
-    >
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-2.5 sm:px-8 lg:px-10">
-        {/* Logo */}
-        <Link
-          href="/dashboard"
-          className="flex shrink-0 items-center transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <Image
-            src="/images/newlogo copy.png"
-            alt="TeenOp"
-            width={4412}
-            height={943}
-            className="h-6 w-auto sm:h-7"
-            priority
-          />
-        </Link>
+    <header className="sticky top-0 z-50 px-4 pt-3.5">
+      <div
+        className={cn(
+          "mx-auto w-full max-w-7xl flex flex-col transition-all duration-300",
+          shape,
+          scrolled
+            ? "bg-white/85 shadow-[0_8px_32px_rgba(0,0,0,0.10),0_1px_0_rgba(0,0,0,0.04)] border border-black/[0.07] backdrop-blur-2xl"
+            : "bg-white/70 shadow-[0_2px_16px_rgba(0,0,0,0.07)] border border-black/[0.06] backdrop-blur-xl"
+        )}
+      >
+        {/* ── Main row ── */}
+        <div className="flex items-center gap-2 px-3 py-2">
 
-        {/* Desktop nav */}
-        <div className="hidden lg:flex items-center gap-0.5">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            const isMessages = item.name === "Messages";
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200",
-                  active
-                    ? "text-[#434c9d] bg-[#434c9d]/[0.07]"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-900/[0.04]"
-                )}
-              >
-                <Icon className={cn("h-3.5 w-3.5", active && "text-[#434c9d]")} />
-                {item.name}
-                {isMessages && unreadMessageCount > 0 && (
-                  <span className="min-w-[18px] h-[18px] inline-flex items-center justify-center rounded-full bg-[#E8634A] px-1 text-[10px] font-bold text-white leading-none">
-                    {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Right side: user menu (desktop) */}
-        <div className="hidden lg:flex items-center shrink-0" ref={userMenuRef}>
-          {user && (
-            <div className="relative">
-              <button
-                onClick={() => setIsUserMenuOpen((o) => !o)}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-xl py-1.5 pl-1.5 pr-3 transition-all duration-200",
-                  isUserMenuOpen
-                    ? "bg-slate-100"
-                    : "hover:bg-slate-900/[0.04]"
-                )}
-              >
-                <div className="relative">
-                  {user.avatar_url ? (
-                    <img
-                      src={user.avatar_url}
-                      alt={user.name || "User"}
-                      className="h-8 w-8 rounded-lg object-cover ring-1 ring-slate-200/60"
-                    />
-                  ) : (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#434c9d] to-[#6c74c4] text-xs font-bold text-white">
-                      {initials}
-                    </div>
-                  )}
-                  {user.is_verified && (
-                    <div className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border-[1.5px] border-white bg-emerald-500">
-                      <CheckCircle2 className="h-2 w-2 text-white" />
-                    </div>
-                  )}
-                </div>
-                <div className="text-left hidden xl:block">
-                  <p className="text-[13px] font-semibold text-slate-800 leading-tight">{displayName}</p>
-                  <p className="text-[11px] text-slate-400 leading-tight">{roleLabel}</p>
-                </div>
-                <ChevronDown
-                  className={cn(
-                    "h-3.5 w-3.5 text-slate-400 transition-transform duration-200",
-                    isUserMenuOpen && "rotate-180"
-                  )}
-                />
-              </button>
-
-              <AnimatePresence>
-                {isUserMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -4, scale: 0.97 }}
-                    transition={{ duration: 0.12, ease: "easeOut" }}
-                    className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl bg-white shadow-xl shadow-black/[0.08] ring-1 ring-slate-200/70 overflow-hidden"
-                  >
-                    <div className="px-4 py-3.5 border-b border-slate-100">
-                      <div className="flex items-center gap-3">
-                        {user.avatar_url ? (
-                          <img
-                            src={user.avatar_url}
-                            alt={user.name || "User"}
-                            className="h-10 w-10 rounded-lg object-cover ring-1 ring-slate-200/60"
-                          />
-                        ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#434c9d] to-[#6c74c4] text-sm font-bold text-white">
-                            {initials}
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-slate-900 truncate">
-                            {displayName}
-                          </p>
-                          <p className="text-xs text-slate-400 truncate">{user.email}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-1.5">
-                      <Link
-                        href="/profile"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className={cn(
-                          "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                          isActive("/profile")
-                            ? "bg-[#434c9d]/[0.07] text-[#434c9d]"
-                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                        )}
-                      >
-                        <User className="h-4 w-4" />
-                        Profile & Settings
-                      </Link>
-
-                      <div className="my-1 border-t border-slate-100" />
-
-                      <button
-                        onClick={() => {
-                          setIsUserMenuOpen(false);
-                          handleLogout();
-                        }}
-                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Log out
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-
-        {/* Mobile right side */}
-        <div className="flex items-center gap-2 lg:hidden">
-          {user && unreadMessageCount > 0 && (
-            <Link
-              href="/messages"
-              className="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
-            >
-              <MessageCircle className="h-5 w-5" />
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] inline-flex items-center justify-center rounded-full bg-[#E8634A] px-1 text-[10px] font-bold text-white leading-none">
-                {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
-              </span>
-            </Link>
-          )}
-          <button
-            onClick={() => setIsMobileMenuOpen((o) => !o)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100"
-            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-            aria-expanded={isMobileMenuOpen}
+          {/* Logo */}
+          <Link
+            href="/dashboard"
+            onClick={closeMenus}
+            tabIndex={showLogo ? 0 : -1}
+            className={cn(
+              "shrink-0 transition-all duration-300 hover:opacity-75",
+              showLogo ? "opacity-100" : "pointer-events-none opacity-0"
+            )}
           >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile menu */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/25 backdrop-blur-sm lg:hidden"
-              onClick={() => setIsMobileMenuOpen(false)}
+            <Image
+              src="/images/newlogo copy.png"
+              alt="TeenOp"
+              width={4412}
+              height={943}
+              className="h-6 w-auto sm:h-7"
+              priority
             />
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ type: "spring", damping: 28, stiffness: 320 }}
-              className="fixed left-3 right-3 top-[4rem] z-50 max-h-[calc(100vh-5rem)] overflow-y-auto rounded-2xl bg-white shadow-xl shadow-black/[0.08] ring-1 ring-slate-200/70 lg:hidden"
-            >
-              {/* User info header */}
-              {user && (
-                <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-100">
-                  {user.avatar_url ? (
-                    <img
-                      src={user.avatar_url}
-                      alt={user.name || "User"}
-                      className="h-10 w-10 rounded-lg object-cover ring-1 ring-slate-200/60"
-                    />
-                  ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#434c9d] to-[#6c74c4] text-sm font-bold text-white">
-                      {initials}
-                    </div>
+          </Link>
+
+          {/* Desktop nav */}
+          <nav className="hidden flex-1 items-center justify-center gap-0.5 xl:flex">
+            {navItems.map((item) => {
+              const badge = badgeFor(item.name);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "relative inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium rounded-full transition-colors duration-200",
+                    isActive(item.href)
+                      ? "bg-black/[0.06] text-slate-900"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-black/[0.04]"
                   )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 truncate">
-                      {displayName}
-                    </p>
-                    <p className="text-xs text-slate-400 truncate">{user.email}</p>
-                  </div>
-                  {user.is_verified && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Verified
+                >
+                  <item.icon className="h-3.5 w-3.5 shrink-0" />
+                  {item.name}
+                  {badge > 0 && (
+                    <span className="inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#E8634A] px-1 text-[10px] font-bold text-white leading-none">
+                      {badge > 99 ? "99+" : badge}
                     </span>
                   )}
-                </div>
-              )}
+                  {isActive(item.href) && (
+                    <span className="absolute bottom-[4px] left-1/2 -translate-x-1/2 h-[3px] w-[3px] rounded-full bg-[#E8634A]" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
 
-              {/* Nav items */}
-              <div className="p-2">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.href);
-                  const isMessages = item.name === "Messages";
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={closeMenus}
-                      className={cn(
-                        "flex items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-medium transition-colors",
-                        active
-                          ? "bg-[#434c9d]/[0.07] text-[#434c9d]"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-lg",
-                          active ? "bg-[#434c9d]/10 text-[#434c9d]" : "bg-slate-100 text-slate-500"
-                        )}
-                      >
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <span className="flex-1">{item.name}</span>
-                      {isMessages && unreadMessageCount > 0 ? (
-                        <span className="rounded-full bg-[#E8634A] px-2 py-0.5 text-[10px] font-bold text-white">
-                          {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
-                        </span>
-                      ) : (
-                        <ArrowRight className="h-3.5 w-3.5 text-slate-300" />
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
+          {/* Spacer on mobile */}
+          <div className="flex-1 xl:hidden" />
 
-              {/* Bottom actions */}
-              <div className="p-2 border-t border-slate-100">
-                <Link
-                  href="/profile"
-                  onClick={closeMenus}
+          {/* Desktop user button */}
+          <div className="hidden shrink-0 xl:flex" ref={userMenuRef}>
+            {user && (
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen((o) => !o)}
+                  type="button"
                   className={cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-medium transition-colors",
-                    isActive("/profile")
-                      ? "bg-[#434c9d]/[0.07] text-[#434c9d]"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    "flex items-center gap-2 rounded-full border px-2 py-1.5 transition-all duration-200",
+                    userMenuOpen
+                      ? "border-black/[0.10] bg-black/[0.07] text-slate-900"
+                      : "border-black/[0.07] bg-black/[0.04] text-slate-900 hover:border-black/[0.10] hover:bg-black/[0.06]"
                   )}
                 >
-                  <div
+                  {/* Avatar */}
+                  <div className="relative shrink-0">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt={displayName} className="h-7 w-7 rounded-full object-cover" />
+                    ) : (
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#434c9d] to-[#6c74c4] text-[11px] font-bold text-white">
+                        {initials}
+                      </div>
+                    )}
+                    {user.is_verified && (
+                      <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-emerald-500 ring-[1.5px] ring-white">
+                        <CheckCircle2 className="h-2 w-2 text-white" />
+                      </span>
+                    )}
+                  </div>
+                  {/* Name + role */}
+                  <div className="min-w-0 pr-0.5">
+                    <p className="truncate text-[12.5px] font-semibold leading-tight text-slate-900">{displayName}</p>
+                    <p className="truncate text-[10.5px] leading-tight text-slate-400">{roleLabel}</p>
+                  </div>
+                  <ChevronDown className={cn("h-3 w-3 shrink-0 text-slate-400 transition-transform duration-200", userMenuOpen && "rotate-180")} />
+                </button>
+
+                {/* Dropdown */}
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-2.5 w-64 overflow-hidden rounded-[22px] border border-black/[0.07] bg-white/95 p-1.5 shadow-[0_16px_48px_rgba(0,0,0,0.12)] backdrop-blur-2xl">
+                    {/* User card */}
+                    <div className="flex items-center gap-3 rounded-[16px] bg-black/[0.04] px-3 py-3 mb-1">
+                      {user.avatar_url ? (
+                        <img src={user.avatar_url} alt={displayName} className="h-9 w-9 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#434c9d] to-[#6c74c4] text-sm font-bold text-white">
+                          {initials}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold text-slate-900">{displayName}</p>
+                        <p className="truncate text-[11px] text-slate-400">{user.email}</p>
+                      </div>
+                      {user.is_verified && (
+                        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                          <CheckCircle2 className="h-2.5 w-2.5" />
+                          Verified
+                        </span>
+                      )}
+                    </div>
+
+                    <Link
+                      href="/profile"
+                      onClick={() => setUserMenuOpen(false)}
+                      className={cn(
+                        "flex items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-[13px] font-medium transition-colors",
+                        isActive("/profile") ? "bg-black/[0.06] text-slate-900" : "text-slate-600 hover:bg-black/[0.04] hover:text-slate-900"
+                      )}
+                    >
+                      <User className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      Profile & Settings
+                    </Link>
+
+                    <div className="my-1 border-t border-black/[0.06]" />
+
+                    <button
+                      onClick={() => { setUserMenuOpen(false); handleLogout(); }}
+                      type="button"
+                      className="flex w-full items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-[13px] font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                    >
+                      <LogOut className="h-3.5 w-3.5 shrink-0" />
+                      Log out
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Mobile — quick badges + hamburger */}
+          <div className="flex items-center gap-1.5 xl:hidden">
+            {user && unreadCount > 0 && (
+              <Link
+                href="/messages"
+                aria-label={`${unreadCount} unread messages`}
+                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-black/[0.08] bg-black/[0.04] text-slate-500"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span className="absolute -right-0.5 -top-0.5 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#E8634A] px-1 text-[9px] font-bold text-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              </Link>
+            )}
+            {user?.role === "teen" && attentionCount > 0 && (
+              <Link
+                href="/my-teen-hustle"
+                aria-label={`${attentionCount} bookings need attention`}
+                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-black/[0.08] bg-black/[0.04] text-slate-500"
+              >
+                <Briefcase className="h-4 w-4" />
+                <span className="absolute -right-0.5 -top-0.5 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#E8634A] px-1 text-[9px] font-bold text-white">
+                  {attentionCount > 99 ? "99+" : attentionCount}
+                </span>
+              </Link>
+            )}
+            <button
+              onClick={() => setMobileOpen((o) => !o)}
+              type="button"
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileOpen}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-black/[0.08] bg-black/[0.04] text-slate-500 transition-colors hover:text-slate-900"
+            >
+              {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Mobile menu ── */}
+        <div
+          className={cn(
+            "overflow-hidden transition-all duration-300 ease-in-out xl:hidden",
+            mobileOpen ? "max-h-[52rem] opacity-100" : "pointer-events-none max-h-0 opacity-0"
+          )}
+        >
+          <div className="border-t border-black/[0.06] px-3 pb-3 pt-2.5">
+            {/* User card */}
+            {user && (
+              <div className="mb-2.5 flex items-center gap-3 rounded-2xl border border-black/[0.06] bg-black/[0.03] px-3 py-3">
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt={displayName} className="h-9 w-9 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#434c9d] to-[#6c74c4] text-sm font-bold text-white">
+                    {initials}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold text-slate-900">{displayName}</p>
+                  <p className="truncate text-[11px] text-slate-400">{user.email}</p>
+                </div>
+                {user.is_verified && (
+                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                    <CheckCircle2 className="h-2.5 w-2.5" />
+                    Verified
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Nav links */}
+            <nav className="flex flex-col gap-0.5">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const badge = badgeFor(item.name);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeMenus}
                     className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-lg",
-                      isActive("/profile") ? "bg-[#434c9d]/10 text-[#434c9d]" : "bg-slate-100 text-slate-500"
+                      "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-medium transition-colors",
+                      isActive(item.href) ? "bg-black/[0.06] text-slate-900" : "text-slate-600 hover:bg-black/[0.04] hover:text-slate-900"
                     )}
                   >
-                    <User className="h-4 w-4" />
-                  </div>
-                  <span className="flex-1">Profile & Settings</span>
-                  <ArrowRight className="h-3.5 w-3.5 text-slate-300" />
-                </Link>
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    handleLogout();
-                  }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-medium text-red-500 hover:bg-red-50 transition-colors"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500">
-                    <LogOut className="h-4 w-4" />
-                  </div>
-                  <span className="flex-1 text-left">Log out</span>
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full border border-black/[0.08] bg-black/[0.04] shrink-0">
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="flex-1">{item.name}</span>
+                    {badge > 0 ? (
+                      <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#E8634A] px-1 text-[9px] font-bold text-white">
+                        {badge > 99 ? "99+" : badge}
+                      </span>
+                    ) : (
+                      <ArrowRight className="h-3.5 w-3.5 text-slate-300" />
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Profile + logout */}
+            <div className="mt-2 flex flex-col gap-0.5 border-t border-black/[0.06] pt-2">
+              <Link
+                href="/profile"
+                onClick={closeMenus}
+                className={cn(
+                  "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-medium transition-colors",
+                  isActive("/profile") ? "bg-black/[0.06] text-slate-900" : "text-slate-600 hover:bg-black/[0.04] hover:text-slate-900"
+                )}
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-full border border-black/[0.08] bg-black/[0.04] shrink-0">
+                  <User className="h-3.5 w-3.5" />
+                </span>
+                <span className="flex-1">Profile & Settings</span>
+                <ArrowRight className="h-3.5 w-3.5 text-slate-300" />
+              </Link>
+              <button
+                onClick={() => { setMobileOpen(false); handleLogout(); }}
+                type="button"
+                className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-full border border-red-200 bg-red-50 shrink-0">
+                  <LogOut className="h-3.5 w-3.5" />
+                </span>
+                <span className="flex-1 text-left">Log out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </header>
   );
 }

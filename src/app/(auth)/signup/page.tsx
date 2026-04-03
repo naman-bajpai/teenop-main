@@ -482,9 +482,9 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950">
+    <div className="relative min-h-screen overflow-hidden bg-white">
       <Image
-        src="/images/hands together9.jpg"
+        src="/images/signup.png"
         alt=""
         fill
         priority
@@ -492,8 +492,6 @@ export default function SignupPage() {
         className="object-cover"
         sizes="100vw"
       />
-      <div className="absolute inset-0 bg-slate-950/35" />
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-slate-950/18 to-slate-950/55" />
 
       <div className="relative z-10 flex min-h-screen flex-col px-6 py-6 sm:px-10">
         <div className="flex items-center justify-between">

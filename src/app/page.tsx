@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import HeroSection from "@/components/home/HeroSection";
+import FlowGradientHeroSection from "@/components/ui/flow-gradient-hero-section";
 import { Sparkles, Users, Star, ArrowRight, Search, Linkedin } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Image from "next/image";
@@ -25,22 +26,6 @@ function FadeUp({ children, delay = 0, className = "" }: { children: React.React
   );
 }
 
-function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
-  return (
-    <motion.div
-      ref={ref}
-      className={className}
-      initial={{ opacity: 0 }}
-      animate={inView ? { opacity: 1 } : {}}
-      transition={{ duration: 0.7, delay }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
 export default function Home() {
   return (
     <div className="min-h-screen bg-white text-gray-700">
@@ -51,32 +36,13 @@ export default function Home() {
 
       {/* Why TeenOp */}
       <section className="relative overflow-hidden bg-gradient-to-b from-white via-slate-50 to-white py-20">
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Animated floating orbs */}
-          <motion.div
-            className="absolute rounded-full bg-[#96cbc3]/20 blur-3xl"
-            style={{ width: 500, height: 500, top: "-10%", right: "-5%" }}
-            animate={{ x: [0, 60, -30, 0], y: [0, -40, 60, 0], scale: [1, 1.15, 0.95, 1] }}
-            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+        <div className="absolute inset-0">
+          <FlowGradientHeroSection
+            className="h-full min-h-0 opacity-85"
+            showContent={false}
+            showPauseButton={false}
           />
-          <motion.div
-            className="absolute rounded-full bg-[#434c9d]/15 blur-3xl"
-            style={{ width: 420, height: 420, top: "30%", left: "-8%" }}
-            animate={{ x: [0, -50, 40, 0], y: [0, 60, -30, 0], scale: [1, 0.9, 1.1, 1] }}
-            transition={{ duration: 22, repeat: Infinity, ease: "easeInOut", delay: 3 }}
-          />
-          <motion.div
-            className="absolute rounded-full bg-[#ff725a]/15 blur-3xl"
-            style={{ width: 380, height: 380, bottom: "-5%", right: "20%" }}
-            animate={{ x: [0, 40, -60, 0], y: [0, -50, 20, 0], scale: [1, 1.2, 0.9, 1] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "easeInOut", delay: 6 }}
-          />
-          <motion.div
-            className="absolute rounded-full bg-[#96cbc3]/10 blur-2xl"
-            style={{ width: 260, height: 260, top: "50%", right: "35%" }}
-            animate={{ x: [0, -30, 50, 0], y: [0, 40, -40, 0], scale: [1, 1.1, 0.95, 1] }}
-            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 9 }}
-          />
+          <div className="absolute inset-0 bg-white/68" />
         </div>
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -87,7 +53,7 @@ export default function Home() {
             <p className="mt-5 text-lg leading-relaxed text-slate-600 md:text-xl">
               TeenOp makes it easier for communities to hire capable local teens for everyday jobs while giving young people a real place to build skills, earn money, and grow their confidence.
             </p>
-            <p className="mt-4 text-base italic text-slate-700">
+            <p className="mt-5 text-xl italic text-slate-700 leading-relaxed md:text-2xl">
               Think of it like a{" "}
               <span className="font-bold text-slate-900 not-italic">modern bulletin board for your town.</span>
             </p>
@@ -160,20 +126,15 @@ export default function Home() {
               </div>
             </FadeUp>
           </div>
-        </div>
-      </section>
 
-      {/* Founder Story */}
-      <section className="bg-white py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <FadeUp>
-            <div className="grid grid-cols-1 items-center gap-10 rounded-[36px] border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-orange-50/40 p-8 shadow-sm md:grid-cols-[320px_minmax(0,1fr)] md:p-12">
+            <div className="mt-10 grid grid-cols-1 items-center gap-10 rounded-[36px] border border-white/70 bg-white/70 p-8 shadow-[0_20px_80px_rgba(15,23,42,0.08)] backdrop-blur-md md:grid-cols-[320px_minmax(0,1fr)] md:p-12">
               <motion.div
                 initial={{ opacity: 0, scale: 0.92 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[28px] border-4 border-white shadow-xl"
+                className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[28px] border border-white/80 shadow-xl ring-1 ring-slate-200/60"
               >
                 <Image
                   src="/images/Founder.png"
@@ -186,11 +147,11 @@ export default function Home() {
 
               <div className="text-center md:text-left">
                 <FadeUp delay={0.1}>
-                  <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#434c9d]/60">Founder Story</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#434c9d]/70">Founder Story</p>
                   <h2 className="mt-3 text-4xl font-bold tracking-tight text-gray-900">The TeenOp Story</h2>
                 </FadeUp>
                 <FadeUp delay={0.2}>
-                  <blockquote className="mt-6 max-w-3xl text-2xl font-medium leading-relaxed text-slate-700">
+                  <blockquote className="mt-6 max-w-3xl text-2xl font-medium leading-relaxed text-slate-800">
                     &ldquo;TeenOp was born at my high school lunch table with the simple dream of helping my friends start their own businesses.&rdquo;
                   </blockquote>
                   <p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-600">
@@ -199,7 +160,7 @@ export default function Home() {
                 </FadeUp>
                 <FadeUp delay={0.3}>
                   <Link href="/our-story" className="mt-8 inline-block">
-                    <Button className="group rounded-xl bg-[#434c9d] px-8 py-6 text-base font-semibold text-white hover:bg-[#434c9d]/90">
+                    <Button className="group rounded-xl bg-[#434c9d] px-8 py-6 text-base font-semibold text-white shadow-lg hover:bg-[#434c9d]/90">
                       View Full Story
                       <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                     </Button>

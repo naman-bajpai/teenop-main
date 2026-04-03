@@ -1,28 +1,45 @@
-import React from "react";
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Search, Sparkles } from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
+import { useRef } from "react";
 
 interface User { id: string; name?: string; email?: string; role?: string; }
 interface HeroSectionProps { user: User | null | undefined; }
 
 export default function HeroSection({ user: _user }: HeroSectionProps) {
+  const containerRef = useRef<HTMLElement | null>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"],
+  });
+  const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "12%"]);
+
   return (
     <section
       id="hero"
       className="relative min-h-screen flex flex-col overflow-hidden -mt-[72px] pt-[72px]"
+      ref={containerRef}
     >
-      {/* Background image — positioned to show subjects, less bright sky */}
+      {/* Background image with subtle parallax movement */}
       <div className="absolute inset-0">
-        <div
-          className="h-full w-full bg-cover bg-no-repeat"
-          style={{
-            backgroundImage: "url('/images/dog.png')",
-            backgroundPosition: "center 35%",
-          }}
-          aria-hidden
-        />
+        <motion.div
+          className="relative h-[112%] w-full"
+          style={{ y: backgroundY }}
+        >
+          <Image
+            src="/images/dog.png"
+            alt=""
+            fill
+            priority
+            aria-hidden
+            className="object-cover object-[center_35%]"
+            sizes="100vw"
+          />
+        </motion.div>
       </div>
 
       {/* Content wrapper — full height, flex row */}
@@ -80,24 +97,28 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
         {/* Spacer pushes card to the right */}
         <div className="flex-1" />
 
-        {/* Middle-right: Definition Card */}
-        <div className="flex items-center px-8 sm:px-12 lg:px-16">
-          <div className="w-full max-w-sm rounded-3xl bg-white/90 backdrop-blur-md px-7 py-6 shadow-2xl ring-1 ring-black/5">
+        {/* Middle-right: Definition Card — top-aligned with left column so it can extend downward */}
+        <div className="flex items-start self-stretch px-8 sm:px-12 lg:px-16 pt-10 lg:pt-14 pb-10">
+          <div className="w-full max-w-md rounded-3xl bg-white/90 backdrop-blur-md px-8 py-8 sm:px-9 sm:py-10 shadow-2xl ring-1 ring-black/5">
             {/* Card header */}
-            <div className="border-b border-slate-100 pb-4">
-              <div className="flex items-baseline gap-2 flex-wrap">
-                <span className="text-3xl font-black text-slate-900 tracking-tight">teen-op</span>
-                <span className="text-sm font-semibold text-slate-400 uppercase tracking-widest">[teen opportunity]</span>
+            <div className="border-b border-slate-100 pb-5">
+              <div className="flex items-baseline gap-2.5 flex-wrap">
+                <span className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight leading-none">
+                  teen-op
+                </span>
+                <span className="text-base sm:text-lg font-semibold text-slate-400 uppercase tracking-widest">
+                  [teen opportunity]
+                </span>
               </div>
-              <p className="mt-0.5 text-sm text-slate-400 italic">noun.</p>
+              <p className="mt-1.5 text-base text-slate-400 italic">noun.</p>
             </div>
 
             {/* Services list */}
-            <div className="mt-4">
-              <p className="text-xs font-black text-[#E8634A] uppercase tracking-[0.15em] mb-3">
+            <div className="mt-6">
+              <p className="text-sm sm:text-base font-black text-[#E8634A] uppercase tracking-[0.15em] mb-4">
                 Services by teens
               </p>
-              <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+              <ul className="grid grid-cols-2 gap-x-5 gap-y-2.5 sm:gap-y-3">
                 {[
                   "Dog walking",
                   "Kids sports training",
@@ -110,8 +131,11 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
                   "Social media creation",
                   "Event setup/cleanup",
                 ].map((service) => (
-                  <li key={service} className="flex items-center gap-2 text-sm text-slate-700 font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#E8634A] shrink-0" />
+                  <li
+                    key={service}
+                    className="flex items-start gap-2.5 text-base sm:text-[17px] text-slate-700 font-medium leading-snug"
+                  >
+                    <span className="mt-1.5 w-2 h-2 rounded-full bg-[#E8634A] shrink-0" />
                     {service}
                   </li>
                 ))}

@@ -369,6 +369,9 @@ export default function TeenHustlePage() {
         const sData = await stripeRes.json();
         if (sData.success) setStripeAccountStatus({ hasAccount: sData.hasAccount, accountStatus: sData.accountStatus, loading: false });
       }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("providerAttentionRefresh"));
+      }
     } catch (e: any) {
       toast({ title: "Load failed", description: e.message, variant: "destructive" });
     } finally { setLoading(false); }
@@ -510,9 +513,9 @@ export default function TeenHustlePage() {
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 bg-[#434c9d]/10 text-[#434c9d] rounded-full px-4 py-1.5">
               <Briefcase className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-[0.15em]">Service Dashboard</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.15em]">Booking Dashboard</span>
             </div>
-            <h1 className="page-title text-gray-900">Service Dashboard</h1>
+            <h1 className="page-title text-gray-900">Booking Dashboard</h1>
             <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">
               Manage your services, bookings, and earnings.
             </p>
@@ -564,7 +567,7 @@ export default function TeenHustlePage() {
         <div className="space-y-8">
           <Tabs defaultValue="pending" className="w-full">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
-              <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Booking Dashboard</h2>
+              <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Your bookings</h2>
               <TabsList className="bg-gray-100/50 p-1 rounded-2xl border border-gray-100">
                 <TabsTrigger value="pending" className="rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm relative">
                   Pending {pendingBookings.length > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#ff725a] rounded-full" />}
