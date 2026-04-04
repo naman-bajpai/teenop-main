@@ -98,13 +98,13 @@ function MessagesPageContent() {
     });
   };
 
+  const unreadTotal = (list: Conversation[]) =>
+    list.reduce((sum, c) => sum + Number(c.unread_count || 0), 0);
+
   const fetchConversations = useCallback(async () => {
     try {
       setLoading(true);
-      // Cache for 10 seconds - messages change frequently but don't need real-time
-      const response = await fetch("/api/messages/conversations", {
-        next: { revalidate: 10 }
-      });
+      const response = await fetch("/api/messages/conversations", { cache: "no-store" });
 
       if (!response.ok) throw new Error("Failed to fetch conversations");
 
@@ -153,7 +153,7 @@ function MessagesPageContent() {
         processingBookingId.current = bookingId;
         try {
           // Cache for 10 seconds - booking details don't change that often
-          const response = await fetch(`/api/bookings/${bookingId}`, { next: { revalidate: 10 } });
+          const response = await fetch(`/api/bookings/${bookingId}`, { cache: "no-store" });
           if (response.ok) {
             const data = await response.json();
             if (data.success && data.booking) {
@@ -210,7 +210,7 @@ function MessagesPageContent() {
                 setSelectedConversation(newConversation);
 
                 // Cache for 5 seconds - messages need to be relatively fresh
-                const messagesResponse = await fetch(`/api/messages?booking_id=${bookingId}`, { next: { revalidate: 5 } });
+                const messagesResponse = await fetch(`/api/messages?booking_id=${bookingId}`, { cache: "no-store" });
                 if (messagesResponse.ok) {
                   const messagesData = await messagesResponse.json();
                   if (messagesData.success && messagesData.messages) {
@@ -236,7 +236,7 @@ function MessagesPageContent() {
       try {
         // Cache for 5 seconds - messages need to be relatively fresh
         const response = await fetch(`/api/messages?booking_id=${selectedConversation.booking_id}`, {
-          next: { revalidate: 5 }
+          cache: "no-store",
         });
         if (response.ok) {
           const data = await response.json();
@@ -260,6 +260,7 @@ function MessagesPageContent() {
       try {
         const response = await fetch("/api/messages/mark-read", {
           method: "POST",
+          credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ booking_id: selectedConversation.booking_id }),
         });
@@ -280,11 +281,14 @@ function MessagesPageContent() {
   }, [selectedConversation]);
 
   const markAllAsRead = async () => {
-    const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0);
-    if (totalUnread === 0) return;
+    if (unreadTotal(conversations) === 0) return;
     try {
       setMarkingAllRead(true);
-      const response = await fetch("/api/messages/mark-read-all", { method: "POST" });
+      const response = await fetch("/api/messages/mark-read-all", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+      });
       if (response.ok) {
         setConversations(prev => prev.map(c => ({ ...c, unread_count: 0 })));
         window.dispatchEvent(new CustomEvent("messagesMarkedAsRead", { detail: { newCount: 0 } }));
@@ -529,7 +533,7 @@ function MessagesPageContent() {
             <div className="flex items-center justify-between mb-4">
               <h1 className="page-title text-gray-900 flex items-center gap-2">
                 Messages
-                {conversations.reduce((sum, c) => sum + c.unread_count, 0) > 0 && (
+                {unreadTotal(conversations) > 0 && (
                   <span className="flex h-2 w-2 rounded-full bg-[#ff725a] animate-pulse" />
                 )}
               </h1>
@@ -543,8 +547,9 @@ function MessagesPageContent() {
                 className="pl-9 h-10 border-gray-100 bg-gray-50/50 focus:bg-white focus:border-[#434c9d]/30 focus:ring-[#434c9d]/10 rounded-xl transition-all"
               />
             </div>
-            {conversations.reduce((sum, c) => sum + c.unread_count, 0) > 0 && (
+            {unreadTotal(conversations) > 0 && (
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={markAllAsRead}

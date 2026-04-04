@@ -97,12 +97,12 @@ export async function GET(request: NextRequest) {
     
     console.log(`[EARNINGS API] Found ${allPendingEarnings?.length || 0} pending earnings for user ${user.id}`);
 
-    // Get pending withdrawal requests to see which earnings are locked
+    // Lock earnings that are already in an open withdrawal (same statuses as POST /api/withdrawal-requests)
     const { data: pendingWithdrawalRequests, error: withdrawalRequestsError } = await (supabase as any)
       .from('withdrawal_requests')
       .select('notes')
       .eq('user_id', user.id)
-      .eq('status', 'pending');
+      .in('status', ['pending', 'processing']);
 
     // Extract all earnings IDs that are in pending withdrawal requests
     const earningsInPendingRequests = new Set<string>();

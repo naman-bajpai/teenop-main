@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 // GET messages for a booking
 export async function GET(request: NextRequest) {
@@ -278,7 +278,13 @@ export async function POST(request: NextRequest) {
 
     // When user replies, mark all messages in this conversation sent to them as read (clears red bubble for this conversation)
     try {
-      await (supabase as any)
+      let db: ReturnType<typeof createServiceRoleClient> | Awaited<ReturnType<typeof createServerClient>>;
+      try {
+        db = createServiceRoleClient();
+      } catch {
+        db = supabase;
+      }
+      await (db as any)
         .from("messages")
         .update({ read_at: new Date().toISOString() })
         .eq("booking_id", booking_id)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 // POST to mark messages as read for a booking
 export async function POST(request: NextRequest) {
@@ -60,8 +60,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark all unread messages for this booking as read
-    const { error: updateError } = await (supabase as any)
+    // Mark all unread messages for this booking as read (service role avoids RLS blocking receiver updates)
+    let db: ReturnType<typeof createServiceRoleClient> | Awaited<ReturnType<typeof createServerClient>>;
+    try {
+      db = createServiceRoleClient();
+    } catch {
+      db = supabase;
+    }
+
+    const { error: updateError } = await (db as any)
       .from("messages")
       .update({ read_at: new Date().toISOString() })
       .eq("booking_id", booking_id)

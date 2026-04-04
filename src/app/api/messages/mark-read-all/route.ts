@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 // POST to mark all messages as read for the current user
 export async function POST(request: NextRequest) {
@@ -15,7 +15,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: updateError } = await (supabase as any)
+    // Use service role so updates succeed under RLS that may allow SELECT but not UPDATE for receivers
+    let db: ReturnType<typeof createServiceRoleClient> | Awaited<ReturnType<typeof createServerClient>>;
+    try {
+      db = createServiceRoleClient();
+    } catch {
+      db = supabase;
+    }
+
+    const { error: updateError } = await (db as any)
       .from("messages")
       .update({ read_at: new Date().toISOString() })
       .eq("receiver_id", user.id)
