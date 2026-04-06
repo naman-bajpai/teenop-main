@@ -168,7 +168,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
         )}
       >
         {/* ── Main row ── */}
-        <div className="flex items-center gap-2 px-3 py-2">
+        <div className="flex items-center gap-2 px-3 py-3">
 
           {/* Logo */}
           <Link
@@ -199,16 +199,16 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "relative inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium rounded-full transition-colors duration-200",
+                    "relative inline-flex items-center gap-1.5 px-3.5 py-2 text-[14px] font-semibold rounded-full transition-colors duration-200",
                     isActive(item.href)
                       ? "bg-black/[0.06] text-slate-900"
                       : "text-slate-500 hover:text-slate-900 hover:bg-black/[0.04]"
                   )}
                 >
-                  <item.icon className="h-3.5 w-3.5 shrink-0" />
+                  <item.icon className="h-4 w-4 shrink-0" />
                   {item.name}
                   {badge > 0 && (
-                    <span className="inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#E8634A] px-1 text-[10px] font-bold text-white leading-none">
+                    <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#E8634A] px-1 text-[10.5px] font-bold text-white leading-none">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}
@@ -254,10 +254,10 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                   </div>
                   {/* Name + role */}
                   <div className="min-w-0 pr-0.5">
-                    <p className="truncate text-[12.5px] font-semibold leading-tight text-slate-900">{displayName}</p>
-                    <p className="truncate text-[10.5px] leading-tight text-slate-400">{roleLabel}</p>
+                    <p className="truncate text-[13.5px] font-bold leading-tight text-slate-900">{displayName}</p>
+                    <p className="truncate text-[11px] leading-tight text-slate-400">{roleLabel}</p>
                   </div>
-                  <ChevronDown className={cn("h-3 w-3 shrink-0 text-slate-400 transition-transform duration-200", userMenuOpen && "rotate-180")} />
+                  <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200", userMenuOpen && "rotate-180")} />
                 </button>
 
                 {/* Dropdown */}

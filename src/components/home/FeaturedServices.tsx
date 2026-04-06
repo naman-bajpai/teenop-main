@@ -37,8 +37,8 @@ export default function FeaturedServices({ services }: FeaturedServicesProps) {
         {services.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-              {services.map((service) => (
-                <ServiceCard key={service.id} service={service} />
+              {services.map((service, index) => (
+                <ServiceCard key={service.id} service={service} index={index} />
               ))}
             </div>
             

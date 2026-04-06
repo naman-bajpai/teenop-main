@@ -54,7 +54,7 @@ export default function Navbar() {
         )}
       >
         {/* ── Main row ── */}
-        <div className="flex items-center gap-2 px-3 py-2">
+        <div className="flex items-center gap-2 px-3 py-3">
 
           {/* Logo */}
           <Link
@@ -83,7 +83,7 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "relative px-4 py-2 text-[13.5px] font-medium rounded-full transition-colors duration-200",
+                  "relative px-4 py-2 text-[14.5px] font-semibold rounded-full transition-colors duration-200",
                   isActive(link.href)
                     ? "text-slate-900 bg-black/[0.06]"
                     : "text-slate-500 hover:text-slate-900 hover:bg-black/[0.04]"
@@ -104,16 +104,16 @@ export default function Navbar() {
           <div className="hidden items-center gap-1 md:flex">
             <Link
               href="/login"
-              className="px-4 py-2 text-[13.5px] font-medium text-slate-500 rounded-full transition-colors hover:text-slate-900 hover:bg-black/[0.04]"
+              className="px-4 py-2 text-[14.5px] font-semibold text-slate-500 rounded-full transition-colors hover:text-slate-900 hover:bg-black/[0.04]"
             >
               Log in
             </Link>
             <Link
               href="/signup"
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#E8634A] px-5 py-2 text-[13.5px] font-semibold text-white transition-all duration-200 hover:bg-[#d45539] hover:-translate-y-px shadow-[0_0_16px_rgba(232,99,74,0.35)] hover:shadow-[0_0_24px_rgba(232,99,74,0.55)]"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#E8634A] px-5 py-2 text-[14.5px] font-bold text-white transition-all duration-200 hover:bg-[#d45539] hover:-translate-y-px shadow-[0_0_16px_rgba(232,99,74,0.35)] hover:shadow-[0_0_24px_rgba(232,99,74,0.55)]"
             >
               Join TeenOp
-              <ArrowRight className="h-3.5 w-3.5" />
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
 

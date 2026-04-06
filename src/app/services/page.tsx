@@ -362,8 +362,8 @@ export default function ServicesPage() {
                   "grid gap-8",
                   viewMode === "list" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
                 )}>
-                  {visibleServices.map((service) => (
-                    <ServiceCard key={service.id} service={service} />
+                  {visibleServices.map((service, index) => (
+                    <ServiceCard key={service.id} service={service} index={index} />
                   ))}
                 </div>
               ) : (
