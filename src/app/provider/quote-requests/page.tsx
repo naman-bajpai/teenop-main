@@ -31,6 +31,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useUser } from "@/hooks/useUser";
 import { useToast } from "@/components/ui/use-toast";
 import { QuoteRequest, Quote, CreateQuoteRequest } from "@/types/quote";
+import { getQuoteReferenceImageUrls } from "@/lib/quote-reference-images";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
@@ -493,6 +494,7 @@ function ProviderQuoteRequestCard({
   const customerName = quoteRequest.customer 
     ? `${quoteRequest.customer.first_name} ${quoteRequest.customer.last_name}`
     : "Customer";
+  const refImageUrls = getQuoteReferenceImageUrls(quoteRequest);
 
   return (
     <div className="group bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col h-full">
@@ -541,13 +543,18 @@ function ProviderQuoteRequestCard({
           </div>
         )}
 
-        {quoteRequest.image_url && (
-          <div className="mb-6 rounded-2xl overflow-hidden border border-gray-100">
+        {refImageUrls.length > 0 && (
+          <div className="mb-6 rounded-2xl overflow-hidden border border-gray-100 relative">
             <img
-              src={quoteRequest.image_url}
-              alt="Quote request"
+              src={refImageUrls[0]}
+              alt=""
               className="w-full h-32 object-cover transition-transform duration-500 group-hover:scale-110"
             />
+            {refImageUrls.length > 1 && (
+              <span className="absolute bottom-2 right-2 rounded-lg bg-black/70 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1">
+                +{refImageUrls.length - 1}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -625,6 +632,7 @@ function QuoteRequestDetailsDialog({
   const customerName = quoteRequest.customer 
     ? `${quoteRequest.customer.first_name} ${quoteRequest.customer.last_name}`
     : "Customer";
+  const refImageUrls = getQuoteReferenceImageUrls(quoteRequest);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -711,8 +719,8 @@ function QuoteRequestDetailsDialog({
               </section>
             )}
 
-            {/* Image Section */}
-            {quoteRequest.image_url && (
+            {/* Reference images */}
+            {refImageUrls.length > 0 && (
               <section className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-gray-50">
                   <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -720,12 +728,22 @@ function QuoteRequestDetailsDialog({
                   </div>
                   <h3 className="text-lg font-black text-gray-900 uppercase tracking-widest text-[14px]">Attached Visuals</h3>
                 </div>
-                <div className="rounded-[32px] overflow-hidden border border-gray-100 shadow-lg">
-                  <img
-                    src={quoteRequest.image_url}
-                    alt="Quote request"
-                    className="w-full max-h-96 object-cover"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {refImageUrls.map((url, i) => (
+                    <a
+                      key={`${url}-${i}`}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-[32px] overflow-hidden border border-gray-100 shadow-lg block hover:opacity-95 transition-opacity"
+                    >
+                      <img
+                        src={url}
+                        alt={`Reference ${i + 1}`}
+                        className="w-full max-h-72 object-cover"
+                      />
+                    </a>
+                  ))}
                 </div>
               </section>
             )}

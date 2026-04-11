@@ -8,6 +8,8 @@ export interface ServiceImage {
   id?: string;
   url: string;
   is_primary?: boolean;
+  /** Set for local previews before the service exists; used to upload after create */
+  file?: File;
 }
 
 interface MultiImageUploadProps {
@@ -68,10 +70,11 @@ export default function MultiImageUpload({
       // If serviceId is "new" or empty, we'll store images temporarily
       // They'll be uploaded after service creation
       if (!serviceId || serviceId === "new") {
-        // Create preview URLs for temporary display
-        const previewImages: ServiceImage[] = files.map(file => ({
+        // Create preview URLs for temporary display; keep File for post-create upload
+        const previewImages: ServiceImage[] = files.map((file, idx) => ({
           url: URL.createObjectURL(file),
-          is_primary: images.length === 0 && file === files[0]
+          is_primary: images.length === 0 && idx === 0,
+          file,
         }));
         
         // Store the actual files for later upload

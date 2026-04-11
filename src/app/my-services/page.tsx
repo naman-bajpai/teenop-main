@@ -285,7 +285,7 @@ export default function MyServicesPage() {
   const [location, setLocation] = useState("Online");
   const [category, setCategory] = useState("tutoring");
   const [status, setStatus] = useState<"active" | "paused">("active");
-  const [duration, setDuration] = useState<number>(60);
+  const [durationHours, setDurationHours] = useState<number>(1);
   const [education, setEducation] = useState("");
   const [qualifications, setQualifications] = useState("");
   const [address, setAddress] = useState("");
@@ -351,7 +351,7 @@ export default function MyServicesPage() {
     setLocation("Online");
     setCategory("tutoring");
     setStatus("active");
-    setDuration(60);
+    setDurationHours(1);
     setEducation("");
     setQualifications("");
     setAddress("");
@@ -373,7 +373,7 @@ export default function MyServicesPage() {
     setLocation(service.location);
     setCategory(service.category);
     setStatus(service.status);
-    setDuration(service.duration || 60);
+    setDurationHours((service.duration || 60) / 60);
     setEducation(service.education || "");
     setQualifications(service.qualifications || "");
     setAddress(service.address || "");
@@ -397,7 +397,7 @@ export default function MyServicesPage() {
         location,
         category,
         status,
-        duration,
+        duration: Math.max(15, Math.round(durationHours * 60)),
         education,
         qualifications,
         address,
@@ -422,19 +422,40 @@ export default function MyServicesPage() {
       const data = await res.json();
       const savedService = data.service;
 
-      if (serviceImages.length > 0) {
-        const primaryImage = serviceImages.find(img => img.is_primary) || serviceImages[0];
-        const otherImages = serviceImages.filter(img => img.id !== primaryImage.id);
-        const imagesToSave = [
-          { ...primaryImage, is_primary: true },
-          ...otherImages.map(img => ({ ...img, is_primary: false }))
-        ];
+      // Pending local previews (create flow): /api/services/[id]/image only signs uploads;
+      // real uploads go through FormData on /api/services/images.
+      const primaryImage =
+        serviceImages.find((img) => img.is_primary) || serviceImages[0];
+      const otherImages = primaryImage
+        ? serviceImages.filter((img) => img !== primaryImage)
+        : [];
+      const orderedForUpload = primaryImage
+        ? [primaryImage, ...otherImages]
+        : [];
+      const pendingWithFiles = orderedForUpload.filter(
+        (img) =>
+          img.file &&
+          typeof img.url === "string" &&
+          img.url.startsWith("blob:")
+      );
 
-        await fetch(`/api/services/${savedService.id}/image`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ images: imagesToSave }),
+      if (pendingWithFiles.length > 0) {
+        const formData = new FormData();
+        formData.append("service_id", savedService.id);
+        pendingWithFiles.forEach((img) => {
+          if (img.file) formData.append("images", img.file);
         });
+
+        const imgRes = await fetch("/api/services/images", {
+          method: "POST",
+          body: formData,
+        });
+        const imgJson = await imgRes.json().catch(() => ({}));
+        if (!imgRes.ok) {
+          throw new Error(
+            imgJson.error || "Failed to upload service images. Try editing the service to add them."
+          );
+        }
       }
 
       toast({ title: `Service ${editingService ? 'updated' : 'added'}!`, description: `${title} is now ${status}.` });
@@ -825,11 +846,13 @@ export default function MyServicesPage() {
                     </div>
                   )}
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Duration (Minutes)</Label>
+                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Duration (Hours)</Label>
                     <Input
                       type="number"
-                      value={duration}
-                      onChange={(e) => setDuration(Number(e.target.value))}
+                      min={0.25}
+                      step={0.25}
+                      value={durationHours}
+                      onChange={(e) => setDurationHours(Number(e.target.value))}
                       className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all font-bold"
                     />
                   </div>

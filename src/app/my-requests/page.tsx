@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -128,6 +128,8 @@ export default function MyRequestsPage() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedBookingForReview, setSelectedBookingForReview] = useState<Booking | null>(null);
   const [completedBookingsForReview, setCompletedBookingsForReview] = useState<Booking[]>([]);
+  const [openingQuoteMessageId, setOpeningQuoteMessageId] = useState<string | null>(null);
+  const quoteMessageNavInFlight = useRef(false);
 
   useEffect(() => {
     if (user) {
@@ -362,6 +364,46 @@ export default function MyRequestsPage() {
         description: "Failed to open messages. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleMessageQuoteRequest = async (qr: { id: string; booking_id?: string | null }) => {
+    if (quoteMessageNavInFlight.current) return;
+    quoteMessageNavInFlight.current = true;
+    setOpeningQuoteMessageId(qr.id);
+    try {
+      let bookingId = qr.booking_id ?? null;
+      if (!bookingId) {
+        const response = await fetch(`/api/quotes/request/${qr.id}/booking`, { cache: "no-store" });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.booking_id) bookingId = data.booking_id;
+        }
+      }
+      if (bookingId) {
+        router.push(`/messages?booking_id=${bookingId}`);
+        toast({
+          title: "Opening Messages",
+          description: "Your conversation with the provider will open in messages.",
+        });
+      } else {
+        router.push("/messages");
+        toast({
+          title: "Messages",
+          description: "Select your conversation from the list if it does not open automatically.",
+        });
+      }
+    } catch (e) {
+      console.error("Error opening quote request messages:", e);
+      router.push("/messages");
+      toast({
+        title: "Error",
+        description: "Failed to open messages. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      quoteMessageNavInFlight.current = false;
+      setOpeningQuoteMessageId(null);
     }
   };
 
@@ -699,10 +741,16 @@ export default function MyRequestsPage() {
                             </Button>
                             <Button
                               variant="outline"
-                              className="rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11"
-                              onClick={() => router.push(`/messages`)}
+                              disabled={openingQuoteMessageId === qr.id}
+                              className="rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11 disabled:opacity-50"
+                              onClick={() => handleMessageQuoteRequest(qr)}
                             >
-                              <MessageCircle className="w-4 h-4 mr-2" /> Message
+                              {openingQuoteMessageId === qr.id ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <MessageCircle className="w-4 h-4 mr-2" />
+                              )}
+                              Message
                             </Button>
                             {(pastDue || qr.status === "pending" || qr.status === "quoted") && (
                               <Button

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
+import { parseStoredQuoteImageUrls, serializeQuoteImageUrls } from "@/lib/quote-reference-images";
 
 type QuoteRequestsUpdate = Database["public"]["Tables"]["quote_requests"]["Update"] & {
   image_url?: string | null;
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     // Verify user has access to this quote request
     const { data: quoteRequest, error: qrError } = await supabase
       .from("quote_requests")
-      .select("customer_id")
+      .select("customer_id, image_url")
       .eq("id" as any, quoteRequestId as any)
       .single();
 
@@ -101,9 +102,10 @@ export async function POST(request: NextRequest) {
       .from('service-images')
       .getPublicUrl(filePath);
 
-    // Update quote request with image URL
+    const existingUrls = parseStoredQuoteImageUrls((quoteRequest as { image_url?: string | null }).image_url);
+    const nextUrls = [...existingUrls, publicUrl];
     const updatePayload: QuoteRequestsUpdate = {
-      image_url: publicUrl
+      image_url: serializeQuoteImageUrls(nextUrls),
     };
     const quoteRequestQuery = supabase.from("quote_requests");
     const { error: updateError } = await (quoteRequestQuery as any)

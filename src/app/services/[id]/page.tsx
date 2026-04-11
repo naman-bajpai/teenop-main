@@ -44,10 +44,14 @@ export default function ServiceDetailsPage() {
     special_instructions: "",
     service_address: "",
   });
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const MAX_REFERENCE_IMAGES = 8;
+  const [selectedReferenceImages, setSelectedReferenceImages] = useState<
+    { file: File; preview: string }[]
+  >([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const referencePreviewsRef = React.useRef(selectedReferenceImages);
+  referencePreviewsRef.current = selectedReferenceImages;
 
   const [bookingForm, setBookingForm] = useState<CreateBookingRequest>({
     service_id: "",
@@ -93,14 +97,11 @@ export default function ServiceDetailsPage() {
     checkBooking();
   }, [serviceId, user]);
 
-  // Cleanup image preview URL on unmount
   useEffect(() => {
     return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
+      referencePreviewsRef.current.forEach((item) => URL.revokeObjectURL(item.preview));
     };
-  }, [imagePreview]);
+  }, []);
 
   const fetchServiceDetails = async (id: string) => {
     try {
@@ -280,35 +281,66 @@ export default function ServiceDetailsPage() {
     }
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleReferenceImagesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert("Please select an image file");
+    const valid: File[] = [];
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        toast({ title: "Invalid file", description: `${file.name} is not an image.`, variant: "destructive" });
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: "File too large", description: `${file.name} must be under 5MB.`, variant: "destructive" });
+        continue;
+      }
+      valid.push(file);
+    }
+
+    if (valid.length === 0) {
+      e.target.value = "";
       return;
     }
 
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File size must be less than 5MB");
-      return;
-    }
-
-    setSelectedImage(file);
-    setImagePreview(URL.createObjectURL(file));
+    setSelectedReferenceImages((prev) => {
+      const room = MAX_REFERENCE_IMAGES - prev.length;
+      if (room <= 0) {
+        toast({
+          title: "Limit reached",
+          description: `You can add up to ${MAX_REFERENCE_IMAGES} reference images.`,
+          variant: "destructive",
+        });
+        return prev;
+      }
+      const toAdd = valid.slice(0, room);
+      if (valid.length > room) {
+        toast({
+          title: "Some images skipped",
+          description: `Only ${room} more image(s) allowed (max ${MAX_REFERENCE_IMAGES}).`,
+        });
+      }
+      return [...prev, ...toAdd.map((file) => ({ file, preview: URL.createObjectURL(file) }))];
+    });
+    e.target.value = "";
   };
 
-  const removeImage = () => {
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-    }
-    setSelectedImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+  const removeReferenceImage = (index: number) => {
+    setSelectedReferenceImages((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(index, 1);
+      if (removed) URL.revokeObjectURL(removed.preview);
+      return next;
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const clearReferenceImages = () => {
+    setSelectedReferenceImages((prev) => {
+      prev.forEach((item) => URL.revokeObjectURL(item.preview));
+      return [];
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleQuoteRequest = async (e?: React.FormEvent) => {
@@ -332,99 +364,61 @@ export default function ServiceDetailsPage() {
 
     try {
       setQuoteRequestLoading(true);
-      let imageUrl = null;
 
-      // Upload image if selected
-      if (selectedImage) {
-        setUploadingImage(true);
-        // First create the quote request to get an ID
-        const tempResponse = await fetch("/api/quotes/request", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            service_id: service.id,
-            requested_date: quoteRequestForm.requested_date,
-            requested_time: quoteRequestForm.requested_time,
-            special_instructions: quoteRequestForm.special_instructions || undefined,
-            service_address: quoteRequestForm.service_address || undefined,
-          }),
-        });
+      const response = await fetch("/api/quotes/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service_id: service.id,
+          requested_date: quoteRequestForm.requested_date,
+          requested_time: quoteRequestForm.requested_time,
+          special_instructions: quoteRequestForm.special_instructions || undefined,
+          service_address: quoteRequestForm.service_address || undefined,
+        }),
+      });
 
-        const tempResult = await tempResponse.json();
+      const result = await response.json();
 
-        if (!tempResponse.ok || !tempResult?.success) {
-          throw new Error(tempResult?.error || "Failed to create quote request");
-        }
-
-        const quoteRequestId = tempResult.quote_request.id;
-
-        // Upload image
-        const formData = new FormData();
-        formData.append('file', selectedImage);
-        formData.append('quote_request_id', quoteRequestId);
-
-        const uploadResponse = await fetch("/api/quotes/request/upload-image", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json();
-          throw new Error(errorData.error || "Failed to upload image");
-        }
-
-        const uploadData = await uploadResponse.json();
-        imageUrl = uploadData.url;
-        setUploadingImage(false);
-
-        setQuoteRequestSuccess(true);
-        setQuoteRequestForm({
-          requested_date: "",
-          requested_time: "",
-          special_instructions: "",
-          service_address: "",
-        });
-        removeImage();
-
-        setTimeout(() => {
-          setIsQuoteDialogOpen(false);
-          setQuoteRequestSuccess(false);
-          router.push("/my-quote-requests");
-        }, 2000);
-      } else {
-        // No image, create quote request normally
-        const response = await fetch("/api/quotes/request", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            service_id: service.id,
-            requested_date: quoteRequestForm.requested_date,
-            requested_time: quoteRequestForm.requested_time,
-            special_instructions: quoteRequestForm.special_instructions || undefined,
-            service_address: quoteRequestForm.service_address || undefined,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok || !result?.success) {
-          throw new Error(result?.error || "Failed to create quote request");
-        }
-
-        setQuoteRequestSuccess(true);
-        setQuoteRequestForm({
-          requested_date: "",
-          requested_time: "",
-          special_instructions: "",
-          service_address: "",
-        });
-
-        setTimeout(() => {
-          setIsQuoteDialogOpen(false);
-          setQuoteRequestSuccess(false);
-          router.push("/my-quote-requests");
-        }, 2000);
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error || "Failed to create quote request");
       }
+
+      const quoteRequestId = result.quote_request.id as string;
+
+      if (selectedReferenceImages.length > 0) {
+        setUploadingImage(true);
+        for (const { file } of selectedReferenceImages) {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("quote_request_id", quoteRequestId);
+
+          const uploadResponse = await fetch("/api/quotes/request/upload-image", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json().catch(() => ({}));
+            throw new Error((errorData as { error?: string }).error || "Failed to upload a reference image");
+          }
+        }
+        setUploadingImage(false);
+      }
+
+      setQuoteRequestSuccess(true);
+      setQuoteRequestForm({
+        requested_date: "",
+        requested_time: "",
+        special_instructions: "",
+        service_address: "",
+      });
+      clearReferenceImages();
+
+      setTimeout(() => {
+        setIsQuoteDialogOpen(false);
+        setQuoteRequestSuccess(false);
+        router.push("/my-quote-requests");
+      }, 2000);
     } catch (err: any) {
       console.error("Error creating quote request:", err);
       toast({
@@ -890,33 +884,53 @@ export default function ServiceDetailsPage() {
                                   </div>
 
                                   <div className="space-y-2">
-                                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Reference Images</Label>
-                                    <div className="flex items-center gap-4">
-                                      {imagePreview ? (
-                                        <div className="relative group">
-                                          <img src={imagePreview} className="w-24 h-24 rounded-2xl object-cover shadow-md" />
-                                          <button onClick={removeImage} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                      Reference images (optional, up to {MAX_REFERENCE_IMAGES})
+                                    </Label>
+                                    <div className="flex flex-wrap items-start gap-3">
+                                      {selectedReferenceImages.map((item, index) => (
+                                        <div key={`${item.preview}-${index}`} className="relative group">
+                                          <img src={item.preview} alt="" className="w-24 h-24 rounded-2xl object-cover shadow-md" />
+                                          <button
+                                            type="button"
+                                            onClick={() => removeReferenceImage(index)}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                            aria-label="Remove image"
+                                          >
                                             <X className="w-3 h-3" />
                                           </button>
                                         </div>
-                                      ) : (
+                                      ))}
+                                      {selectedReferenceImages.length < MAX_REFERENCE_IMAGES && (
                                         <button
                                           type="button"
                                           onClick={() => fileInputRef.current?.click()}
-                                          className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 hover:border-[#434c9d] hover:text-[#434c9d] transition-all"
+                                          className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 hover:border-[#434c9d] hover:text-[#434c9d] transition-all shrink-0"
                                         >
                                           <ImageIcon className="w-6 h-6 mb-1" />
-                                          <span className="text-[8px] font-black uppercase">Add Photo</span>
+                                          <span className="text-[8px] font-black uppercase text-center px-1">Add photos</span>
                                         </button>
                                       )}
-                                      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+                                      <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        className="hidden"
+                                        onChange={handleReferenceImagesSelect}
+                                      />
                                     </div>
+                                    <p className="text-xs text-gray-400 font-medium">PNG, JPG, or WebP · max 5MB each</p>
                                   </div>
 
                                   <div className="flex gap-4 pt-4">
                                     <Button type="button" variant="ghost" onClick={() => setIsQuoteDialogOpen(false)} className="flex-1 h-14 rounded-2xl font-bold">Cancel</Button>
-                                    <Button type="submit" disabled={quoteRequestLoading} className="flex-1 h-14 bg-[#434c9d] text-white rounded-2xl font-bold shadow-lg shadow-[#434c9d]/20">
-                                      {quoteRequestLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send Request"}
+                                    <Button type="submit" disabled={quoteRequestLoading || uploadingImage} className="flex-1 h-14 bg-[#434c9d] text-white rounded-2xl font-bold shadow-lg shadow-[#434c9d]/20">
+                                      {quoteRequestLoading || uploadingImage ? (
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                      ) : (
+                                        "Send Request"
+                                      )}
                                     </Button>
                                   </div>
                                 </form>

@@ -6,7 +6,10 @@ export interface QuoteRequest {
   requested_date: string | null;
   requested_time: string | null;
   special_instructions: string | null;
+  /** Single URL, or JSON array string of URLs (see `getQuoteReferenceImageUrls`). */
   image_url: string | null;
+  /** When present (DB column), list of reference image public URLs. */
+  reference_image_urls?: string[] | null;
   service_address: string | null;
   booking_id: string | null;
   created_at: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,6 +27,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useUser } from "@/hooks/useUser";
 import { useToast } from "@/components/ui/use-toast";
 import { QuoteRequest, Quote } from "@/types/quote";
+import { getQuoteReferenceImageUrls } from "@/lib/quote-reference-images";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 function getStatusConfig(status: string) {
@@ -86,6 +87,32 @@ export default function MyQuoteRequestsPage() {
   const [selectedQuoteRequest, setSelectedQuoteRequest] = useState<QuoteRequest | null>(null);
   const [acceptingQuote, setAcceptingQuote] = useState<string | null>(null);
   const [rejectingQuote, setRejectingQuote] = useState<string | null>(null);
+  const [openingMessageQuoteId, setOpeningMessageQuoteId] = useState<string | null>(null);
+  const messageNavInFlight = useRef(false);
+
+  const openMessagesForQuoteRequest = async (qr: QuoteRequest) => {
+    if (messageNavInFlight.current) return;
+    messageNavInFlight.current = true;
+    setOpeningMessageQuoteId(qr.id);
+    try {
+      let bookingId = qr.booking_id;
+      if (!bookingId) {
+        const response = await fetch(`/api/quotes/request/${qr.id}/booking`, { cache: "no-store" });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.booking_id) bookingId = data.booking_id;
+        }
+      }
+      if (bookingId) router.push(`/messages?booking_id=${bookingId}`);
+      else router.push("/messages");
+    } catch (e) {
+      console.error("Error opening messages for quote request:", e);
+      router.push("/messages");
+    } finally {
+      messageNavInFlight.current = false;
+      setOpeningMessageQuoteId(null);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -289,7 +316,8 @@ export default function MyQuoteRequestsPage() {
                         formatTime={formatTime}
                         formatPrice={formatPrice}
                         onViewDetails={() => setSelectedQuoteRequest(qr)}
-                        onMessage={() => router.push("/messages")}
+                        onMessage={() => openMessagesForQuoteRequest(qr)}
+                        messageLoading={openingMessageQuoteId === qr.id}
                         onAcceptQuote={qr.quotes && qr.quotes.length > 0 ? () => handleAcceptQuote(qr.quotes![0].id) : undefined}
                         onRejectQuote={qr.quotes && qr.quotes.length > 0 ? () => handleRejectQuote(qr.quotes![0].id) : undefined}
                         acceptingQuote={acceptingQuote}
@@ -322,7 +350,8 @@ export default function MyQuoteRequestsPage() {
                         formatTime={formatTime}
                         formatPrice={formatPrice}
                         onViewDetails={() => setSelectedQuoteRequest(qr)}
-                        onMessage={() => router.push("/messages")}
+                        onMessage={() => openMessagesForQuoteRequest(qr)}
+                        messageLoading={openingMessageQuoteId === qr.id}
                         onRejectQuote={qr.quotes && qr.quotes.length > 0 ? () => handleRejectQuote(qr.quotes![0].id) : undefined}
                         rejectingQuote={rejectingQuote}
                       />
@@ -353,7 +382,8 @@ export default function MyQuoteRequestsPage() {
                         formatTime={formatTime}
                         formatPrice={formatPrice}
                         onViewDetails={() => setSelectedQuoteRequest(qr)}
-                        onMessage={() => router.push("/messages")}
+                        onMessage={() => openMessagesForQuoteRequest(qr)}
+                        messageLoading={openingMessageQuoteId === qr.id}
                         onRejectQuote={qr.quotes && qr.quotes.length > 0 ? () => handleRejectQuote(qr.quotes![0].id) : undefined}
                         rejectingQuote={rejectingQuote}
                       />
@@ -400,6 +430,7 @@ function QuoteRequestCard({
   formatPrice,
   onViewDetails,
   onMessage,
+  messageLoading,
   onAcceptQuote,
   onRejectQuote,
   acceptingQuote,
@@ -412,6 +443,7 @@ function QuoteRequestCard({
   formatPrice: (price: number) => string;
   onViewDetails: () => void;
   onMessage: () => void;
+  messageLoading?: boolean;
   onAcceptQuote?: () => void;
   onRejectQuote?: () => void;
   acceptingQuote?: string | null;
@@ -420,6 +452,7 @@ function QuoteRequestCard({
   const hasQuote = quoteRequest.quotes && quoteRequest.quotes.length > 0;
   const quote = hasQuote ? quoteRequest.quotes![0] : null;
   const canRespondToQuote = !!quote && quote.status === "pending";
+  const refImageUrls = getQuoteReferenceImageUrls(quoteRequest);
 
   return (
     <div className="group relative bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#434c9d]/30 hover:shadow-xl transition-all duration-300">
@@ -470,13 +503,18 @@ function QuoteRequestCard({
           </div>
         )}
 
-        {quoteRequest.image_url && (
-          <div className="mb-4">
+        {refImageUrls.length > 0 && (
+          <div className="mb-4 relative rounded-xl overflow-hidden border border-gray-200">
             <img
-              src={quoteRequest.image_url}
-              alt="Quote request"
-              className="w-full h-32 object-cover rounded-xl border border-gray-200"
+              src={refImageUrls[0]}
+              alt=""
+              className="w-full h-32 object-cover"
             />
+            {refImageUrls.length > 1 && (
+              <span className="absolute bottom-2 right-2 rounded-lg bg-black/70 text-white text-xs font-bold px-2 py-1">
+                +{refImageUrls.length - 1} more
+              </span>
+            )}
           </div>
         )}
 
@@ -538,9 +576,14 @@ function QuoteRequestCard({
             size="sm"
             variant="outline"
             onClick={onMessage}
-            className="flex-1 min-w-[100px] border-2 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm"
+            disabled={messageLoading}
+            className="flex-1 min-w-[100px] border-2 border-[#434c9d] text-[#434c9d] hover:bg-[#434c9d] hover:text-white text-xs sm:text-sm disabled:opacity-50"
           >
-            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            {messageLoading ? (
+              <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin" />
+            ) : (
+              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            )}
             Message
           </Button>
         </div>
@@ -577,6 +620,7 @@ function QuoteRequestDetailsDialog({
   const hasQuote = quoteRequest.quotes && quoteRequest.quotes.length > 0;
   const quote = hasQuote ? quoteRequest.quotes![0] : null;
   const canRespondToQuote = !!quote && quote.status === "pending";
+  const refImageUrls = getQuoteReferenceImageUrls(quoteRequest);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -724,15 +768,27 @@ function QuoteRequestDetailsDialog({
             </div>
           )}
 
-          {/* Image */}
-          {quoteRequest.image_url && (
+          {/* Reference images */}
+          {refImageUrls.length > 0 && (
             <div>
-              <p className="text-sm font-semibold text-gray-900 mb-2">Attached Image</p>
-              <img
-                src={quoteRequest.image_url}
-                alt="Quote request"
-                className="w-full max-h-64 object-cover rounded-xl border border-gray-200"
-              />
+              <p className="text-sm font-semibold text-gray-900 mb-2">Reference images</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {refImageUrls.map((url, i) => (
+                  <a
+                    key={`${url}-${i}`}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-xl overflow-hidden border border-gray-200 hover:opacity-90 transition-opacity"
+                  >
+                    <img
+                      src={url}
+                      alt={`Reference ${i + 1}`}
+                      className="w-full h-36 object-cover"
+                    />
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 
