@@ -3,9 +3,13 @@ import { createClient, createAdminClient } from '@/lib/supabase';
 import { emailService } from '@/lib/email';
 import { smsService } from '@/lib/sms';
 import { randomBytes } from 'crypto';
+import { enforceAuthRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
+    const limited = enforceAuthRateLimit(request, 'signup');
+    if (limited) return limited;
+
     const { email, password, firstName, lastName, age, role, phone, parentEmail, parentPhone, parentPermission } = await request.json();
     
     console.log('Signup attempt for:', { email, firstName, lastName, age, role });

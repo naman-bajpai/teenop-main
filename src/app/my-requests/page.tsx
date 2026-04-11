@@ -494,6 +494,14 @@ export default function MyRequestsPage() {
     qr.status === "pending" || qr.status === "quoted"
   );
 
+  /** Payment due or provider offered a new time — show Pending tab attention bubble */
+  const pendingTabNeedsAttention = pendingBookings.some(
+    (b) =>
+      b.status === "confirmed" ||
+      (b.status === "alternative_proposed" &&
+        Boolean(b.alternative_date && b.alternative_time))
+  );
+
   // Calculate stats
   const totalSpent = bookings
     .filter(booking => booking.status === "paid" || booking.status === "completed")
@@ -627,12 +635,12 @@ export default function MyRequestsPage() {
                     value={tab.value}
                     className={cn(
                       "rounded-xl px-6 py-3 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all relative",
-                      tab.value === "pending" && pendingBookings.some(b => b.status === "confirmed") && "pr-8"
+                      tab.value === "pending" && pendingTabNeedsAttention && "pr-8"
                     )}
                   >
                     {tab.label}
                     <span className={cn("ml-2 px-2 py-0.5 rounded-lg bg-current/10 opacity-50", tab.color)}>{tab.count}</span>
-                    {tab.value === "pending" && pendingBookings.some(b => b.status === "confirmed") && (
+                    {tab.value === "pending" && pendingTabNeedsAttention && (
                       <span className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                     )}
                   </TabsTrigger>

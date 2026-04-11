@@ -3,12 +3,19 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { FEATURE_FLAGS } from "@/lib/feature-flags";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function LoginPage() {
   // Wrap the hook-using component in Suspense to satisfy Next.js
@@ -38,64 +45,24 @@ function LoginInner() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const [lastAttemptTime, setLastAttemptTime] = useState<number | null>(null);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [submitLock, setSubmitLock] = useState(false);
+  const [rateLimitOpen, setRateLimitOpen] = useState(false);
+  const [rateLimitMessage, setRateLimitMessage] = useState("");
 
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
 
-  // Countdown timer effect
-  useEffect(() => {
-    if (countdown && countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (countdown === 0) {
-      setCountdown(null);
-      setError("");
-    }
-  }, [countdown]);
-
-  // Helper function to check if we should wait before retrying
-  const shouldWaitForRetry = () => {
-    if (!lastAttemptTime) return false;
-    const timeSinceLastAttempt = Date.now() - lastAttemptTime;
-    // Longer wait time for rate limit scenarios
-    const waitTime = Math.min(1000 * Math.pow(2, retryCount), 60000); // Max 60 seconds
-    return timeSinceLastAttempt < waitTime;
-  };
-
-  // Helper function to check if error is a rate limit error
-  const isRateLimitError = (error: any) => {
-    const errorMessage = error?.message?.toLowerCase() || "";
-    const errorStatus = error?.status || error?.code;
-    
-    return (
-      errorMessage.includes("rate limit") ||
-      errorMessage.includes("too many requests") ||
-      errorStatus === 429 ||
-      errorStatus === "429" ||
-      error?.name === "AuthApiError" && (errorMessage.includes("rate") || errorStatus === 429)
-    );
-  };
-
-  // Helper function to get user-friendly error message
-  const getErrorMessage = (error: any) => {
-    if (isRateLimitError(error)) {
-      return "Too many login attempts. Please wait a moment and try again.";
-    }
-    if (error?.message?.includes("Invalid login credentials")) {
+  const mapApiLoginError = (msg: string) => {
+    const m = (msg || "").toLowerCase();
+    if (m.includes("invalid login credentials") || m.includes("invalid email or password")) {
       return "Invalid email or password. Please check your credentials and try again.";
     }
-    if (error?.message?.includes("Email not confirmed")) {
+    if (m.includes("email not confirmed")) {
       return "Please check your email and click the confirmation link before signing in.";
     }
-    if (error?.message?.includes("User not found")) {
+    if (m.includes("user not found")) {
       return "No account found with this email address. Please sign up first.";
     }
-    return error?.message || "Login failed. Please try again.";
+    return msg || "Login failed. Please try again.";
   };
 
   // Validation functions
@@ -180,139 +147,73 @@ function LoginInner() {
       return;
     }
     
-    // Check if we should wait before retrying
-    if (shouldWaitForRetry()) {
-      const timeSinceLastAttempt = Date.now() - (lastAttemptTime || 0);
-      const waitTime = Math.min(1000 * Math.pow(2, retryCount), 60000);
-      const remainingTime = Math.ceil((waitTime - timeSinceLastAttempt) / 1000);
-      setCountdown(remainingTime);
-      setError(`Please wait ${remainingTime} seconds before trying again.`);
-      return;
-    }
-
-    // Minimum delay between requests (1 second) to prevent rapid submissions
-    const minDelay = 1000;
-    if (lastAttemptTime) {
-      const timeSinceLastAttempt = Date.now() - lastAttemptTime;
-      if (timeSinceLastAttempt < minDelay) {
-        const remaining = Math.ceil((minDelay - timeSinceLastAttempt) / 1000);
-        setError(`Please wait ${remaining} second${remaining !== 1 ? 's' : ''} before trying again.`);
-        return;
-      }
-    }
-
     setSubmitLock(true);
     setIsSubmitting(true);
     setError("");
     setFieldErrors({});
-    setLastAttemptTime(Date.now());
 
     try {
-      const supabase = createClient();
-      console.log("Attempting login for:", formData.email);
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
+      const res = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
       });
 
-      console.log("Login response:", { data, error });
+      const result = await res.json().catch(() => ({}));
 
-      if (error) {
-        console.error("Login error:", error);
-        console.error("Error details:", {
-          message: error.message,
-          status: error.status,
-          code: error.code,
-          name: error.name,
-        });
-        
-        // Handle rate limiting specifically
-        if (isRateLimitError(error)) {
-          setRetryCount(prev => prev + 1);
-          const waitTime = Math.min(1000 * Math.pow(2, retryCount + 1), 60000); // Max 60 seconds for rate limits
-          const remainingTime = Math.ceil(waitTime / 1000);
-          setCountdown(remainingTime);
-          setError(getErrorMessage(error));
-          setIsSubmitting(false);
-          return;
-        }
-        
-        // Reset retry count for non-rate-limit errors
-        setRetryCount(0);
-        setError(getErrorMessage(error));
-        setIsSubmitting(false);
+      if (res.status === 429) {
+        setRateLimitMessage(
+          typeof result.error === "string"
+            ? result.error
+            : "Too many sign-in attempts. Please wait and try again."
+        );
+        setRateLimitOpen(true);
         return;
       }
 
-      // Reset retry count on successful login
-      setRetryCount(0);
-
-      if (data.user) {
-        console.log("User authenticated:", data.user.id);
-
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", data.user.id)
-          .single();
-
-        console.log("Profile fetch result:", { profile, profileError });
-
-        if (profileError || !profile) {
-          console.error("Profile error:", profileError);
-          setError("User profile not found. Please contact support.");
-          setIsSubmitting(false);
-          return;
-        }
-
-        if (profile.status === "pending_verification" && profile.role === "teen") {
-          setError("Pending Approval: your parent or guardian still needs to approve your TeenOp account before it can go live.");
-          router.push("/pending-approval");
-          setIsSubmitting(false);
-          return;
-        }
-
-        if (data.session) {
-          await supabase.auth.setSession(data.session);
-          console.log("Session persisted successfully");
-          
-          // Wait a bit to ensure cookies are set before redirecting
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-
-        console.log("Login successful, redirecting to:", redirectTo);
-        
-        // Store current pathname to check if redirect worked
-        const currentPath = window.location.pathname;
-        
-        // Use router.push for client-side navigation
-        router.push(redirectTo);
-        
-        // Fallback to window.location if router doesn't work
-        // This ensures redirect happens even if router.push fails
-        setTimeout(() => {
-          // Check if we're still on the login page (redirect didn't work)
-          if (window.location.pathname === currentPath || window.location.pathname === '/login') {
-            console.log("Router push may have failed, using window.location fallback");
-            window.location.href = redirectTo;
-          }
-        }, 500);
+      if (!res.ok) {
+        setError(mapApiLoginError(typeof result.error === "string" ? result.error : ""));
+        return;
       }
-    } catch (err: any) {
-      console.error("Login exception:", err);
-      
-      // Check if it's a rate limit error in the catch block too
-      if (isRateLimitError(err)) {
-        setRetryCount(prev => prev + 1);
-        const waitTime = Math.min(1000 * Math.pow(2, retryCount + 1), 60000);
-        const remainingTime = Math.ceil(waitTime / 1000);
-        setCountdown(remainingTime);
-        setError(getErrorMessage(err));
-      } else {
-        setRetryCount(prev => prev + 1);
-        setError("An unexpected error occurred. Please try again.");
+
+      const supabase = createClient();
+      const profile = result.user;
+      const session = result.session;
+
+      if (!profile) {
+        setError("User profile not found. Please contact support.");
+        return;
       }
+
+      if (profile.status === "pending_verification" && profile.role === "teen") {
+        setError(
+          "Pending Approval: your parent or guardian still needs to approve your TeenOp account before it can go live."
+        );
+        if (session) {
+          await supabase.auth.setSession(session);
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        router.push("/pending-approval");
+        return;
+      }
+
+      if (session) {
+        await supabase.auth.setSession(session);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      const currentPath = window.location.pathname;
+      router.push(redirectTo);
+      setTimeout(() => {
+        if (window.location.pathname === currentPath || window.location.pathname === "/login") {
+          window.location.href = redirectTo;
+        }
+      }, 500);
+    } catch {
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
       // Release lock after a minimum delay
@@ -355,9 +256,6 @@ function LoginInner() {
                 <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
                 <div>
                   <span className="text-sm text-red-700">{error}</span>
-                  {countdown && countdown > 0 && (
-                    <div className="mt-1 text-xs text-red-500">Retry in {countdown}s</div>
-                  )}
                 </div>
               </div>
             )}
@@ -415,14 +313,16 @@ function LoginInner() {
               <Button
                 type="submit"
                 className="h-12 w-full rounded-2xl bg-[#434c9d] font-bold text-white shadow-lg shadow-[#434c9d]/20 transition-all duration-200 hover:bg-[#434c9d]/90 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSubmitting || (countdown !== null && countdown > 0)}
+                disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     Signing in...
                   </span>
-                ) : countdown && countdown > 0 ? `Wait ${countdown}s` : "Sign in"}
+                ) : (
+                  "Sign in"
+                )}
               </Button>
             </form>
 
@@ -433,6 +333,27 @@ function LoginInner() {
           </div>
         </div>
       </div>
+
+      <Dialog open={rateLimitOpen} onOpenChange={setRateLimitOpen}>
+        <DialogContent className="rounded-2xl sm:rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Too many sign-in attempts</DialogTitle>
+            <DialogDescription className="text-left text-base text-slate-600">
+              {rateLimitMessage ||
+                "You have exceeded the allowed number of tries. Please wait before trying again."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              className="rounded-xl bg-[#434c9d] font-semibold"
+              onClick={() => setRateLimitOpen(false)}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

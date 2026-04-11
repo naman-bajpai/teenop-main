@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Shield, Eye, EyeOff, AlertCircle, Lock, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -29,30 +37,8 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const [lastAttemptTime, setLastAttemptTime] = useState<number | null>(null);
-  const [countdown, setCountdown] = useState<number | null>(null);
-
-  // Countdown timer effect
-  useEffect(() => {
-    if (countdown && countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (countdown === 0) {
-      setCountdown(null);
-      setError("");
-    }
-  }, [countdown]);
-
-  // Helper function to check if we should wait before retrying
-  const shouldWaitForRetry = () => {
-    if (!lastAttemptTime) return false;
-    const timeSinceLastAttempt = Date.now() - lastAttemptTime;
-    const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000); // Max 30 seconds
-    return timeSinceLastAttempt < waitTime;
-  };
+  const [rateLimitOpen, setRateLimitOpen] = useState(false);
+  const [rateLimitMessage, setRateLimitMessage] = useState("");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -67,17 +53,6 @@ export default function AdminLoginPage() {
     e.preventDefault();
     e.stopPropagation();
     
-    // Check if we should wait before retrying
-    if (shouldWaitForRetry()) {
-      const timeSinceLastAttempt = Date.now() - (lastAttemptTime || 0);
-      const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000);
-      const remainingTime = Math.ceil((waitTime - timeSinceLastAttempt) / 1000);
-      setCountdown(remainingTime);
-      setError(`Please wait ${remainingTime} seconds before trying again.`);
-      return;
-    }
-
-    // Validate form data
     if (!formData.email || !formData.password) {
       setError("Please enter both email and password.");
       return;
@@ -85,130 +60,66 @@ export default function AdminLoginPage() {
 
     setIsSubmitting(true);
     setError("");
-    setLastAttemptTime(Date.now());
 
     try {
-      const supabase = createClient();
-      console.log("Admin login attempt for:", formData.email);
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
+      const res = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
       });
 
-      if (error) {
-        console.error("Admin login error:", error);
-        
-        // Handle rate limiting specifically
-        if (error.message?.includes("rate limit")) {
-          setRetryCount(prev => prev + 1);
-          const waitTime = Math.min(1000 * Math.pow(2, retryCount + 1), 30000);
-          const remainingTime = Math.ceil(waitTime / 1000);
-          setCountdown(remainingTime);
-          setError("Too many login attempts. Please wait a moment and try again.");
-          return;
-        }
-        
-        setRetryCount(0);
-        setError("Invalid admin credentials. Please check your email and password.");
+      const result = await res.json().catch(() => ({}));
+
+      if (res.status === 429) {
+        setRateLimitMessage(
+          typeof result.error === "string"
+            ? result.error
+            : "Too many sign-in attempts. Please wait and try again."
+        );
+        setRateLimitOpen(true);
         return;
       }
 
-      // Reset retry count on successful login
-      setRetryCount(0);
-
-      if (data.user) {
-        console.log("Admin user authenticated:", data.user.id);
-
-        // Check if user is actually an admin
-        // Users should be able to view their own profile via RLS policy
-        let profile: any = null;
-        let profileError: any = null;
-        
-        // First try: Query by user ID (should work with "Users can view their own profile" policy)
-        const { data: profileById, error: errorById } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", data.user.id)
-          .single();
-
-        if (errorById || !profileById) {
-          console.error("Profile lookup by ID failed:", errorById);
-          
-          // Second try: Query by email (in case there's a policy allowing this)
-          const { data: profileByEmail, error: errorByEmail } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("email", data.user.email || formData.email)
-            .single();
-          
-          if (errorByEmail || !profileByEmail) {
-            console.error("Profile lookup by email also failed:", errorByEmail);
-            
-            // Show detailed error for debugging
-            const errorMessage = errorById?.message || errorByEmail?.message || "Unknown error";
-            const errorCode = errorById?.code || errorByEmail?.code || "Unknown";
-            
-            console.error("Full error details:", {
-              errorById: errorById,
-              errorByEmail: errorByEmail,
-              userId: data.user.id,
-              userEmail: data.user.email
-            });
-            
-            setError(
-              `Unable to verify admin status. Error: ${errorMessage} (Code: ${errorCode}). ` +
-              `Please ensure you have a profile with role='admin' and that RLS policies allow users to view their own profile.`
-            );
-            setIsSubmitting(false);
-            return;
-          }
-          
-          profile = profileByEmail;
-        } else {
-          profile = profileById;
-        }
-
-        if (!profile) {
-          console.error("Profile is null after all attempts");
-          setError("Admin profile not found. Please ensure your profile exists and has role='admin'.");
-          setIsSubmitting(false);
-          return;
-        }
-
-        console.log("Profile found:", { id: profile.id, email: profile.email, role: profile.role });
-
-        // Verify admin role
-        if (profile.role !== "admin") {
-          console.error("User is not an admin:", { role: profile.role, email: profile.email });
-          setError(`Access denied. Your account role is '${profile.role}', but 'admin' is required.`);
-          setIsSubmitting(false);
-          return;
-        }
-
-        if (data.session) {
-          await supabase.auth.setSession(data.session);
-          console.log("Admin session persisted successfully");
-        }
-
-        console.log("Admin login successful, redirecting to admin dashboard");
-        // Clear any URL parameters before redirecting
-        const cleanUrl = "/admin/dashboard";
-        // Use router.push for client-side navigation (cleaner)
-        router.push(cleanUrl);
-        // Fallback to window.location if router doesn't work
-        setTimeout(() => {
-          if (window.location.pathname !== "/admin/dashboard") {
-            window.location.href = cleanUrl;
-          }
-        }, 100);
-      } else {
-        setError("Login failed. Please try again.");
-        setIsSubmitting(false);
+      if (!res.ok) {
+        setError(
+          typeof result.error === "string"
+            ? result.error
+            : "Invalid admin credentials. Please check your email and password."
+        );
+        return;
       }
-    } catch (err) {
-      console.error("Admin login exception:", err);
-      setRetryCount(prev => prev + 1);
+
+      const profile = result.user;
+      const supabase = createClient();
+
+      if (!profile) {
+        setError("Admin profile not found. Please ensure your profile exists and has role='admin'.");
+        return;
+      }
+
+      if (profile.role !== "admin") {
+        setError(
+          `Access denied. Your account role is '${profile.role}', but 'admin' is required.`
+        );
+        await supabase.auth.signOut();
+        return;
+      }
+
+      if (result.session) {
+        await supabase.auth.setSession(result.session);
+      }
+
+      const cleanUrl = "/admin/dashboard";
+      router.push(cleanUrl);
+      setTimeout(() => {
+        if (window.location.pathname !== "/admin/dashboard") {
+          window.location.href = cleanUrl;
+        }
+      }, 100);
+    } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -235,11 +146,6 @@ export default function AdminLoginPage() {
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm text-red-700 font-medium">{error}</p>
-                {countdown && countdown > 0 && (
-                  <p className="mt-1 text-xs text-red-600">
-                    Retry available in {countdown} second{countdown !== 1 ? 's' : ''}
-                  </p>
-                )}
               </div>
             </div>
           )}
@@ -312,15 +218,13 @@ export default function AdminLoginPage() {
               <Button
                 type="submit"
                 className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isSubmitting || (countdown !== null && countdown > 0)}  
+                disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                     <span>Signing in...</span>
                   </div>
-                ) : countdown && countdown > 0 ? (
-                  `Wait ${countdown}s`
                 ) : (
                   "Sign In"
                 )}
@@ -340,6 +244,27 @@ export default function AdminLoginPage() {
         </div>
         </div>
       </div>
+
+      <Dialog open={rateLimitOpen} onOpenChange={setRateLimitOpen}>
+        <DialogContent className="rounded-xl sm:rounded-xl">
+          <DialogHeader>
+            <DialogTitle>Too many sign-in attempts</DialogTitle>
+            <DialogDescription className="text-left text-base text-gray-600">
+              {rateLimitMessage ||
+                "You have exceeded the allowed number of tries. Please wait before trying again."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              className="bg-slate-900 hover:bg-slate-800"
+              onClick={() => setRateLimitOpen(false)}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

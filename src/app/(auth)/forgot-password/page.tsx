@@ -5,6 +5,14 @@ import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Sparkles, AlertCircle, CheckCircle } from "lucide-react";
 
 export default function ForgotPasswordPage() {
@@ -13,6 +21,8 @@ export default function ForgotPasswordPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rateLimitOpen, setRateLimitOpen] = useState(false);
+  const [rateLimitMessage, setRateLimitMessage] = useState("");
 
   // Validation functions
   const sanitizeInput = (value: string): string => {
@@ -67,7 +77,17 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email }),
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
+
+      if (response.status === 429) {
+        setRateLimitMessage(
+          typeof result.error === "string"
+            ? result.error
+            : "Too many reset requests. Please wait and try again."
+        );
+        setRateLimitOpen(true);
+        return;
+      }
 
       if (response.ok) {
         setSuccess(result.message || "Password reset email sent! Please check your inbox.");
@@ -188,6 +208,27 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={rateLimitOpen} onOpenChange={setRateLimitOpen}>
+        <DialogContent className="rounded-2xl sm:rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Too many reset requests</DialogTitle>
+            <DialogDescription className="text-left text-base text-gray-600">
+              {rateLimitMessage ||
+                "You have exceeded the allowed number of tries. Please wait before trying again."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              className="rounded-xl bg-gradient-to-r from-[#434c9d] to-[#96cbc3] font-semibold text-white"
+              onClick={() => setRateLimitOpen(false)}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

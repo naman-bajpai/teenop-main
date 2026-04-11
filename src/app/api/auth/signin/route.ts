@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
+import { enforceAuthRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
+    const limited = enforceAuthRateLimit(request, 'signin');
+    if (limited) return limited;
+
     const { email, password } = await request.json();
     
     console.log('Signin attempt for:', { email });
@@ -16,12 +21,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if Supabase environment variables are configured
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-    
-    console.log('Supabase URL configured:', !!supabaseUrl);
-    console.log('Supabase Key configured:', !!supabaseKey);
     
     if (!supabaseUrl || !supabaseKey) {
       console.error('Supabase environment variables not configured');
@@ -31,8 +32,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createClient();
-    console.log('Supabase client created successfully');
+    // Fresh client per request so concurrent sign-ins never share session state
+    const supabase = createSupabaseClient<Database>(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
     // Sign in user
     console.log('Attempting to sign in user...');
@@ -83,9 +86,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user is active
-    if (profile.status !== 'active') {
-      console.log('User account is not active:', profile.status);
+    // Allow active accounts and teens awaiting parent verification (matches client login flow)
+    const canSignIn =
+      profile.status === 'active' ||
+      (profile.status === 'pending_verification' && profile.role === 'teen');
+    if (!canSignIn) {
+      console.log('User account cannot sign in:', profile.status, profile.role);
       return NextResponse.json(
         { error: 'Account is not active. Please contact support.' },
         { status: 403 }

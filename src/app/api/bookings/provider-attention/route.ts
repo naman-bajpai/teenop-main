@@ -1,12 +1,23 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 
-/** Match my-teen-hustle: expiry uses requested date/time only. */
+/** Match my-requests / my-teen-hustle: proposed alternative uses alternative_* for expiry. */
 function isBookingExpired(booking: {
+  status: string;
   requested_date: string;
   requested_time: string;
+  alternative_date?: string | null;
+  alternative_time?: string | null;
 }): boolean {
   try {
+    if (
+      booking.status === "alternative_proposed" &&
+      booking.alternative_date &&
+      booking.alternative_time
+    ) {
+      const alt = new Date(`${booking.alternative_date}T${booking.alternative_time}`);
+      return alt < new Date();
+    }
     const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
     return bookingDateTime < new Date();
   } catch {
@@ -16,8 +27,9 @@ function isBookingExpired(booking: {
 
 /**
  * Count of items needing a teen provider's attention:
- * incoming bookings (pending / confirmed / alternative_proposed, not expired)
- * plus pending quote requests for their services.
+ * incoming bookings that need provider action (pending = new request / scheduling;
+ * confirmed = awaiting customer payment). Excludes alternative_proposed (waiting on customer).
+ * Plus pending quote requests for their services.
  */
 export async function GET() {
   try {
@@ -45,6 +57,8 @@ export async function GET() {
         status,
         requested_date,
         requested_time,
+        alternative_date,
+        alternative_time,
         services!inner (
           user_id
         )
@@ -60,11 +74,13 @@ export async function GET() {
       status: string;
       requested_date: string;
       requested_time: string;
+      alternative_date?: string | null;
+      alternative_time?: string | null;
     }>) || [];
 
     let bookingCount = 0;
     for (const b of incoming) {
-      if (b.status !== "pending" && b.status !== "confirmed" && b.status !== "alternative_proposed") continue;
+      if (b.status !== "pending" && b.status !== "confirmed") continue;
       if (isBookingExpired(b)) continue;
       bookingCount++;
     }

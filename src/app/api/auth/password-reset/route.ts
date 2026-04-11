@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase';
+import { enforceAuthRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
+    const limited = enforceAuthRateLimit(request, 'password-reset');
+    if (limited) return limited;
+
     const { email } = await request.json();
     
     console.log('Password reset request for:', { email });

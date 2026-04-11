@@ -3,9 +3,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Eye, EyeOff, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import TeenProviderDisclaimer from "@/components/auth/TeenProviderDisclaimer";
@@ -46,30 +54,8 @@ export default function SignupPage() {
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const [lastAttemptTime, setLastAttemptTime] = useState<number | null>(null);
-  const [countdown, setCountdown] = useState<number | null>(null);
-
-  // Countdown timer effect
-  useEffect(() => {
-    if (countdown && countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (countdown === 0) {
-      setCountdown(null);
-      setError("");
-    }
-  }, [countdown]);
-
-  // Helper function to check if we should wait before retrying
-  const shouldWaitForRetry = () => {
-    if (!lastAttemptTime) return false;
-    const timeSinceLastAttempt = Date.now() - lastAttemptTime;
-    const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000); // Max 30 seconds
-    return timeSinceLastAttempt < waitTime;
-  };
+  const [rateLimitOpen, setRateLimitOpen] = useState(false);
+  const [rateLimitMessage, setRateLimitMessage] = useState("");
 
   // Validation functions
   const sanitizeInput = (value: string): string => {
@@ -167,23 +153,6 @@ export default function SignupPage() {
       return "Please enter a valid phone number (10-15 digits)";
     }
     return null;
-  };
-
-  // Helper function to get user-friendly error message
-  const getErrorMessage = (error: any) => {
-    if (error?.message?.includes("rate limit")) {
-      return "Too many signup attempts. Please wait a moment before trying again to create an account.";
-    }
-    if (error?.message?.includes("User already registered")) {
-      return "An account with this email already exists. Please sign in instead.";
-    }
-    if (error?.message?.includes("Password should be at least")) {
-      return "Password must be at least 8 characters long.";
-    }
-    if (error?.message?.includes("Invalid email")) {
-      return "Please enter a valid email address.";
-    }
-    return error?.message || "Signup failed. Please try again.";
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -358,16 +327,6 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Check if we should wait before retrying
-    if (shouldWaitForRetry()) {
-      const timeSinceLastAttempt = Date.now() - (lastAttemptTime || 0);
-      const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000);
-      const remainingTime = Math.ceil((waitTime - timeSinceLastAttempt) / 1000);
-      setCountdown(remainingTime);
-      setError(`Please wait ${remainingTime} seconds before trying again.`);
-      return;
-    }
 
     setError("");
     setSuccess("");
@@ -389,7 +348,6 @@ export default function SignupPage() {
 
   const submitForm = async () => {
     setIsSubmitting(true);
-    setLastAttemptTime(Date.now());
 
     try {
       const response = await fetch("/api/auth/signup", {
@@ -411,29 +369,25 @@ export default function SignupPage() {
         }),
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
-      if (!response.ok) {
-        console.error("Signup error:", result);
-        
-        // Handle rate limiting specifically
-        if (result.error?.includes("rate limit")) {
-          setRetryCount(prev => prev + 1);
-          const waitTime = Math.min(1000 * Math.pow(2, retryCount + 1), 30000);
-          const remainingTime = Math.ceil(waitTime / 1000);
-          setCountdown(remainingTime);
-          setError(result.error);
-          return;
-        }
-        
-        // Reset retry count for non-rate-limit errors
-        setRetryCount(0);
-        setError(result.error || "Failed to create account");
+      if (response.status === 429) {
+        setRateLimitMessage(
+          typeof result.error === "string"
+            ? result.error
+            : "Too many signup attempts. Please wait and try again."
+        );
+        setRateLimitOpen(true);
         return;
       }
 
-      // Reset retry count on successful signup
-      setRetryCount(0);
+      if (!response.ok) {
+        console.error("Signup error:", result);
+        setError(
+          typeof result.error === "string" ? result.error : "Failed to create account"
+        );
+        return;
+      }
 
       setSuccess(
         result.requiresParentVerification
@@ -465,7 +419,6 @@ export default function SignupPage() {
       }, 3000);
     } catch (error) {
       console.error('Signup error:', error);
-      setRetryCount(prev => prev + 1);
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -514,7 +467,6 @@ export default function SignupPage() {
                 <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
                 <div>
                   <span className="text-sm text-red-700">{error}</span>
-                  {countdown && countdown > 0 && <div className="mt-1 text-xs text-red-500">Retry in {countdown}s</div>}
                 </div>
               </div>
             )}
@@ -677,13 +629,15 @@ export default function SignupPage() {
 
               <Button type="submit"
                 className="h-12 w-full rounded-2xl bg-[#E8634A] font-bold text-white shadow-lg shadow-[#E8634A]/20 transition-all duration-200 hover:bg-[#d45539] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSubmitting || (countdown !== null && countdown > 0)}>
+                disabled={isSubmitting}>
                 {isSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     Creating account...
                   </span>
-                ) : countdown && countdown > 0 ? `Wait ${countdown}s` : "Create account"}
+                ) : (
+                  "Create account"
+                )}
               </Button>
 
               <p className="text-center text-sm text-slate-600">
@@ -696,6 +650,27 @@ export default function SignupPage() {
       </div>
 
       <TeenProviderDisclaimer isOpen={showDisclaimer} onClose={handleDisclaimerClose} onAccept={handleDisclaimerAccept} />
+
+      <Dialog open={rateLimitOpen} onOpenChange={setRateLimitOpen}>
+        <DialogContent className="rounded-2xl sm:rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Too many signup attempts</DialogTitle>
+            <DialogDescription className="text-left text-base text-slate-600">
+              {rateLimitMessage ||
+                "You have exceeded the allowed number of tries. Please wait before trying again."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              className="rounded-xl bg-[#434c9d] font-semibold"
+              onClick={() => setRateLimitOpen(false)}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

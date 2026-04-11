@@ -316,9 +316,19 @@ export default function TeenHustlePage() {
 
   const isBookingExpired = (booking: Booking): boolean => {
     try {
+      if (
+        booking.status === "alternative_proposed" &&
+        booking.alternative_date &&
+        booking.alternative_time
+      ) {
+        const alt = new Date(`${booking.alternative_date}T${booking.alternative_time}`);
+        return alt < new Date();
+      }
       const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
       return bookingDateTime < new Date();
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   };
 
   const fetchEverything = async (forceRefresh = false) => {
@@ -569,8 +579,20 @@ export default function TeenHustlePage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
               <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Your bookings</h2>
               <TabsList className="bg-gray-100/50 p-1 rounded-2xl border border-gray-100">
-                <TabsTrigger value="pending" className="rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm relative">
-                  Pending {pendingBookings.length > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#ff725a] rounded-full" />}
+                <TabsTrigger
+                  value="pending"
+                  className={cn(
+                    "rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm relative",
+                    pendingBookings.some((b) => b.status === "pending") && "pr-7"
+                  )}
+                >
+                  Pending
+                  {pendingBookings.some((b) => b.status === "pending") && (
+                    <span
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-red-500 animate-pulse"
+                      aria-hidden
+                    />
+                  )}
                 </TabsTrigger>
                 <TabsTrigger value="scheduled" className="rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm relative">
                   Scheduled {scheduledBookings.length > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#ff725a] rounded-full" />}

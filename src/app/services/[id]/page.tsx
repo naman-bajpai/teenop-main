@@ -38,6 +38,7 @@ export default function ServiceDetailsPage() {
   const [hasBooking, setHasBooking] = useState(false);
   const [existingBookingId, setExistingBookingId] = useState<string | null>(null);
   const [checkingBooking, setCheckingBooking] = useState(true);
+  const [bookedDetails, setBookedDetails] = useState<{ date: string; time: string; title: string } | null>(null);
   const [quoteRequestForm, setQuoteRequestForm] = useState({
     requested_date: "",
     requested_time: "",
@@ -265,6 +266,11 @@ export default function ServiceDetailsPage() {
 
       setBookingSuccess(true);
       setIsBookingDialogOpen(false);
+      setBookedDetails({
+        date: bookingForm.requested_date,
+        time: bookingForm.requested_time,
+        title: service?.title ?? "Service Booking",
+      });
 
       setBookingForm({
         service_id: serviceId ?? "",
@@ -492,6 +498,37 @@ export default function ServiceDetailsPage() {
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(price ?? 0);
 
+  const buildCalendarUrls = (date: string, time: string, title: string) => {
+    // date: "YYYY-MM-DD", time: "HH:MM"
+    const startDt = new Date(`${date}T${time}:00`);
+    const endDt = new Date(startDt.getTime() + (service?.duration ?? 60) * 60 * 1000);
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+
+    const googleUrl = new URL("https://www.google.com/calendar/render");
+    googleUrl.searchParams.set("action", "TEMPLATE");
+    googleUrl.searchParams.set("text", title);
+    googleUrl.searchParams.set("dates", `${fmt(startDt)}/${fmt(endDt)}`);
+    googleUrl.searchParams.set("details", `Booking via Teenop`);
+
+    const icsContent = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      `DTSTART:${fmt(startDt)}`,
+      `DTEND:${fmt(endDt)}`,
+      `SUMMARY:${title}`,
+      "DESCRIPTION:Booking via Teenop",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const appleUrl = `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
+
+    return { googleUrl: googleUrl.toString(), appleUrl };
+  };
+
   const toTitle = (s: string) => s.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 
   if (userLoading) {
@@ -568,14 +605,48 @@ export default function ServiceDetailsPage() {
           </div>
 
           {bookingSuccess && (
-            <div className="mb-12 p-6 bg-green-50/50 border border-green-100 rounded-[32px] flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="p-3 bg-green-100 rounded-2xl text-green-600 shadow-lg shadow-green-100/50">
-                <CheckCircle className="w-6 h-6" />
+            <div className="mb-12 p-6 bg-green-50/50 border border-green-100 rounded-[32px] animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-100 rounded-2xl text-green-600 shadow-lg shadow-green-100/50 shrink-0">
+                  <CheckCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 leading-tight">Request Sent Successfully!</h3>
+                  <p className="text-green-700 font-medium text-sm mt-0.5">The provider will review your request and respond shortly.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 leading-tight">Request Sent Successfully!</h3>
-                <p className="text-green-700 font-medium text-sm mt-0.5">The provider will review your request and respond shortly.</p>
-              </div>
+              {bookedDetails && (() => {
+                const { googleUrl, appleUrl } = buildCalendarUrls(bookedDetails.date, bookedDetails.time, bookedDetails.title);
+                return (
+                  <div className="mt-4 flex flex-wrap gap-3 pl-[60px]">
+                    <a
+                      href={googleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-green-200 text-sm font-semibold text-gray-700 hover:bg-green-50 hover:border-green-300 transition-colors shadow-sm"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="4" width="18" height="17" rx="2" fill="#4285F4" />
+                        <rect x="3" y="4" width="18" height="5" rx="1" fill="#4285F4" />
+                        <rect x="3" y="7" width="18" height="14" rx="1" fill="white" />
+                        <rect x="3" y="7" width="18" height="3" fill="#4285F4" />
+                        <text x="12" y="18" textAnchor="middle" fontSize="7" fill="#4285F4" fontWeight="bold">31</text>
+                      </svg>
+                      Add to Google Calendar
+                    </a>
+                    <a
+                      href={appleUrl}
+                      download="booking.ics"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-green-200 text-sm font-semibold text-gray-700 hover:bg-green-50 hover:border-green-300 transition-colors shadow-sm"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18.71 19.5C17.88 20.74 17 21.95 15.66 21.97C14.32 22 13.89 21.18 12.37 21.18C10.84 21.18 10.37 21.95 9.1 22C7.78 22.05 6.8 20.68 5.96 19.47C4.25 17 2.94 12.45 4.7 9.39C5.57 7.87 7.13 6.91 8.82 6.88C10.1 6.86 11.32 7.75 12.11 7.75C12.89 7.75 14.37 6.68 15.92 6.84C16.57 6.87 18.39 7.1 19.56 8.82C19.47 8.88 17.39 10.1 17.41 12.63C17.44 15.65 20.06 16.66 20.09 16.67C20.06 16.74 19.67 18.11 18.71 19.5ZM13 3.5C13.73 2.67 14.94 2.04 15.94 2C16.07 3.17 15.6 4.35 14.9 5.19C14.21 6.04 13.07 6.7 11.95 6.61C11.8 5.46 12.36 4.26 13 3.5Z" />
+                      </svg>
+                      Add to Apple Calendar
+                    </a>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
