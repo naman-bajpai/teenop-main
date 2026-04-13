@@ -422,9 +422,20 @@ export default function MyBookingsPage() {
           bookingId={selectedBooking.id}
           amount={selectedBooking.total_price}
           serviceTitle={selectedBooking.service?.title || 'Service'}
-          onPaymentSuccess={() => {
-            // Refresh the bookings data after successful payment with cache bypass
-            fetchBookings(true);
+          onPaymentSuccess={(updatedBooking) => {
+            const bookingId = updatedBooking?.id || selectedBooking.id;
+            setBookings((prev) =>
+              prev.map((booking) =>
+                booking.id === bookingId
+                  ? {
+                      ...booking,
+                      status: (updatedBooking?.status as any) || "paid",
+                      updated_at: updatedBooking?.updated_at || new Date().toISOString(),
+                    }
+                  : booking
+              )
+            );
+            void fetchBookings(true);
             setPaymentModalOpen(false);
             setSelectedBooking(null);
           }}

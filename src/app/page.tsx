@@ -7,7 +7,7 @@ import FlowGradientHeroSection from "@/components/ui/flow-gradient-hero-section"
 import { Sparkles, Users, Star, ArrowRight, Search, Linkedin } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Image from "next/image";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, useMotionValue, useSpring } from "framer-motion";
 import { useRef } from "react";
 
 function FadeUp({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
@@ -22,6 +22,59 @@ function FadeUp({ children, delay = 0, className = "" }: { children: React.React
       transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1], delay }}
     >
       {children}
+    </motion.div>
+  );
+}
+
+function Tilt3D({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const rx = useMotionValue(0);
+  const ry = useMotionValue(0);
+  const tx = useMotionValue(0);
+  const ty = useMotionValue(0);
+
+  const rotateX = useSpring(rx, { stiffness: 140, damping: 18, mass: 0.5 });
+  const rotateY = useSpring(ry, { stiffness: 140, damping: 18, mass: 0.5 });
+  const translateX = useSpring(tx, { stiffness: 140, damping: 20, mass: 0.5 });
+  const translateY = useSpring(ty, { stiffness: 140, damping: 20, mass: 0.5 });
+
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width - 0.5;
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+
+    rx.set(py * -8);
+    ry.set(px * 10);
+    tx.set(px * 8);
+    ty.set(py * 6);
+  };
+
+  const onLeave = () => {
+    rx.set(0);
+    ry.set(0);
+    tx.set(0);
+    ty.set(0);
+  };
+
+  return (
+    <motion.div className={className} style={{ perspective: 1200 }}>
+      <motion.div
+        ref={ref}
+        onMouseMove={onMove}
+        onMouseLeave={onLeave}
+        style={{
+          rotateX,
+          rotateY,
+          x: translateX,
+          y: translateY,
+          transformStyle: "preserve-3d",
+          willChange: "transform",
+        }}
+      >
+        {children}
+      </motion.div>
     </motion.div>
   );
 }
@@ -61,40 +114,43 @@ export default function Home() {
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             <FadeUp delay={0.1}>
-              <div className="rounded-[32px] border border-slate-200 bg-white p-10 shadow-sm h-full">
-                <h3 className="text-center text-4xl md:text-5xl font-bold tracking-tight text-[#434c9d]">Teens</h3>
-                <ul className="mt-8 space-y-5 text-xl md:text-2xl text-slate-700">
-                  {[
-                    "Start a small business in under 10 minutes",
-                    "Make money using existing skills/talents",
-                    "Choose when you work",
-                    "Gain experience",
-                    "Build College Resume",
-                  ].map((item, i) => (
-                    <motion.li
-                      key={item}
-                      initial={{ opacity: 0, x: -16 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: 0.2 + i * 0.08, duration: 0.4 }}
-                      className="flex items-start gap-3"
-                    >
-                      <span className="mt-2.5 w-2.5 h-2.5 rounded-full bg-[#434c9d] flex-shrink-0" />
-                      {item}
-                    </motion.li>
-                  ))}
-                </ul>
-                <Link href="/signup" className="mt-10 block">
-                  <Button className="group w-full rounded-xl bg-[#434c9d] px-12 py-7 text-lg font-semibold text-white hover:bg-[#434c9d]/90">
-                    Offer Services
-                    <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                  </Button>
-                </Link>
-              </div>
+              <Tilt3D>
+                <div className="rounded-[32px] border border-slate-200 bg-white p-10 shadow-sm h-full">
+                  <h3 className="text-center text-4xl md:text-5xl font-bold tracking-tight text-[#434c9d]">Teens</h3>
+                  <ul className="mt-8 space-y-5 text-xl md:text-2xl text-slate-700">
+                    {[
+                      "Start a small business in under 10 minutes",
+                      "Make money using existing skills/talents",
+                      "Choose when you work",
+                      "Gain experience",
+                      "Build College Resume",
+                    ].map((item, i) => (
+                      <motion.li
+                        key={item}
+                        initial={{ opacity: 0, x: -16 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.2 + i * 0.08, duration: 0.4 }}
+                        className="flex items-start gap-3"
+                      >
+                        <span className="mt-2.5 w-2.5 h-2.5 rounded-full bg-[#434c9d] flex-shrink-0" />
+                        {item}
+                      </motion.li>
+                    ))}
+                  </ul>
+                  <Link href="/signup" className="mt-10 block">
+                    <Button className="group w-full rounded-xl bg-[#434c9d] px-12 py-7 text-lg font-semibold text-white hover:bg-[#434c9d]/90">
+                      Offer Services
+                      <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </Tilt3D>
             </FadeUp>
 
             <FadeUp delay={0.2}>
-              <div className="rounded-[32px] border border-slate-200 bg-white p-10 shadow-sm h-full">
+              <Tilt3D>
+                <div className="rounded-[32px] border border-slate-200 bg-white p-10 shadow-sm h-full">
                 <h3 className="text-center text-4xl md:text-5xl font-bold tracking-tight text-[#ff725a]">Community</h3>
                 <ul className="mt-8 space-y-5 text-xl md:text-2xl text-slate-700">
                   {[
@@ -123,12 +179,14 @@ export default function Home() {
                     <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </Link>
-              </div>
+                </div>
+              </Tilt3D>
             </FadeUp>
           </div>
 
           <FadeUp>
-            <div className="mt-10 grid grid-cols-1 items-center gap-10 rounded-[36px] border border-white/70 bg-white/70 p-8 shadow-[0_20px_80px_rgba(15,23,42,0.08)] backdrop-blur-md md:grid-cols-[320px_minmax(0,1fr)] md:p-12">
+            <Tilt3D className="mt-10">
+              <div className="grid grid-cols-1 items-center gap-10 rounded-[36px] border border-white/70 bg-white/70 p-8 shadow-[0_20px_80px_rgba(15,23,42,0.08)] backdrop-blur-md md:grid-cols-[320px_minmax(0,1fr)] md:p-12">
               <motion.div
                 initial={{ opacity: 0, scale: 0.92 }}
                 whileInView={{ opacity: 1, scale: 1 }}
@@ -167,7 +225,8 @@ export default function Home() {
                   </Link>
                 </FadeUp>
               </div>
-            </div>
+              </div>
+            </Tilt3D>
           </FadeUp>
         </div>
       </section>

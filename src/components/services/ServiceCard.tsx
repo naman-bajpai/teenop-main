@@ -105,13 +105,15 @@ export default function ServiceCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -6, scale: 1.005 }}
+      whileTap={{ scale: 0.995 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ 
         duration: 0.5, 
         delay: index * 0.1,
         ease: [0.21, 0.47, 0.32, 0.98] 
       }}
-      className="group relative bg-white rounded-[24px] border border-slate-200/60 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:border-[#434c9d]/20 transition-all duration-500 ease-out overflow-hidden flex flex-col h-full active:scale-[0.99] hover:-translate-y-1 cursor-pointer"
+      className="group relative bg-white rounded-[24px] border border-slate-200/60 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:border-[#434c9d]/20 transition-[box-shadow,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform overflow-hidden flex flex-col h-full cursor-pointer"
     >
       {/* Header Image Section */}
       <div className={cn(

@@ -14,7 +14,7 @@ interface PaymentModalProps {
   bookingId: string;
   amount: number;
   serviceTitle: string;
-  onPaymentSuccess?: () => void;
+  onPaymentSuccess?: (updatedBooking?: { id: string; status?: string; updated_at?: string }) => void;
 }
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
@@ -32,7 +32,7 @@ function PaymentForm({
   bookingId: string;
   amount: number;
   serviceTitle: string;
-  onPaymentSuccess?: () => void;
+  onPaymentSuccess?: (updatedBooking?: { id: string; status?: string; updated_at?: string }) => void;
   onClose: () => void;
 }) {
   const stripe = useStripe();
@@ -91,6 +91,8 @@ function PaymentForm({
         throw new Error(error.message || 'Payment failed');
       }
 
+      let confirmedBooking: { id: string; status?: string; updated_at?: string } | undefined;
+
       if (paymentIntent.status === 'succeeded') {
         // Confirm payment on our backend
         const confirmResponse = await fetch('/api/payments/confirm', {
@@ -106,6 +108,8 @@ function PaymentForm({
         if (!confirmData.success) {
           throw new Error(confirmData.error || 'Failed to confirm payment');
         }
+
+        confirmedBooking = confirmData.booking;
       } else {
         throw new Error('Payment was not successful');
       }
@@ -116,8 +120,8 @@ function PaymentForm({
         description: `Payment of $${amount.toFixed(2)} for ${serviceTitle} has been completed.`,
       });
 
-      // Notify parent immediately so booking list can refetch (parent view stays in sync)
-      onPaymentSuccess?.();
+      // Notify parent immediately with server-confirmed booking payload for instant UI update.
+      onPaymentSuccess?.(confirmedBooking);
 
       setTimeout(() => {
         onClose();

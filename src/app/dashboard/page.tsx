@@ -313,7 +313,51 @@ export default function HomePage() {
 
         {/* Trust Badges Section */}
         <div className="py-24 bg-[#434c9d] relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#1e2458]/70 via-[#2b3176]/65 to-[#434c9d]/75 pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 pointer-events-none">
+            <svg viewBox="0 0 1440 260" preserveAspectRatio="none" className="block w-full h-28 md:h-36 text-white/15">
+              <g>
+                <path
+                  fill="currentColor"
+                  d="M0,170C120,130,240,130,360,170C480,210,600,210,720,170C840,130,960,130,1080,170C1200,210,1320,210,1440,170L1440,320L0,320Z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M1440,170C1560,130,1680,130,1800,170C1920,210,2040,210,2160,170C2280,130,2400,130,2520,170C2640,210,2760,210,2880,170L2880,320L1440,320Z"
+                />
+                <animateTransform
+                  attributeName="transform"
+                  type="translate"
+                  from="0 0"
+                  to="-1440 0"
+                  dur="18s"
+                  repeatCount="indefinite"
+                />
+              </g>
+            </svg>
+          </div>
+          <div className="absolute inset-x-0 bottom-0 pointer-events-none translate-y-6 opacity-70">
+            <svg viewBox="0 0 1440 260" preserveAspectRatio="none" className="block w-full h-20 md:h-24 text-[#96cbc3]/20">
+              <g>
+                <path
+                  fill="currentColor"
+                  d="M0,140C180,90,300,90,480,140C660,190,780,190,960,140C1140,90,1260,90,1440,140L1440,320L0,320Z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M-1440,140C-1260,90,-1140,90,-960,140C-780,190,-660,190,-480,140C-300,90,-180,90,0,140L0,320L-1440,320Z"
+                />
+                <animateTransform
+                  attributeName="transform"
+                  type="translate"
+                  from="0 0"
+                  to="1440 0"
+                  dur="24s"
+                  repeatCount="indefinite"
+                />
+              </g>
+            </svg>
+          </div>
           <div className="max-w-7xl mx-auto px-4 relative z-10">
             <div className="text-center mb-16 space-y-4">
               <h3 className="text-3xl md:text-4xl font-black text-white tracking-tight">Why Choose <span className="text-[#96cbc3]">TeenOp?</span></h3>
@@ -323,15 +367,15 @@ export default function HomePage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
-                { icon: Shield, title: "Safe & Filtered", desc: "All teen providers are verified students of your school community. All community buyers given access through school code.", color: "bg-white/10" },
-                { icon: Star, title: "Community Rated", desc: "Services are rated and reviewed by real customers in your school community.", color: "bg-white/10" },
-                { icon: Heart, title: "Support Local", desc: "Empower local teens to build valuable skills while earning their own money.", color: "bg-white/10" }
+                { icon: Shield, title: "Safe & Filtered", desc: "All teen providers are verified students of your school community. All community buyers are given access through a school code." },
+                { icon: Star, title: "Community Rated", desc: "Services are rated and reviewed by real customers in your school community." },
+                { icon: Heart, title: "Support Local", desc: "Empower local teens to build valuable skills while earning their own money." }
               ].map((badge, i) => (
-                <div key={i} className={cn("rounded-[32px] p-8 border border-white/10 text-white transition-all hover:translate-y-[-8px] duration-300", badge.color)}>
-                  <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mb-6">
-                    <badge.icon className="w-7 h-7" />
+                <div key={i} className="rounded-[32px] p-8 border border-white/15 bg-white/10 backdrop-blur-sm text-white transition-all hover:translate-y-[-8px] hover:bg-white/15 duration-300 shadow-xl shadow-black/10">
+                  <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center mb-6 border border-white/20">
+                    <badge.icon className="w-7 h-7 text-[#96cbc3]" />
                   </div>
-                  <h4 className="text-xl font-bold mb-3">{badge.title}</h4>
+                  <h4 className="text-xl font-black mb-3 tracking-tight">{badge.title}</h4>
                   <p className="text-blue-100/70 text-sm leading-relaxed font-medium">{badge.desc}</p>
                 </div>
               ))}

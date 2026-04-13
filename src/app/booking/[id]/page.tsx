@@ -614,9 +614,17 @@ export default function BookingDetailsPage() {
             bookingId={booking.id}
             amount={booking.total_price}
             serviceTitle={booking.service?.title || 'Service'}
-            onPaymentSuccess={() => {
-              // Refresh the booking data after successful payment
-              window.location.reload();
+            onPaymentSuccess={(updatedBooking) => {
+              setBooking((prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  status: updatedBooking?.status || "paid",
+                  updated_at: updatedBooking?.updated_at || new Date().toISOString(),
+                };
+              });
+              setPaymentModalOpen(false);
+              void fetchBookingDetails(true);
             }}
           />
         )}

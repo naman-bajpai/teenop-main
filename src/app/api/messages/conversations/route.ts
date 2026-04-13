@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = 'force-dynamic';
 
@@ -253,8 +253,16 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete all messages for this booking
-    const { error: deleteError } = await supabase
+    // Delete all messages for this booking. Use service role when available so
+    // both sides of the thread are removed even if RLS only allows deleting own rows.
+    let db: ReturnType<typeof createServiceRoleClient> | Awaited<ReturnType<typeof createServerClient>>;
+    try {
+      db = createServiceRoleClient();
+    } catch {
+      db = supabase;
+    }
+
+    const { error: deleteError } = await (db as any)
       .from("messages")
       .delete()
       .eq("booking_id" as any, bookingId as any);

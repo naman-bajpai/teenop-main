@@ -525,10 +525,6 @@ export default function MyRequestsPage() {
           {/* Page Header */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 mb-12">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 bg-[#434c9d]/10 text-[#434c9d] rounded-full px-4 py-1.5">
-                <Calendar className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase tracking-[0.15em]">Customer Dashboard</span>
-              </div>
               <h1 className="page-title text-gray-900">
                 My Requests
               </h1>
@@ -564,6 +560,20 @@ export default function MyRequestsPage() {
               </Button>
             </div>
           )}
+
+          <div className="mb-10 p-5 bg-[#434c9d]/5 border border-[#434c9d]/20 rounded-2xl">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white border border-[#434c9d]/15 flex items-center justify-center shrink-0">
+                <Info className="w-4 h-4 text-[#434c9d]" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-black text-[#434c9d] uppercase tracking-widest">Payment Update</p>
+                <p className="text-sm font-medium text-gray-700 leading-relaxed">
+                  After you pay, please give it a moment for your account to update. If it does not reflect right away, refresh this page after about 30 seconds.
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* Stats Overview */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-16">
@@ -807,8 +817,20 @@ export default function MyRequestsPage() {
           bookingId={selectedBooking.id}
           amount={selectedBooking.total_price}
           serviceTitle={selectedBooking.service?.title || 'Service'}
-          onPaymentSuccess={() => {
-            fetchBookings(true);
+          onPaymentSuccess={(updatedBooking) => {
+            const bookingId = updatedBooking?.id || selectedBooking.id;
+            setBookings((prev) =>
+              prev.map((booking) =>
+                booking.id === bookingId
+                  ? {
+                      ...booking,
+                      status: (updatedBooking?.status as any) || "paid",
+                      updated_at: updatedBooking?.updated_at || new Date().toISOString(),
+                    }
+                  : booking
+              )
+            );
+            void fetchBookings(true);
             setPaymentModalOpen(false);
             setSelectedBooking(null);
           }}
