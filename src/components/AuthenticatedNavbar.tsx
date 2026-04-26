@@ -53,6 +53,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [attentionCount, setAttentionCount] = useState(0);
+  const [customerAttentionCount, setCustomerAttentionCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const [shape, setShape] = useState("rounded-full");
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -112,6 +113,29 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
   }, [user]);
 
   useEffect(() => {
+    if (!user || user.role === "teen") {
+      setCustomerAttentionCount(0);
+      return;
+    }
+    const fetch_ = async () => {
+      try {
+        const res = await fetch("/api/bookings/customer-attention", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && typeof data.count === "number") setCustomerAttentionCount(data.count);
+        }
+      } catch {}
+    };
+    fetch_();
+    window.addEventListener("focus", fetch_);
+    const interval = setInterval(fetch_, 60000);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", fetch_);
+    };
+  }, [user]);
+
+  useEffect(() => {
     if (!user || user.role !== "teen") { setAttentionCount(0); return; }
     const fetch_ = async () => {
       try {
@@ -137,7 +161,9 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Neighborhood", href: "/neighborhood", icon: Map },
     { name: "Messages", href: "/messages", icon: MessageCircle },
-    { name: "Requests", href: "/my-requests", icon: Calendar },
+    ...(user?.role !== "teen"
+      ? [{ name: "Requests", href: "/my-requests", icon: Calendar }]
+      : []),
     ...(user?.role === "teen"
       ? [
           { name: "Services", href: "/my-services", icon: Sparkles },
@@ -150,11 +176,16 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
   const isActive = (href: string) => pathname === href;
   const initials = (user?.first_name?.charAt(0) || user?.name?.charAt(0) || "U").toUpperCase();
   const displayName = user?.first_name || user?.name || "User";
-  const roleLabel = user?.role === "teen" ? "Teen Provider" : user?.role || "Member";
   const closeMenus = () => { setMobileOpen(false); setUserMenuOpen(false); };
 
   const badgeFor = (name: string) =>
-    name === "Messages" ? unreadCount : name === "Bookings" ? attentionCount : 0;
+    name === "Messages"
+      ? unreadCount
+      : name === "Bookings"
+        ? attentionCount
+        : name === "Requests"
+          ? customerAttentionCount
+          : 0;
 
   return (
     <header className="sticky top-0 z-50 px-4 pt-3.5">
@@ -252,10 +283,9 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                       </span>
                     )}
                   </div>
-                  {/* Name + role */}
+                  {/* Name only */}
                   <div className="min-w-0 pr-0.5">
                     <p className="truncate text-[13.5px] font-bold leading-tight text-slate-900">{displayName}</p>
-                    <p className="truncate text-[11px] leading-tight text-slate-400">{roleLabel}</p>
                   </div>
                   <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200", userMenuOpen && "rotate-180")} />
                 </button>
@@ -274,7 +304,6 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[13px] font-semibold text-slate-900">{displayName}</p>
-                        <p className="truncate text-[11px] text-slate-400">{user.email}</p>
                       </div>
                       {user.is_verified && (
                         <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
@@ -370,7 +399,6 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-semibold text-slate-900">{displayName}</p>
-                  <p className="truncate text-[11px] text-slate-400">{user.email}</p>
                 </div>
                 {user.is_verified && (
                   <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">

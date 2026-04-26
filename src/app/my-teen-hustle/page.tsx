@@ -49,6 +49,7 @@ import {
   Info,
   Loader2,
   Briefcase,
+  CalendarPlus,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -125,6 +126,7 @@ function BookingCard({ booking, onStatusUpdate }: {
   const [alternativeDate, setAlternativeDate] = useState("");
   const [alternativeTime, setAlternativeTime] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -166,6 +168,94 @@ function BookingCard({ booking, onStatusUpdate }: {
     } catch (error) {
       toast({ title: "Error", description: "Failed to reject booking.", variant: "destructive" });
     } finally { setIsSubmitting(false); }
+  };
+
+  const buildGoogleCalendarUrl = () => {
+    const startDate = new Date(`${booking.requested_date}T${booking.requested_time}`);
+    if (Number.isNaN(startDate.getTime())) return null;
+    const endDate = new Date(startDate.getTime() + booking.duration * 60 * 1000);
+    const formatForGoogle = (date: Date) => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+    const details = [
+      `Booking ID: ${booking.id}`,
+      booking.special_instructions ? `Notes: ${booking.special_instructions}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const params = new URLSearchParams({
+      action: "TEMPLATE",
+      text: `${booking.service.title} (TeenOp)`,
+      dates: `${formatForGoogle(startDate)}/${formatForGoogle(endDate)}`,
+      details,
+      location: booking.service.location || "",
+    });
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  };
+
+  const buildIcsContent = () => {
+    const startDate = new Date(`${booking.requested_date}T${booking.requested_time}`);
+    if (Number.isNaN(startDate.getTime())) return null;
+    const endDate = new Date(startDate.getTime() + booking.duration * 60 * 1000);
+    const formatIcsDate = (date: Date) =>
+      date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+
+    const escapeText = (value: string) =>
+      value
+        .replace(/\\/g, "\\\\")
+        .replace(/,/g, "\\,")
+        .replace(/;/g, "\\;")
+        .replace(/\n/g, "\\n");
+
+    const description = [
+      `TeenOp Service Booking`,
+      `Booking ID: ${booking.id}`,
+      booking.special_instructions ? `Notes: ${booking.special_instructions}` : "",
+    ]
+      .filter(Boolean)
+      .join("\\n");
+
+    return [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//TeenOp//Booking Calendar//EN",
+      "CALSCALE:GREGORIAN",
+      "BEGIN:VEVENT",
+      `UID:${booking.id}@teenop.com`,
+      `DTSTAMP:${formatIcsDate(new Date())}`,
+      `DTSTART:${formatIcsDate(startDate)}`,
+      `DTEND:${formatIcsDate(endDate)}`,
+      `SUMMARY:${escapeText(`${booking.service.title} (TeenOp)`)}`,
+      `DESCRIPTION:${escapeText(description)}`,
+      `LOCATION:${escapeText(booking.service.location || "")}`,
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+  };
+
+  const handleAddToCalendar = () => {
+    const url = buildGoogleCalendarUrl();
+    if (!url) {
+      toast({ title: "Unable to add event", description: "This booking has an invalid date/time.", variant: "destructive" });
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleAddToAppleCalendar = () => {
+    const icsContent = buildIcsContent();
+    if (!icsContent) {
+      toast({ title: "Unable to add event", description: "This booking has an invalid date/time.", variant: "destructive" });
+      return;
+    }
+
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = `teenop-booking-${booking.id}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(objectUrl);
   };
 
   return (
@@ -229,9 +319,37 @@ function BookingCard({ booking, onStatusUpdate }: {
           </Button>
         )}
         {booking.status === "paid" && (
-          <Button variant="default" size="sm" onClick={() => onStatusUpdate(booking.id, "completed")} className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90 rounded-xl px-6 h-10 font-bold flex items-center gap-2">
-            <CheckCircle className="w-4 h-4" /> Mark as Completed
-          </Button>
+          <>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowCompleteDialog(true)}
+              className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90 rounded-xl px-6 h-10 font-bold flex items-center gap-2"
+            >
+              <CheckCircle className="w-4 h-4" /> Mark as Completed
+            </Button>
+          </>
+        )}
+
+        {(booking.status === "paid" || booking.status === "confirmed") && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddToCalendar}
+              className="border-gray-100 text-gray-700 hover:bg-gray-50 rounded-xl px-6 h-10 font-bold flex items-center gap-2"
+            >
+              <CalendarPlus className="w-4 h-4" /> Google Calendar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddToAppleCalendar}
+              className="border-gray-100 text-gray-700 hover:bg-gray-50 rounded-xl px-6 h-10 font-bold flex items-center gap-2"
+            >
+              <CalendarPlus className="w-4 h-4" /> Apple Calendar
+            </Button>
+          </>
         )}
       </div>
 
@@ -256,6 +374,35 @@ function BookingCard({ booking, onStatusUpdate }: {
               <Button onClick={handleProposeAlternative} disabled={isSubmitting || !alternativeDate || !alternativeTime} className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 rounded-xl h-12 font-bold">Propose New Time</Button>
               <Button onClick={handleRejectWithoutAlternative} disabled={isSubmitting} variant="ghost" className="w-full text-red-500 hover:bg-red-50 rounded-xl h-12 font-bold">Reject Without Alternative</Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+        <DialogContent className="rounded-[28px] p-7">
+          <DialogHeader>
+            <DialogTitle>Mark service as completed?</DialogTitle>
+            <DialogDescription>
+              Confirm once the service has actually been completed. This unlocks earnings for withdrawal.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col sm:flex-row gap-3 mt-2">
+            <Button
+              variant="outline"
+              className="sm:flex-1 rounded-xl"
+              onClick={() => setShowCompleteDialog(false)}
+            >
+              Not yet
+            </Button>
+            <Button
+              className="sm:flex-1 rounded-xl bg-[#434c9d] hover:bg-[#434c9d]/90"
+              onClick={async () => {
+                setShowCompleteDialog(false);
+                await onStatusUpdate(booking.id, "completed");
+              }}
+            >
+              Yes, mark completed
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -545,6 +692,12 @@ export default function TeenHustlePage() {
               </Button>
             </Link>
           </div>
+        </div>
+
+        <div className="mb-10 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+          <p className="text-sm font-semibold text-amber-900 leading-relaxed">
+            If you need to cancel, please do so at least 24 hours in advance. Last-minute cancellations should be avoided whenever possible.
+          </p>
         </div>
 
         {/* Stats Card */}

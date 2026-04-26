@@ -27,8 +27,7 @@ function isBookingExpired(booking: {
 
 /**
  * Count of items needing a teen provider's attention:
- * incoming bookings that need provider action (pending = new request / scheduling;
- * confirmed = awaiting customer payment). Excludes alternative_proposed (waiting on customer).
+ * incoming bookings that need provider attention.
  * Plus pending quote requests for their services.
  */
 export async function GET() {
@@ -80,8 +79,8 @@ export async function GET() {
 
     let bookingCount = 0;
     for (const b of incoming) {
-      if (b.status !== "pending" && b.status !== "confirmed") continue;
-      if (isBookingExpired(b)) continue;
+      if (!["pending", "confirmed", "paid", "cancelled", "rejected"].includes(b.status)) continue;
+      if ((b.status === "pending" || b.status === "confirmed") && isBookingExpired(b)) continue;
       bookingCount++;
     }
 

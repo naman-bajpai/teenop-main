@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { label: "Browse Services", href: "/services" },
   { label: "Our Story", href: "/our-story" },
   { label: "Safety", href: "/safety" },
+  { label: "Support", href: "/help" },
 ];
 
 export default function Navbar() {

@@ -211,6 +211,17 @@ export async function POST(request: NextRequest) {
       console.warn('Provider email not found, skipping email notification');
     }
 
+    // Send confirmation email to parent/customer that request was submitted
+    const customer = bookingData.profiles as any;
+    if (customer?.email) {
+      emailService.sendParentRequestSent({
+        parentName: `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Parent',
+        parentEmail: customer.email,
+      }).catch((error) => {
+        console.error('Failed to send request-sent email to customer:', error);
+      });
+    }
+
     return NextResponse.json({
       success: true,
       booking: {
@@ -403,14 +414,15 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Add cache headers to reduce server load
+    // Booking state is user-specific and changes frequently (payment/status updates).
+    // Avoid stale responses so UI reflects updates immediately after actions.
     return NextResponse.json({
       success: true,
       incoming,
       myRequests
     }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30'
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
       }
     });
 

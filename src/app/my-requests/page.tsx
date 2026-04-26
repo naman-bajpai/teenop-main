@@ -133,9 +133,13 @@ export default function MyRequestsPage() {
 
   useEffect(() => {
     if (user) {
+      if (user.role === "teen") {
+        router.replace("/my-teen-hustle");
+        return;
+      }
       fetchBookings();
     }
-  }, [user]);
+  }, [user, router]);
 
   // Refetch when tab becomes visible so parent sees updated status after paying (e.g. webhook updated booking)
   useEffect(() => {
@@ -561,20 +565,6 @@ export default function MyRequestsPage() {
             </div>
           )}
 
-          <div className="mb-10 p-5 bg-[#434c9d]/5 border border-[#434c9d]/20 rounded-2xl">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white border border-[#434c9d]/15 flex items-center justify-center shrink-0">
-                <Info className="w-4 h-4 text-[#434c9d]" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-black text-[#434c9d] uppercase tracking-widest">Payment Update</p>
-                <p className="text-sm font-medium text-gray-700 leading-relaxed">
-                  After you pay, please give it a moment for your account to update. If it does not reflect right away, refresh this page after about 30 seconds.
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Stats Overview */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-16">
             {[
@@ -593,6 +583,12 @@ export default function MyRequestsPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="mb-12 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <p className="text-sm font-semibold text-amber-900 leading-relaxed">
+              If you need to cancel, please do so at least 24 hours in advance to receive a full refund. If the teen cancels, you will also receive a full automatic refund within 5 days.
+            </p>
           </div>
 
           {/* Tip, Rate, and Review Section */}
@@ -803,6 +799,20 @@ export default function MyRequestsPage() {
               </TabsContent>
             ))}
           </Tabs>
+
+          <div className="mt-12 p-5 bg-[#434c9d]/5 border border-[#434c9d]/20 rounded-2xl">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white border border-[#434c9d]/15 flex items-center justify-center shrink-0">
+                <Info className="w-4 h-4 text-[#434c9d]" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-black text-[#434c9d] uppercase tracking-widest">Payment Update</p>
+                <p className="text-sm font-medium text-gray-700 leading-relaxed">
+                  After you pay, please give it a moment for your account to update. If it does not reflect right away, refresh this page after about 30 seconds.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1099,6 +1109,25 @@ function BookingCard({
                 className="w-full bg-green-500 hover:bg-green-600 text-white rounded-xl font-black h-12 shadow-xl shadow-green-100 transition-all active:scale-95"
               >
                 {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-2" /> Mark as Completed</>}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={updating}
+                className="w-full rounded-xl font-bold border-amber-200 text-amber-700 hover:bg-amber-50 transition-all h-11"
+                onClick={() => {
+                  const shouldRefund = window.confirm(
+                    "If teen doesn't complete service click here and payment will be refunded.\n\nClick OK to cancel this service and start refund processing."
+                  );
+                  if (shouldRefund) {
+                    onCancel();
+                    toast({
+                      title: "Service Cancelled",
+                      description: "Your cancellation was submitted. Refunds typically process within 5 business days.",
+                    });
+                  }
+                }}
+              >
+                If teen doesn&apos;t complete service click here and payment will be refunded
               </Button>
               <div className="flex gap-2">
                 <Button

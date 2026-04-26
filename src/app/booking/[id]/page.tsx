@@ -474,6 +474,38 @@ export default function BookingDetailsPage() {
                 </div>
               </div>
             )}
+
+            {(isProvider || isCustomer) &&
+              ["pending", "confirmed", "paid"].includes(booking.status) && (
+                <div className="bg-white rounded-xl p-6 border border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Cancel Service</h2>
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-sm text-amber-800">
+                        {isCustomer
+                          ? "If you need to cancel, please do so at least 24 hours in advance to receive a full refund. If the teen cancels, you will also receive a full automatic refund within 5 days."
+                          : "If you need to cancel, please do so at least 24 hours in advance. Last-minute cancellations should be avoided whenever possible."}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      disabled={actionLoading}
+                      className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                      onClick={() => {
+                        const confirmed = window.confirm(
+                          "Are you sure you want to cancel this service?"
+                        );
+                        if (confirmed) {
+                          void handleStatusUpdate("cancelled");
+                        }
+                      }}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Cancel Service
+                    </Button>
+                  </div>
+                </div>
+              )}
           </div>
 
           {/* Sidebar */}

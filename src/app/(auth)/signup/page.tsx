@@ -15,7 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Eye, EyeOff, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import TeenProviderDisclaimer from "@/components/auth/TeenProviderDisclaimer";
 export default function SignupPage() {
   const router = useRouter();
@@ -93,12 +92,6 @@ export default function SignupPage() {
       return `${fieldName} address is too long`;
     }
     return null;
-  };
-
-  const TEEN_ALLOWED_DOMAIN = "sses.saintstephens.org";
-  const isAllowedTeenEmail = (email: string): boolean => {
-    const domain = email.trim().split("@")[1] || "";
-    return domain.toLowerCase() === TEEN_ALLOWED_DOMAIN;
   };
 
   const validateAge = (age: string): string | null => {
@@ -180,9 +173,7 @@ export default function SignupPage() {
       setFieldErrors(prev => ({ ...prev, lastName: error || undefined }));
     } else if (name === "email" && typeof sanitizedValue === "string") {
       let error = validateEmail(sanitizedValue);
-      if (!error && formData.role === "teen" && sanitizedValue && !isAllowedTeenEmail(sanitizedValue)) {
-        error = `Teen accounts require an @${TEEN_ALLOWED_DOMAIN} email address.`;
-      }
+      // Teen email domain restriction temporarily disabled.
       setFieldErrors(prev => ({ ...prev, email: error || undefined }));
     } else if (name === "age") {
       const error = validateAge(value);
@@ -214,8 +205,7 @@ export default function SignupPage() {
       // When switching to teen, re-validate email for allowed domain
       if (value === "teen" && formData.email) {
         const emailErr = validateEmail(formData.email);
-        const domainErr = !emailErr && !isAllowedTeenEmail(formData.email) ? `Teen accounts require an @${TEEN_ALLOWED_DOMAIN} email address.` : null;
-        setFieldErrors(prev => ({ ...prev, email: emailErr || domainErr || undefined }));
+        setFieldErrors(prev => ({ ...prev, email: emailErr || undefined }));
       } else {
         setFieldErrors(prev => ({ ...prev, email: undefined }));
       }
@@ -248,9 +238,6 @@ export default function SignupPage() {
     const emailError = validateEmail(formData.email);
     if (emailError) {
       errors.email = emailError;
-      hasErrors = true;
-    } else if (formData.role === "teen" && formData.email && !isAllowedTeenEmail(formData.email)) {
-      errors.email = `Teen accounts require an @${TEEN_ALLOWED_DOMAIN} email address.`;
       hasErrors = true;
     }
 
@@ -494,7 +481,7 @@ export default function SignupPage() {
                 </select>
                 <p className="mt-2 text-xs text-slate-500">
                   {formData.role === "teen"
-                    ? "Teen accounts currently require an @sses.saintstephens.org email address."
+                    ? "Teen accounts can use any valid email address."
                     : "Choose this if you want to book or support teen services in your area."}
                 </p>
               </div>
@@ -528,7 +515,7 @@ export default function SignupPage() {
                 <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-slate-700">Email</label>
                 <Input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleInputChange}
                   className={`h-12 w-full rounded-2xl border bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.email ? "border-red-400" : "border-slate-200"}`}
-                  placeholder={formData.role === "teen" ? "you@sses.saintstephens.org" : "you@example.com"} disabled={isSubmitting} maxLength={254} />
+                  placeholder="you@example.com" disabled={isSubmitting} maxLength={254} />
                 {fieldErrors.email && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.email}</p>}
               </div>
 

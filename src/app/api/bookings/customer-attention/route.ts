@@ -1,0 +1,68 @@
+import { NextResponse } from "next/server";
+import { createServerClient } from "@/lib/supabase/server";
+
+function isBookingExpired(booking: {
+  status: string;
+  requested_date: string;
+  requested_time: string;
+  alternative_date?: string | null;
+  alternative_time?: string | null;
+}): boolean {
+  try {
+    if (
+      booking.status === "alternative_proposed" &&
+      booking.alternative_date &&
+      booking.alternative_time
+    ) {
+      return new Date(`${booking.alternative_date}T${booking.alternative_time}`) < new Date();
+    }
+    return new Date(`${booking.requested_date}T${booking.requested_time}`) < new Date();
+  } catch {
+    return false;
+  }
+}
+
+export async function GET() {
+  try {
+    const supabase = await createServerClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
+    }
+
+    const { data: bookings, error: bookingError } = await supabase
+      .from("bookings")
+      .select("status, requested_date, requested_time, alternative_date, alternative_time")
+      .eq("user_id" as any, user.id as any);
+
+    if (bookingError) {
+      return NextResponse.json({ success: false, error: "Failed to load bookings" }, { status: 500 });
+    }
+
+    const bookingEvents = (bookings || []).filter((b: any) => {
+      if (b.status === "pending") return false;
+      if ((b.status === "confirmed" || b.status === "alternative_proposed") && isBookingExpired(b)) return false;
+      return ["confirmed", "alternative_proposed", "paid", "completed", "cancelled", "rejected"].includes(b.status);
+    }).length;
+
+    const { data: quoteRequests, error: quoteError } = await supabase
+      .from("quote_requests")
+      .select("status")
+      .eq("customer_id" as any, user.id as any)
+      .in("status" as any, ["quoted", "cancelled"] as any);
+
+    const quoteEvents = quoteError ? 0 : (quoteRequests || []).length;
+
+    return NextResponse.json({
+      success: true,
+      count: bookingEvents + quoteEvents,
+    });
+  } catch (e) {
+    console.error("customer-attention:", e);
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+  }
+}

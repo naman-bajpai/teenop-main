@@ -338,13 +338,13 @@ export default function Home() {
                     {[
                       { href: "/our-story", label: "Our Story" },
                       { href: "/services", label: "Hire Local" },
-                      { href: "mailto:teenop.co@gmail.com", label: "Support" },
+                      { href: "/help", label: "Support" },
                     ].map(l => (
                       <li key={l.label}>
-                        <a href={l.href} className="group flex items-center gap-2 text-sm text-slate-600 hover:text-[#434c9d] transition-colors">
+                        <Link href={l.href} className="group flex items-center gap-2 text-sm text-slate-600 hover:text-[#434c9d] transition-colors">
                           <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                           <span>{l.label}</span>
-                        </a>
+                        </Link>
                       </li>
                     ))}
                   </ul>

@@ -5,21 +5,16 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  User,
-  Mail,
-  Phone,
   MapPin,
   Calendar,
   Star,
   ArrowLeft,
   MessageCircle,
-  Briefcase,
   ExternalLink,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { RatingDisplay } from "@/components/ui/rating";
-import { cn } from "@/lib/utils";
 
 type Profile = {
   id: string;

@@ -88,12 +88,13 @@ export class EmailService {
 
   async sendEmail(to: string, subject: string, html: string, text?: string) {
     try {
+      const standardizedHtml = this.ensureStandardEmailTemplate(subject, html);
       const info = await this.transporter.sendMail({
         from: `"TeenOp" <${process.env.SMTP_FROM || 'noreply@teenop.com'}>`,
         to,
         subject,
-        html,
-        text: text || this.stripHtml(html),
+        html: standardizedHtml,
+        text: text || this.stripHtml(standardizedHtml),
       });
       console.log('Email sent:', info.messageId);
       return { success: true, messageId: info.messageId };
@@ -105,6 +106,25 @@ export class EmailService {
 
   private stripHtml(html: string): string {
     return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Enforce a single visual template across all outbound emails.
+   * If a caller passes a full TeenOp template already, keep it as-is.
+   * Otherwise, wrap the content in the shared TeenOp layout.
+   */
+  private ensureStandardEmailTemplate(subject: string, html: string): string {
+    const trimmed = html.trim();
+    const alreadyStandardized =
+      trimmed.includes('class="wrapper"') &&
+      trimmed.includes('class="card"') &&
+      trimmed.includes('Teen<span class="brand-dot">Op</span>');
+
+    if (alreadyStandardized) return html;
+
+    const headerTitle = subject || 'TeenOp Update';
+    const headerSubtitle = 'Important update from TeenOp';
+    return buildEmail(subject || 'TeenOp Update', headerTitle, headerSubtitle, html);
   }
 
   // -------------------------------------------------------------------------
@@ -173,31 +193,29 @@ export class EmailService {
     bookingId: string;
     specialInstructions?: string;
   }) {
-    const subject = `New booking request: ${data.serviceName}`;
+    const subject = `Action Needed: Service Request on TeenOp!`;
     const html = buildEmail(
-      'New Booking Request',
-      'You have a new booking request!',
-      'Someone wants to book your service — review the details below.',
+      'Service Request on TeenOp',
+      'Action Needed: Service Request on TeenOp!',
+      'You received a new booking request from a community member.',
       `
+      <p>Hi ${data.providerName},</p>
+      <p>You’ve received a new service request from a community member.</p>
+      <p>Review the details and choose to accept, propose a new time that works for you, or decline the service request.</p>
+
       <div class="details-box">
         <p><strong>Service:</strong> ${data.serviceName}</p>
         <p><strong>Requested by:</strong> ${data.buyerName}</p>
         <p><strong>Date & Time:</strong> ${data.date}, ${data.time} ${data.timeZone}</p>
         <p><strong>Location:</strong> ${data.location}</p>
-        <p><strong>Duration:</strong> ${data.duration} minutes</p>
-        <p><strong>Total Price:</strong> $${data.totalPrice}</p>
-        <p><strong>Booking ID:</strong> #${data.bookingId}</p>
-        ${data.specialInstructions ? `<p><strong>Special Instructions:</strong> ${data.specialInstructions}</p>` : ''}
       </div>
 
-      <p class="section-title">What's next?</p>
-      <ul>
-        <li>Log in to your TeenOp account to accept or decline this request.</li>
-        <li>If you accept, the booking will be confirmed and you'll receive payment details.</li>
-        <li>Use TeenOp messages to communicate with the buyer if needed.</li>
-      </ul>
+      <div class="btn-center">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com'}/my-teen-hustle" class="btn">View Request</a>
+      </div>
 
-      <p><strong>Please respond as soon as possible</strong> so the buyer knows whether their booking is confirmed.</p>
+      <p>Responding quickly helps you secure bookings and build trust.</p>
+      <p>Best,<br>The TeenOp Team</p>
       `
     );
     return this.sendEmail(data.providerEmail, subject, html);
@@ -211,19 +229,52 @@ export class EmailService {
     buyerEmail: string;
     serviceName: string;
   }) {
-    const subject = 'Update on your TeenOp booking request';
+    const subject = 'Update on your service request';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
     const html = buildEmail(
-      'Booking Update',
-      'Update on your booking request',
+      'Service Request Update',
+      'Update on your service request',
       '',
       `
       <p>Hi ${data.buyerName},</p>
-      <p>Unfortunately, the teen provider wasn't able to accept the proposed time slot for <strong>${data.serviceName}</strong>.</p>
-      <p>You can still book this service by returning to the listing and selecting another available time that works for you.</p>
-      <p>Thank you for your understanding — we hope you find a time that works soon!</p>
+      <p>Your teen provider is unable to move forward with your request at this time.</p>
+      <p>If you'd like, you can submit a new request with a different time or explore other teens available on TeenOp.</p>
+      <div class="btn-center">
+        <a href="${appUrl}/my-requests" class="btn">View Listing</a>
+      </div>
+      <div class="btn-center">
+        <a href="${appUrl}/neighborhood" class="btn">View Neighborhood</a>
+      </div>
+      <p>We appreciate your understanding and your support of the TeenOp community.</p>
+      <p>Warmly,<br>The TeenOp Team</p>
       `
     );
     return this.sendEmail(data.buyerEmail, subject, html);
+  }
+
+  async sendParentRequestSent(data: {
+    parentName: string;
+    parentEmail: string;
+  }) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
+    const subject = 'Your request has been sent';
+    const html = buildEmail(
+      'Request Sent',
+      'Your request has been sent',
+      '',
+      `
+      <p>Hi ${data.parentName},</p>
+      <p>Your booking request has been sent to your teen provider.</p>
+      <p>You’ll be notified as soon as they respond. In the meantime, you can check the status anytime on your Requests page.</p>
+      <div class="btn-center">
+        <a href="${appUrl}/my-requests" class="btn">View Requests</a>
+      </div>
+      <p>We appreciate you choosing TeenOp and helping support the next generation of entrepreneurs.</p>
+      <p>If you have any questions, feel free to contact TeenOp support.</p>
+      <p>Best,<br>The TeenOp Team</p>
+      `
+    );
+    return this.sendEmail(data.parentEmail, subject, html);
   }
 
   // -------------------------------------------------------------------------
@@ -240,30 +291,27 @@ export class EmailService {
     location: string;
     bookingId: string;
   }) {
-    const subject = 'Reminder: Your service is tomorrow';
+    const subject = 'Reminder: Your TeenOp Service is Tomorrow';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
     const html = buildEmail(
       'Service Reminder',
-      'Your service is tomorrow!',
-      "Here's a quick reminder of what's coming up.",
+      'Reminder: Your TeenOp Service is Tomorrow',
+      '',
       `
       <p>Hi ${data.buyerName},</p>
-      <p>You have an upcoming service with TeenOp scheduled for tomorrow.</p>
-
-      <div class="details-box">
-        <p><strong>Service:</strong> ${data.serviceName}</p>
-        <p><strong>Teen Provider:</strong> ${data.teenName}</p>
-        <p><strong>Date & Time:</strong> ${data.date}, ${data.time} ${data.timeZone}</p>
-        <p><strong>Location:</strong> ${data.location}</p>
-      </div>
-
-      <p>You can review the details or send a message to your teen provider through TeenOp.</p>
+      <p>This is a reminder that your TeenOp service is scheduled for tomorrow.</p>
+      <p>You can message your teen provider anytime through TeenOp to confirm final details.</p>
 
       <div class="btn-center">
         <a href="${appUrl}/my-bookings" class="btn">View Booking</a>
       </div>
 
-      <p>Thank you for supporting local teen entrepreneurs!</p>
+      <div class="btn-center">
+        <a href="${appUrl}/messages?booking_id=${data.bookingId}" class="btn">Message Provider</a>
+      </div>
+
+      <p>We are excited for you to experience a TeenOp service!</p>
+      <p>Best,<br>The TeenOp Team</p>
       `
     );
     return this.sendEmail(data.buyerEmail, subject, html);
@@ -282,30 +330,27 @@ export class EmailService {
     location: string;
     bookingId: string;
   }) {
-    const subject = 'Your service starts in 3 hours';
+    const subject = 'Your TeenOp Service is Coming Up Soon';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
     const html = buildEmail(
       'Service Starting Soon',
-      'Your service starts in 3 hours',
-      "Make sure you're ready!",
+      'Your TeenOp Service is Coming Up Soon',
+      '',
       `
       <p>Hi ${data.buyerName},</p>
-      <p>Your TeenOp service is coming up very soon.</p>
-
-      <div class="details-box">
-        <p><strong>Service:</strong> ${data.serviceName}</p>
-        <p><strong>Teen Provider:</strong> ${data.teenName}</p>
-        <p><strong>Time:</strong> ${data.time} ${data.timeZone}</p>
-        <p><strong>Location:</strong> ${data.location}</p>
-      </div>
-
-      <p>You can review your booking or send a message to your teen provider through TeenOp.</p>
+      <p>Your TeenOp service is scheduled to begin in 3 hours.</p>
+      <p>If you need to reach your teen provider, you can message them through the platform.</p>
 
       <div class="btn-center">
         <a href="${appUrl}/my-bookings" class="btn">View Booking</a>
       </div>
 
-      <p>We hope you enjoy your service!</p>
+      <div class="btn-center">
+        <a href="${appUrl}/messages?booking_id=${data.bookingId}" class="btn">Message Provider</a>
+      </div>
+
+      <p>Thank you for being part of the TeenOp community. We hope you enjoy your service!</p>
+      <p>Best,<br>The TeenOp Team</p>
       `
     );
     return this.sendEmail(data.buyerEmail, subject, html);
@@ -325,16 +370,16 @@ export class EmailService {
     location: string;
     bookingId: string;
   }) {
-    const subject = 'Reminder: Your service is tomorrow';
+    const subject = 'Reminder: Service Booking Tomorrow';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
     const locationDisplay = data.location === 'Online' ? 'Online' : data.location;
     const html = buildEmail(
       'Service Reminder',
-      'Your service is tomorrow!',
-      'Take a moment to review the details and prepare.',
+      'Reminder: Service Booking Tomorrow',
+      '',
       `
       <p>Hi ${data.providerName},</p>
-      <p>This is a reminder that you have an upcoming service scheduled for tomorrow.</p>
+      <p>This is a reminder that you have a service scheduled for tomorrow!</p>
 
       <div class="details-box">
         <p><strong>Service:</strong> ${data.serviceName}</p>
@@ -347,7 +392,8 @@ export class EmailService {
         <a href="${appUrl}/my-teen-hustle" class="btn">View Booking</a>
       </div>
 
-      <p>We hope everything goes great!</p>
+      <p>You’re all set. You can remind your customer to confirm the service so payment can be released.</p>
+      <p>Best,<br>The TeenOp Team</p>
       `
     );
     return this.sendEmail(data.providerEmail, subject, html);
@@ -366,15 +412,15 @@ export class EmailService {
     location: string;
     bookingId: string;
   }) {
-    const subject = 'Your service starts in 3 hours!';
+    const subject = 'Your Service Starts in 3 Hours';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
     const html = buildEmail(
       'Service Starting Soon',
-      'Your service starts in 3 hours!',
-      "Make sure you're ready to go.",
+      'Your Service Starts in 3 Hours',
+      '',
       `
       <p>Hi ${data.providerName},</p>
-      <p>Your TeenOp service is coming up soon — here are the details.</p>
+      <p>Your service is coming up soon!</p>
 
       <div class="details-box">
         <p><strong>Service:</strong> ${data.serviceName}</p>
@@ -383,13 +429,14 @@ export class EmailService {
         <p><strong>Location:</strong> ${data.location}</p>
       </div>
 
-      <p>Please arrive on time or message your customer through TeenOp if anything changes.</p>
+      <p>Please make sure you arrive on time or message your customer through TeenOp if anything changes.</p>
 
       <div class="btn-center">
         <a href="${appUrl}/my-teen-hustle" class="btn">View Booking</a>
       </div>
 
-      <p>Good luck!</p>
+      <p>You’ve got this. We hope you have a wonderful booking! Don’t forget to remind your buyer to mark the service as completed at the end of completed service to initiate your payment.</p>
+      <p>Best,<br>The TeenOp Team</p>
       `
     );
     return this.sendEmail(data.providerEmail, subject, html);
@@ -404,24 +451,23 @@ export class EmailService {
     serviceName: string;
     bookingId: string;
   }) {
-    const subject = 'Action needed: Mark your service complete';
+    const subject = 'Nice Work — Next Step';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
     const html = buildEmail(
-      'Mark Service Complete',
-      'Action needed: Mark your service complete',
-      'It only takes a moment — and unlocks tips and reviews!',
+      'Nice Work — Next Step',
+      'Nice Work — Next Step',
+      '',
       `
       <p>Hi ${data.providerName},</p>
-      <p>Your service <strong>${data.serviceName}</strong> should be wrapping up. Mark it complete so your customer can tip you and leave a review.</p>
-
-      <ul>
-        <li>Click the button below to mark your service as complete.</li>
-        <li>Once marked, your customer will be able to tip you and leave a rating.</li>
-      </ul>
+      <p>We hope your service went well!</p>
+      <p>Once your service is finished, feel free to mark it as complete on your Bookings page to keep your records up to date.</p>
+      <p>Your customer will be asked to confirm the service shortly. You can also send them a quick message to remind them to confirm so payment can be released.</p>
 
       <div class="btn-center">
-        <a href="${appUrl}/my-teen-hustle" class="btn">Mark Service Complete</a>
+        <a href="${appUrl}/my-teen-hustle" class="btn">View Bookings</a>
       </div>
+      <p>Great work!</p>
+      <p>Best,<br>The TeenOp Team</p>
       `
     );
     return this.sendEmail(data.providerEmail, subject, html);

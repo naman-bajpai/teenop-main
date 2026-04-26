@@ -271,6 +271,11 @@ export default function EarningsPage() {
               <p className="mt-4 text-lg font-medium text-slate-500 max-w-2xl">
                 Track your revenue, manage your Stripe connection, and monitor your transaction history in real-time.
               </p>
+              <div className="mt-6 max-w-3xl rounded-2xl border-2 border-[#434c9d]/20 bg-[#434c9d]/5 px-5 py-4">
+                <p className="text-sm sm:text-base font-bold text-[#434c9d] leading-relaxed">
+                  Earnings automatically transfer to your TeenOp Cash account. Click withdraw cash to transfer earnings to your bank.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -474,16 +479,26 @@ export default function EarningsPage() {
                   { step: "01", title: "Service Booked", desc: "Buyer pays for your service upfront." },
                   {
                     step: "02",
-                    title: "Withdrawal Request",
-                    desc: "Click the Withdraw Cash button to transfer earnings to bank account.",
+                    title: "Mark as Completed",
+                    desc: "To receive earnings, mark service as completed on Bookings Page.",
                   },
                   {
                     step: "03",
+                    title: "Earnings Received",
+                    desc: "Earnings will appear on Earnings dashboard within 1 day of marking service as complete.",
+                  },
+                  {
+                    step: "04",
+                    title: "Withdrawal Request",
+                    desc: "Select Withdraw Cash on the Earnings page to transfer money to your bank account.",
+                  },
+                  {
+                    step: "05",
                     title: "Admin Approval",
                     desc: "Admin approves request for cash withdrawal.",
                   },
                   {
-                    step: "04",
+                    step: "06",
                     title: "Bank Deposit",
                     desc: "Stripe will transfer funds to connected bank account within 5 days.",
                   },

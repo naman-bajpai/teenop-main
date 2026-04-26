@@ -327,6 +327,24 @@ export async function POST(
         }
       );
 
+      // Move funds from the connected Stripe balance to the connected bank account.
+      // A transfer alone only credits the teen's Stripe balance.
+      const payout = await stripe.payouts.create(
+        {
+          amount: transferAmountCents,
+          currency: 'usd',
+          metadata: {
+            withdrawal_request_id: requestId,
+            transfer_id: transfer.id,
+            user_id: (withdrawalRequest as any).user_id
+          }
+        },
+        {
+          stripeAccount: connectedAccountId,
+          idempotencyKey: `withdrawal-request-payout-${requestId}`
+        }
+      );
+
       // Update withdrawal request status to 'approved' after the Stripe transfer succeeds
       const { error: updateRequestError } = await (supabaseService as any)
         .from('withdrawal_requests')
@@ -336,7 +354,13 @@ export async function POST(
           stripe_transfer_id: transfer.id,
           processed_at: new Date().toISOString(),
           processed_by: user.id,
-          notes: (withdrawalRequest as any).notes // Keep existing notes with earnings IDs
+          notes: JSON.stringify({
+            ...(withdrawalRequest as any).notes ? (() => {
+              try { return JSON.parse((withdrawalRequest as any).notes); }
+              catch { return {}; }
+            })() : {},
+            payout_id: payout.id
+          })
         })
         .eq('id', requestId);
 
@@ -367,18 +391,21 @@ export async function POST(
         );
       }
 
-      console.log(`Successfully processed withdrawal request ${requestId}. Created Stripe transfer ${transfer.id} for $${((withdrawalRequest as any).amount).toFixed(2)}.`);
+      console.log(
+        `Successfully processed withdrawal request ${requestId}. Created transfer ${transfer.id} and payout ${payout.id} for $${((withdrawalRequest as any).amount).toFixed(2)}.`
+      );
 
       return NextResponse.json({
         success: true,
-        message: `Withdrawal request approved and $${((withdrawalRequest as any).amount).toFixed(2)} was transferred to the teen's Stripe account.`,
+        message: `Withdrawal request approved and $${((withdrawalRequest as any).amount).toFixed(2)} was sent to the teen's connected bank via Stripe payout.`,
         withdrawalRequest: {
           id: requestId,
           amount: (withdrawalRequest as any).amount,
           user_id: (withdrawalRequest as any).user_id,
           user_name: `${userProfile.first_name} ${userProfile.last_name}`,
           user_email: userProfile.email,
-          stripe_transfer_id: transfer.id
+          stripe_transfer_id: transfer.id,
+          stripe_payout_id: payout.id
         }
       });
 

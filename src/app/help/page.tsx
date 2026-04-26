@@ -39,7 +39,7 @@ const categories = [
       },
       {
         q: "Is TeenOp free to join?",
-        a: "Yes, creating an account is completely free. TeenOp takes a small platform fee on completed bookings to keep the service running.",
+        a: "Yes, creating an account is completely free and no additional fees are added to the price of services.",
       },
     ],
   },
@@ -58,11 +58,11 @@ const categories = [
       },
       {
         q: "How do I cancel a booking?",
-        a: "Go to My Bookings, find the booking, and use the cancel option. Cancellation policies may vary — check with the service provider if you have questions.",
+        a: "Go to My Bookings, find the booking, and use the cancel option. If a cancellation is needed, please do so at least 24 hours before the scheduled service to ensure a full refund. Last-minute cancellations should be avoided whenever possible.",
       },
       {
         q: "What happens after a booking is completed?",
-        a: "After the service is done, you'll be prompted to leave a review and optional tip. The teen's earnings will be credited to their account after the platform fee.",
+        a: "After the service is done, you'll be prompted to leave a review and optional tip. The teen's earnings will be credited to their account.",
       },
     ],
   },
@@ -73,19 +73,19 @@ const categories = [
     faqs: [
       {
         q: "How does payment work?",
-        a: "Payments are processed securely through Stripe. You pay when confirming a booking, and the teen receives their earnings (minus a small platform fee) once the service is completed.",
+        a: "Payments are processed securely through Stripe. You pay when confirming a booking, and the teen receives their earnings once the service is completed.",
       },
       {
         q: "How do teens get paid?",
-        a: "Teens need to connect a Stripe account under 'My Teen Hustle' in their dashboard. Once connected, earnings from completed bookings are transferred to their bank account.",
+        a: "Teens need to connect a Stripe account under their Bookings Page. Once connected, earnings from completed bookings are transferred to their bank account after they select the \"Withdraw Cash\" button on their Earnings Page.",
       },
       {
         q: "Can I leave a tip?",
         a: "Yes! After a completed booking you can add a tip to show appreciation. Tips go directly to the teen.",
       },
       {
-        q: "What is the platform fee?",
-        a: "TeenOp charges a small percentage fee on each completed booking. This helps keep the platform running and secure for everyone.",
+        q: "What is the refund policy?",
+        a: "If a cancellation is needed, please do so at least 24 hours before the scheduled service to ensure a full refund. If the teen provider cancels, the buyer will receive an automatic full refund, typically processed within 5 business days. Last-minute cancellations should be avoided whenever possible.",
       },
     ],
   },
@@ -96,7 +96,7 @@ const categories = [
     faqs: [
       {
         q: "How do I update my profile?",
-        a: "Go to Profile in your dashboard. You can update your name, bio, avatar, skills, and contact info from there.",
+        a: "Go to Profile in your dashboard. You can update your name, bio, avatar, and skills from there.",
       },
       {
         q: "How do I change my password?",
