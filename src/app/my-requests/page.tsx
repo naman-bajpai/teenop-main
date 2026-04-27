@@ -129,6 +129,7 @@ export default function MyRequestsPage() {
   const [selectedBookingForReview, setSelectedBookingForReview] = useState<Booking | null>(null);
   const [completedBookingsForReview, setCompletedBookingsForReview] = useState<Booking[]>([]);
   const [openingQuoteMessageId, setOpeningQuoteMessageId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("pending");
   const quoteMessageNavInFlight = useRef(false);
 
   useEffect(() => {
@@ -462,7 +463,10 @@ export default function MyRequestsPage() {
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(price);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    // Parse YYYY-MM-DD as a local calendar date to avoid timezone day-shift.
+    const [year, month, day] = dateString.split("-").map(Number);
+    const localDate = new Date(year, (month || 1) - 1, day || 1);
+    return localDate.toLocaleDateString("en-US", {
       weekday: "short",
       year: "numeric",
       month: "short",
@@ -626,7 +630,7 @@ export default function MyRequestsPage() {
           )}
 
           {/* Tabs */}
-          <Tabs defaultValue="pending" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-6 mb-10 pb-6 border-b border-gray-100">
               <TabsList className="bg-gray-100/50 p-1.5 rounded-2xl h-auto flex flex-wrap justify-center">
                 {[
@@ -652,6 +656,15 @@ export default function MyRequestsPage() {
                   </TabsTrigger>
                 ))}
               </TabsList>
+            </div>
+            <div className="mb-8 rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
+              <p className="text-sm font-semibold text-gray-700">
+                {activeTab === "pending" && "Pending: Booking not yet confirmed, awaiting response from the teen."}
+                {activeTab === "expired" && "Expired: Booking request expired due to no response or missed confirmation."}
+                {activeTab === "scheduled" && "Scheduled: Payment completed and service is confirmed."}
+                {activeTab === "completed" && "History: Past bookings including completed services, reviews, and payments."}
+                {activeTab === "cancelled" && "Cancelled: Bookings that were canceled and refunded."}
+              </p>
             </div>
 
             {/* Status-specific tabs */}
@@ -990,6 +1003,21 @@ function BookingCard({
             </div>
           </div>
         )}
+        {booking.status === "paid" && (
+          <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-sm font-black text-emerald-900 mb-2">Payment Confirmed</p>
+            <p className="text-xs font-bold text-emerald-800 mb-2">Here&apos;s what happens next:</p>
+            <ul className="space-y-1 text-xs font-medium text-emerald-900 list-disc pl-4">
+              <li>Your payment has been received and securely held. Teens will not be paid until you mark the service as completed.</li>
+              <li>Funds will be transferred to the teen after the service is marked as completed.</li>
+              <li>You can message your teen anytime through the platform to coordinate details.</li>
+              <li>You&apos;ll receive email reminders 24 hours and 3 hours before your scheduled service.</li>
+              <li>Mark the service as completed on Requests Page to initiate teen payment.</li>
+              <li>After the service, you&apos;ll have the option to tip and leave a review.</li>
+            </ul>
+            <p className="text-xs font-bold text-emerald-900 mt-2">Thank you for supporting young entrepreneurs &#128155;</p>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
@@ -1012,6 +1040,9 @@ function BookingCard({
 
           {!isExpired && booking.status === "alternative_proposed" && (
             <div className="space-y-2">
+              <p className="text-[11px] font-semibold text-gray-600 px-1">
+                You will be notified by email when the buyer responds.
+              </p>
               <div className="flex gap-2">
                 <Button
                   onClick={() => {
@@ -1065,6 +1096,9 @@ function BookingCard({
 
           {!isExpired && booking.status === "confirmed" && (
             <div className="space-y-2">
+              <p className="text-[11px] font-semibold text-gray-600 px-1">
+                You will receive an email notification when the teen provider responds. View the status of your request under the Requests tab.
+              </p>
               <Button
                 onClick={onPay}
                 className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-xl font-black h-12 shadow-xl shadow-[#434c9d]/20 transition-all active:scale-95"

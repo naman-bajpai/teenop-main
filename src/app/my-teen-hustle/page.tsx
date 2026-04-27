@@ -140,6 +140,13 @@ function BookingCard({ booking, onStatusUpdate }: {
     } catch { return timeString; }
   };
 
+  const formatDate = (dateString: string) => {
+    // Parse YYYY-MM-DD as a local calendar date to avoid timezone day-shift.
+    const [year, month, day] = dateString.split("-").map(Number);
+    const localDate = new Date(year, (month || 1) - 1, day || 1);
+    return localDate.toLocaleDateString("en-US");
+  };
+
   const handleAccept = async () => await onStatusUpdate(booking.id, "confirmed");
   const handleDecline = () => setShowAlternativeDialog(true);
 
@@ -282,7 +289,7 @@ function BookingCard({ booking, onStatusUpdate }: {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-2xl mb-6">
         <div className="space-y-1">
           <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5"><Calendar className="w-3 h-3" /> Date</div>
-          <div className="text-sm font-bold text-gray-900">{new Date(booking.requested_date).toLocaleDateString()}</div>
+          <div className="text-sm font-bold text-gray-900">{formatDate(booking.requested_date)}</div>
           <div className="text-[10px] font-medium text-gray-500">{formatTime(booking.requested_time)}</div>
         </div>
         <div className="space-y-1 text-right sm:text-left">
@@ -305,10 +312,28 @@ function BookingCard({ booking, onStatusUpdate }: {
           &quot;{booking.special_instructions}&quot;
         </div>
       )}
+      {booking.status === "paid" && (
+        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+          <p className="text-sm font-black text-blue-900 mb-2">Booking Confirmed</p>
+          <p className="text-xs font-bold text-blue-800 mb-2">Here&apos;s what happens next:</p>
+          <ul className="space-y-1 text-xs font-medium text-blue-900 list-disc pl-4">
+            <li>A parent has paid in advance for your service.</li>
+            <li>Funds will be transferred to your account after you mark the service as completed.</li>
+            <li>Be sure to message the parent through the platform to confirm details.</li>
+            <li>You&apos;ll receive email reminders 24 hours and 3 hours before your scheduled service.</li>
+            <li>Once completed, Mark Service Completed on Bookings Page and visit Earnings Page to see how to receive payment.</li>
+            <li>After the service, the parent can tip and leave a review.</li>
+          </ul>
+          <p className="text-xs font-bold text-blue-900 mt-2">You&apos;re all set go do your thing &#128155;</p>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 pt-2">
         {booking.status === "pending" && (
           <>
+            <p className="w-full text-[11px] font-semibold text-gray-600 mb-1">
+              You will be notified by email when the buyer completes payment and booking is confirmed.
+            </p>
             <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-6 h-10 font-bold" onClick={handleAccept}>Accept Request</Button>
             <Button variant="outline" size="sm" className="text-red-600 border-red-100 hover:bg-red-50 rounded-xl px-6 h-10 font-bold" onClick={handleDecline}>Decline / Propose Time</Button>
           </>
@@ -358,6 +383,9 @@ function BookingCard({ booking, onStatusUpdate }: {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-gray-900">Propose Alternative</DialogTitle>
             <DialogDescription className="text-gray-500 pt-2 leading-relaxed">The requested time doesn&apos;t work. Suggest a better time for you.</DialogDescription>
+            <p className="text-xs font-semibold text-[#434c9d]">
+              You will be notified by email when the buyer responds.
+            </p>
           </DialogHeader>
           <div className="space-y-6 py-6">
             <div className="grid grid-cols-2 gap-4">
@@ -449,6 +477,7 @@ export default function TeenHustlePage() {
   const [quoteRequests, setQuoteRequests] = useState<any[]>([]);
   const [servicesNeedingCompletion, setServicesNeedingCompletion] = useState<number>(0);
   const [cancellingQuoteRequest, setCancellingQuoteRequest] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("pending");
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -728,7 +757,7 @@ export default function TeenHustlePage() {
 
         {/* Bookings Section */}
         <div className="space-y-8">
-          <Tabs defaultValue="pending" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
               <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Your bookings</h2>
               <TabsList className="bg-gray-100/50 p-1 rounded-2xl border border-gray-100">
@@ -752,6 +781,13 @@ export default function TeenHustlePage() {
                 </TabsTrigger>
                 <TabsTrigger value="completed" className="rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm">History</TabsTrigger>
               </TabsList>
+            </div>
+            <div className="mb-6 rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
+              <p className="text-sm font-semibold text-gray-700">
+                {activeTab === "pending" && "Pending: Booking not yet confirmed, awaiting payment or a response to an alternative time request."}
+                {activeTab === "scheduled" && "Scheduled: Payment received and service is confirmed."}
+                {activeTab === "completed" && "History: Completed or past bookings, including reviews and payments."}
+              </p>
             </div>
 
             <TabsContent value="pending">

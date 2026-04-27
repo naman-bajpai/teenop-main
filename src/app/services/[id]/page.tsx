@@ -612,7 +612,7 @@ export default function ServiceDetailsPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-900 leading-tight">Request Sent Successfully!</h3>
-                  <p className="text-green-700 font-medium text-sm mt-0.5">The provider will review your request and respond shortly.</p>
+                  <p className="text-green-700 font-medium text-sm mt-0.5">The provider will review your request and respond shortly. You will receive an email notification when the teen provider responds. View the status of your request under the Requests tab.</p>
                 </div>
               </div>
               {bookedDetails && (() => {
@@ -896,6 +896,9 @@ export default function ServiceDetailsPage() {
                                 <DialogDescription className="text-gray-500 font-medium text-base">
                                   Provide details about your project to get a custom price from {service.provider_name}.
                                 </DialogDescription>
+                                <p className="text-xs font-semibold text-[#434c9d] mt-3">
+                                  You will be notified by email when the teen provider responds.
+                                </p>
                               </DialogHeader>
                             </div>
                             <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
@@ -1026,6 +1029,9 @@ export default function ServiceDetailsPage() {
                                 <DialogDescription className="text-gray-500 font-medium text-base">
                                   Book {service.title} with {service.provider_name}.
                                 </DialogDescription>
+                                <p className="text-xs font-semibold text-[#434c9d] mt-3">
+                                  You will be notified by email when the teen provider responds.
+                                </p>
                               </DialogHeader>
                             </div>
                             <div className="p-8">
