@@ -1147,7 +1147,7 @@ function BookingCard({
               <Button
                 variant="outline"
                 disabled={updating}
-                className="w-full rounded-xl font-bold border-amber-200 text-amber-700 hover:bg-amber-50 transition-all h-11"
+                className="w-full rounded-xl font-bold border-amber-200 text-amber-700 hover:bg-amber-50 transition-all h-auto py-3 leading-snug whitespace-normal text-left justify-start"
                 onClick={() => {
                   const shouldRefund = window.confirm(
                     "If teen doesn't complete service click here and payment will be refunded.\n\nClick OK to cancel this service and start refund processing."

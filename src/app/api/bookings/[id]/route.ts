@@ -722,7 +722,24 @@ export async function PATCH(
           .eq("id", bookingData.user_id)
           .single();
 
-        if (customerProfile && (customerProfile as any).email) {
+        let customerEmail = (customerProfile as any)?.email as string | undefined;
+
+        // Fallback to auth email in case profiles.email is missing/outdated.
+        if (!customerEmail) {
+          try {
+            const serviceRole = createServiceRoleClient();
+            const { data: authUserData, error: authUserError } = await serviceRole.auth.admin.getUserById(bookingData.user_id);
+            if (!authUserError) {
+              customerEmail = authUserData.user?.email;
+            } else {
+              console.warn("Failed to fetch customer auth email for alternative proposal:", authUserError.message);
+            }
+          } catch (fallbackError) {
+            console.warn("Alternative proposal email fallback failed:", fallbackError);
+          }
+        }
+
+        if (customerEmail) {
           const { emailService } = await import("@/lib/email");
           const serviceTitle = updatedBookingData.services?.title || "Service";
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -743,7 +760,7 @@ export async function PATCH(
           };
 
           await emailService.sendEmail(
-            (customerProfile as any).email,
+            customerEmail,
             "Your Action Needed: New TeenOp Service Time Proposed",
             `
               <p>Hello,</p>

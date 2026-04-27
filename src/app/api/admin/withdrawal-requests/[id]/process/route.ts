@@ -327,23 +327,38 @@ export async function POST(
         }
       );
 
-      // Move funds from the connected Stripe balance to the connected bank account.
-      // A transfer alone only credits the teen's Stripe balance.
-      const payout = await stripe.payouts.create(
-        {
-          amount: transferAmountCents,
-          currency: 'usd',
-          metadata: {
-            withdrawal_request_id: requestId,
-            transfer_id: transfer.id,
-            user_id: (withdrawalRequest as any).user_id
+      // Try to move funds from connected Stripe balance to bank account.
+      // Note: Stripe Standard accounts often disallow platform-initiated payouts.
+      let payout: { id: string } | null = null;
+      let payoutSkippedReason: string | null = null;
+      try {
+        const createdPayout = await stripe.payouts.create(
+          {
+            amount: transferAmountCents,
+            currency: 'usd',
+            metadata: {
+              withdrawal_request_id: requestId,
+              transfer_id: transfer.id,
+              user_id: (withdrawalRequest as any).user_id
+            }
+          },
+          {
+            stripeAccount: connectedAccountId,
+            idempotencyKey: `withdrawal-request-payout-${requestId}`
           }
-        },
-        {
-          stripeAccount: connectedAccountId,
-          idempotencyKey: `withdrawal-request-payout-${requestId}`
+        );
+        payout = { id: createdPayout.id };
+      } catch (payoutError: any) {
+        if (payoutError?.code === 'not_allowed_on_standard_account') {
+          // For Standard accounts, transfer succeeds and Stripe handles payout schedule automatically.
+          payoutSkippedReason = 'standard_account_platform_payout_not_allowed';
+          console.warn(
+            `Skipping payout for withdrawal request ${requestId}: ${payoutError.code}`
+          );
+        } else {
+          throw payoutError;
         }
-      );
+      }
 
       // Update withdrawal request status to 'approved' after the Stripe transfer succeeds
       const { error: updateRequestError } = await (supabaseService as any)
@@ -359,7 +374,8 @@ export async function POST(
               try { return JSON.parse((withdrawalRequest as any).notes); }
               catch { return {}; }
             })() : {},
-            payout_id: payout.id
+            payout_id: payout?.id || null,
+            payout_skipped_reason: payoutSkippedReason
           })
         })
         .eq('id', requestId);
@@ -392,12 +408,14 @@ export async function POST(
       }
 
       console.log(
-        `Successfully processed withdrawal request ${requestId}. Created transfer ${transfer.id} and payout ${payout.id} for $${((withdrawalRequest as any).amount).toFixed(2)}.`
+        `Successfully processed withdrawal request ${requestId}. Created transfer ${transfer.id}${payout ? ` and payout ${payout.id}` : ''} for $${((withdrawalRequest as any).amount).toFixed(2)}.`
       );
 
       return NextResponse.json({
         success: true,
-        message: `Withdrawal request approved and $${((withdrawalRequest as any).amount).toFixed(2)} was sent to the teen's connected bank via Stripe payout.`,
+        message: payout
+          ? `Withdrawal request approved and $${((withdrawalRequest as any).amount).toFixed(2)} was sent to the teen's connected bank via Stripe payout.`
+          : `Withdrawal request approved and $${((withdrawalRequest as any).amount).toFixed(2)} was transferred to the teen's Stripe account. Stripe will send it to their connected bank based on their Stripe payout schedule.`,
         withdrawalRequest: {
           id: requestId,
           amount: (withdrawalRequest as any).amount,
@@ -405,7 +423,8 @@ export async function POST(
           user_name: `${userProfile.first_name} ${userProfile.last_name}`,
           user_email: userProfile.email,
           stripe_transfer_id: transfer.id,
-          stripe_payout_id: payout.id
+          stripe_payout_id: payout?.id || null,
+          payout_skipped_reason: payoutSkippedReason
         }
       });
 
