@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { Eye, EyeOff, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
 import TeenProviderDisclaimer from "@/components/auth/TeenProviderDisclaimer";
-import { isSchoolEmail } from "@/lib/school-email";
 export default function SignupPage() {
   const router = useRouter();
   
@@ -76,12 +75,12 @@ export default function SignupPage() {
     if (!email.trim()) {
       return `${fieldName} is required`;
     }
-    // More comprehensive email validation
-    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-    if (!emailRegex.test(email)) {
+    // Keep this intentionally lightweight to avoid over-rejecting valid addresses.
+    const trimmed = email.trim();
+    if (!trimmed.includes("@") || !trimmed.includes(".")) {
       return `Please enter a valid ${fieldName.toLowerCase()} address`;
     }
-    if (email.length > 254) {
+    if (trimmed.length > 254) {
       return `${fieldName} address is too long`;
     }
     return null;
@@ -165,10 +164,7 @@ export default function SignupPage() {
       const error = validateName(sanitizedValue, "Last name");
       setFieldErrors(prev => ({ ...prev, lastName: error || undefined }));
     } else if (name === "email" && typeof sanitizedValue === "string") {
-      let error = validateEmail(sanitizedValue);
-      if (!error && formData.role === "teen" && !isSchoolEmail(sanitizedValue)) {
-        error = "Teen accounts require a valid school email address";
-      }
+      const error = validateEmail(sanitizedValue);
       setFieldErrors(prev => ({ ...prev, email: error || undefined }));
     } else if (name === "age") {
       const error = validateAge(value);
@@ -188,16 +184,7 @@ export default function SignupPage() {
       const error = value !== formData.password ? "Passwords do not match" : null;
       setFieldErrors(prev => ({ ...prev, confirmPassword: error || undefined }));
     } else if (name === "role") {
-      // When switching to teen, re-validate school email requirement
-      if (value === "teen" && formData.email) {
-        let emailErr = validateEmail(formData.email);
-        if (!emailErr && !isSchoolEmail(formData.email)) {
-          emailErr = "Teen accounts require a valid school email address";
-        }
-        setFieldErrors(prev => ({ ...prev, email: emailErr || undefined }));
-      } else {
-        setFieldErrors(prev => ({ ...prev, email: undefined }));
-      }
+      setFieldErrors(prev => ({ ...prev, email: undefined }));
     }
 
     // Clear errors when user starts typing
@@ -229,11 +216,6 @@ export default function SignupPage() {
       errors.email = emailError;
       hasErrors = true;
     }
-    if (formData.role === "teen" && !emailError && !isSchoolEmail(formData.email)) {
-      errors.email = "Teen accounts require a valid school email address";
-      hasErrors = true;
-    }
-
     // Validate age for teen accounts
     if (formData.role === "teen") {
       const ageError = validateAge(formData.age);
@@ -432,7 +414,7 @@ export default function SignupPage() {
                 </select>
                 <p className="mt-2 text-xs text-slate-500">
                   {formData.role === "teen"
-                    ? "Teen accounts must use a school email address."
+                    ? "Use an email address you can access for verification."
                     : "Choose this if you want to book or support teen services in your area."}
                 </p>
               </div>
@@ -470,7 +452,7 @@ export default function SignupPage() {
                       Teen details
                     </div>
                     <p className="mt-3 text-sm text-slate-600">
-                      Use your school email and add your age so we can create your provider account.
+                      Add your age so we can create your provider account.
                     </p>
                   </div>
 

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase';
 import { enforceAuthRateLimit } from '@/lib/rate-limit';
-import { isSchoolEmail } from '@/lib/school-email';
 
 export async function POST(request: Request) {
   try {
@@ -32,12 +31,6 @@ export async function POST(request: Request) {
       if (age < 13 || age > 19) {
         return NextResponse.json(
           { error: 'Age must be between 13 and 19' },
-          { status: 400 }
-        );
-      }
-      if (!isSchoolEmail(String(email))) {
-        return NextResponse.json(
-          { error: 'Teen accounts require a valid school email address.' },
           { status: 400 }
         );
       }

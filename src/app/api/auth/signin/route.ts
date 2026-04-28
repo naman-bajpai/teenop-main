@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import { enforceAuthRateLimit } from '@/lib/rate-limit';
-import { isSchoolEmail } from '@/lib/school-email';
 
 export async function POST(request: Request) {
   try {
@@ -91,13 +90,6 @@ export async function POST(request: Request) {
       console.log('User account cannot sign in:', profile.status, profile.role);
       return NextResponse.json(
         { error: 'Account is not active. Please contact support.' },
-        { status: 403 }
-      );
-    }
-
-    if (profile.role === 'teen' && !isSchoolEmail(profile.email || email)) {
-      return NextResponse.json(
-        { error: 'Teen accounts require a valid school email address.' },
         { status: 403 }
       );
     }
