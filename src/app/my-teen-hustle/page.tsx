@@ -707,14 +707,6 @@ export default function TeenHustlePage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/provider/quote-requests">
-              <Button variant="outline" className="rounded-2xl border-gray-100 text-gray-700 hover:bg-gray-50 h-12 font-bold relative">
-                <FileText className="w-4 h-4 mr-2 text-[#96cbc3]" /> Quote Requests
-                {pendingQuoteRequestsCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-[#ff725a] text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-lg border-2 border-white">{pendingQuoteRequestsCount}</span>
-                )}
-              </Button>
-            </Link>
             <Link href="/my-services">
               <Button variant="outline" className="rounded-2xl border-gray-100 text-gray-700 hover:bg-gray-50 h-12 font-bold">
                 <Star className="w-4 h-4 mr-2 text-yellow-400 fill-yellow-400" /> My Services
@@ -748,7 +740,7 @@ export default function TeenHustlePage() {
             <div className="flex items-center">
               <Link href="/earnings" className="w-full">
                 <Button className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 rounded-2xl h-14 font-bold shadow-lg shadow-[#434c9d]/20 transition-all active:scale-95 flex items-center justify-center gap-2">
-                  <Wallet className="w-5 h-5" /> View Payouts <ChevronRight className="w-4 h-4 opacity-50" />
+                  <Wallet className="w-5 h-5" /> Earnings Dashboard<ChevronRight className="w-4 h-4 opacity-50" />
                 </Button>
               </Link>
             </div>
@@ -776,8 +768,20 @@ export default function TeenHustlePage() {
                     />
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="scheduled" className="rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm relative">
-                  Scheduled {scheduledBookings.length > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#ff725a] rounded-full" />}
+                <TabsTrigger
+                  value="scheduled"
+                  className={cn(
+                    "rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm relative",
+                    scheduledBookings.length > 0 && "pr-7"
+                  )}
+                >
+                  Scheduled
+                  {scheduledBookings.length > 0 && (
+                    <span
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-red-500 animate-pulse"
+                      aria-hidden
+                    />
+                  )}
                 </TabsTrigger>
                 <TabsTrigger value="completed" className="rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm">History</TabsTrigger>
               </TabsList>
@@ -805,9 +809,7 @@ export default function TeenHustlePage() {
                             </div>
                             <p className="text-sm text-gray-500 font-medium">From <span className="text-[#434c9d] font-bold">{qr.profiles?.first_name}</span></p>
                           </div>
-                          <div className="flex gap-2">
-                            <Button onClick={() => router.push(`/provider/quote-requests?request=${qr.id}`)} className="bg-[#96cbc3] hover:bg-[#96cbc3]/90 text-white rounded-xl font-bold h-10 px-6">Respond</Button>
-                          </div>
+                          <div className="flex gap-2" />
                         </div>
                         {qr.special_instructions && <p className="text-sm text-gray-500 leading-relaxed bg-gray-50 p-4 rounded-xl italic mb-4">&quot;{qr.special_instructions}&quot;</p>}
                         {(qr.status === "pending" || qr.status === "quoted") && (

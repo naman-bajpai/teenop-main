@@ -147,6 +147,26 @@ export async function POST(request: NextRequest) {
       // Don't fail the payment confirmation if email fails
     }
 
+    // Send booking confirmation email to parent immediately after payment succeeds
+    try {
+      const { data: parentProfile } = await supabase
+        .from("profiles")
+        .select("first_name")
+        .eq("id", user.id)
+        .single();
+
+      const { emailService } = await import("@/lib/email");
+      const parentName = (parentProfile as any)?.first_name || user.user_metadata?.first_name || "there";
+
+      await emailService.sendBuyerPaymentConfirmed({
+        buyerName: parentName,
+        buyerEmail: user.email || "",
+      });
+    } catch (parentEmailError) {
+      console.error("Error sending booking confirmation email to parent:", parentEmailError);
+      // Don't fail payment confirmation if email fails
+    }
+
     return NextResponse.json({
       success: true,
       booking: updatedBooking,

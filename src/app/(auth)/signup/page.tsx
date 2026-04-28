@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Eye, EyeOff, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
 import TeenProviderDisclaimer from "@/components/auth/TeenProviderDisclaimer";
+import { isSchoolEmail } from "@/lib/school-email";
 export default function SignupPage() {
   const router = useRouter();
   
@@ -28,11 +29,7 @@ export default function SignupPage() {
     password: "",
     confirmPassword: "",
     role: "teen" as "teen" | "parent",
-    parentEmail: "",
-    parentPhone: "",
-    parentPermission: false,
     terms: false,
-    accessCode: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -46,10 +43,6 @@ export default function SignupPage() {
     phone?: string;
     password?: string;
     confirmPassword?: string;
-    parentEmail?: string;
-    parentPhone?: string;
-    parentPermission?: string;
-    accessCode?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
@@ -173,7 +166,9 @@ export default function SignupPage() {
       setFieldErrors(prev => ({ ...prev, lastName: error || undefined }));
     } else if (name === "email" && typeof sanitizedValue === "string") {
       let error = validateEmail(sanitizedValue);
-      // Teen email domain restriction temporarily disabled.
+      if (!error && formData.role === "teen" && !isSchoolEmail(sanitizedValue)) {
+        error = "Teen accounts require a valid school email address";
+      }
       setFieldErrors(prev => ({ ...prev, email: error || undefined }));
     } else if (name === "age") {
       const error = validateAge(value);
@@ -192,19 +187,13 @@ export default function SignupPage() {
     } else if (name === "confirmPassword") {
       const error = value !== formData.password ? "Passwords do not match" : null;
       setFieldErrors(prev => ({ ...prev, confirmPassword: error || undefined }));
-    } else if (name === "parentEmail" && typeof sanitizedValue === "string") {
-      const error = validateEmail(sanitizedValue, "Parent email");
-      setFieldErrors(prev => ({ ...prev, parentEmail: error || undefined }));
-    } else if (name === "parentPhone" && typeof sanitizedValue === "string") {
-      const error = validatePhone(sanitizedValue);
-      setFieldErrors(prev => ({ ...prev, parentPhone: error || undefined }));
-    } else if (name === "accessCode") {
-      const error = value !== "teenopfalcons" ? "Invalid access code" : null;
-      setFieldErrors(prev => ({ ...prev, accessCode: error || undefined }));
     } else if (name === "role") {
-      // When switching to teen, re-validate email for allowed domain
+      // When switching to teen, re-validate school email requirement
       if (value === "teen" && formData.email) {
-        const emailErr = validateEmail(formData.email);
+        let emailErr = validateEmail(formData.email);
+        if (!emailErr && !isSchoolEmail(formData.email)) {
+          emailErr = "Teen accounts require a valid school email address";
+        }
         setFieldErrors(prev => ({ ...prev, email: emailErr || undefined }));
       } else {
         setFieldErrors(prev => ({ ...prev, email: undefined }));
@@ -240,6 +229,10 @@ export default function SignupPage() {
       errors.email = emailError;
       hasErrors = true;
     }
+    if (formData.role === "teen" && !emailError && !isSchoolEmail(formData.email)) {
+      errors.email = "Teen accounts require a valid school email address";
+      hasErrors = true;
+    }
 
     // Validate age for teen accounts
     if (formData.role === "teen") {
@@ -249,10 +242,6 @@ export default function SignupPage() {
         hasErrors = true;
       }
 
-      if (!formData.parentPermission) {
-        errors.parentPermission = "You must confirm that you have parent or guardian permission.";
-        hasErrors = true;
-      }
     }
 
     // Validate password
@@ -268,12 +257,6 @@ export default function SignupPage() {
       hasErrors = true;
     }
 
-    // Validate access code
-    if (formData.accessCode !== "teenopfalcons") {
-      errors.accessCode = "Invalid access code";
-      hasErrors = true;
-    }
-
     // Validate terms
     if (!formData.terms) {
       setError(
@@ -282,24 +265,6 @@ export default function SignupPage() {
           : "You must agree to the Terms of Service and Liability Waiver"
       );
       hasErrors = true;
-    }
-
-    // Validate parent email for teen accounts
-    if (formData.role === "teen") {
-      const parentEmailError = validateEmail(formData.parentEmail, "Parent email");
-      if (parentEmailError) {
-        errors.parentEmail = parentEmailError;
-        hasErrors = true;
-      }
-    }
-
-    // Validate parent phone if provided
-    if (formData.role === "teen") {
-      const parentPhoneError = validatePhone(formData.parentPhone);
-      if (parentPhoneError) {
-        errors.parentPhone = parentPhoneError;
-        hasErrors = true;
-      }
     }
 
     setFieldErrors(errors);
@@ -350,9 +315,6 @@ export default function SignupPage() {
           age: formData.role === "teen" ? parseInt(formData.age) : undefined,
           phone: formData.phone || undefined,
           role: formData.role || 'teen',
-          parentEmail: formData.parentEmail || undefined,
-          parentPhone: formData.parentPhone || undefined,
-          parentPermission: formData.parentPermission,
         }),
       });
 
@@ -376,11 +338,7 @@ export default function SignupPage() {
         return;
       }
 
-      setSuccess(
-        result.requiresParentVerification
-          ? "Account created. A verification email was sent to your parent/guardian. They must confirm before you can log in."
-          : "Account created successfully! Please check your email for verification."
-      );
+      setSuccess("Account created successfully! Please check your email for verification.");
       // Reset form
       setFormData({
         firstName: "",
@@ -391,18 +349,11 @@ export default function SignupPage() {
         password: "",
         confirmPassword: "",
         role: "teen",
-        parentEmail: "",
-        parentPhone: "",
-        parentPermission: false,
         terms: false,
-        accessCode: "",
       });
       
-      // Teens: parent must verify first, so send to login (they'll see "account not active" until parent confirms)
-      // Parents: go to login
-      const redirectPath = result.requiresParentVerification ? "/pending-approval" : "/login";
       setTimeout(() => {
-        router.push(redirectPath);
+        router.push("/login");
       }, 3000);
     } catch (error) {
       console.error('Signup error:', error);
@@ -481,17 +432,9 @@ export default function SignupPage() {
                 </select>
                 <p className="mt-2 text-xs text-slate-500">
                   {formData.role === "teen"
-                    ? "Teen accounts can use any valid email address."
+                    ? "Teen accounts must use a school email address."
                     : "Choose this if you want to book or support teen services in your area."}
                 </p>
-              </div>
-
-              <div>
-                <label htmlFor="accessCode" className="mb-1.5 block text-sm font-semibold text-slate-700">Access code</label>
-                <Input id="accessCode" name="accessCode" type="text" required value={formData.accessCode} onChange={handleInputChange}
-                  className={`h-12 w-full rounded-2xl border bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.accessCode ? "border-red-400" : "border-slate-200"}`}
-                  placeholder="Enter your access code" disabled={isSubmitting} />
-                {fieldErrors.accessCode && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.accessCode}</p>}
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -524,10 +467,10 @@ export default function SignupPage() {
                   <div>
                     <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#434c9d] shadow-sm">
                       <ShieldCheck className="h-3.5 w-3.5" />
-                      Teen verification
+                      Teen details
                     </div>
                     <p className="mt-3 text-sm text-slate-600">
-                      We’ll collect a few extra details so your parent or guardian can approve your account.
+                      Use your school email and add your age so we can create your provider account.
                     </p>
                   </div>
 
@@ -548,29 +491,6 @@ export default function SignupPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <label htmlFor="parentEmail" className="mb-1.5 block text-sm font-semibold text-slate-700">Parent email</label>
-                      <Input id="parentEmail" name="parentEmail" type="email" autoComplete="email" required value={formData.parentEmail} onChange={handleInputChange}
-                        className={`h-12 rounded-2xl border bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.parentEmail ? "border-red-400" : "border-slate-200"}`}
-                        placeholder="parent@example.com" disabled={isSubmitting} maxLength={254} />
-                      {fieldErrors.parentEmail && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.parentEmail}</p>}
-                    </div>
-                    <div>
-                      <label htmlFor="parentPhone" className="mb-1.5 block text-sm font-semibold text-slate-700">Parent phone</label>
-                      <Input id="parentPhone" name="parentPhone" type="tel" required value={formData.parentPhone} onChange={handleInputChange}
-                        className={`h-12 rounded-2xl border bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.parentPhone ? "border-red-400" : "border-slate-200"}`}
-                        placeholder="+1 555 0100" disabled={isSubmitting} maxLength={20} />
-                      {fieldErrors.parentPhone && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.parentPhone}</p>}
-                    </div>
-                  </div>
-
-                  <label htmlFor="parentPermission" className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                    <input id="parentPermission" name="parentPermission" type="checkbox" checked={formData.parentPermission} onChange={handleInputChange}
-                      className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-slate-300 text-[#434c9d] focus:ring-[#434c9d]/20" disabled={isSubmitting} />
-                    <span className="text-sm leading-relaxed text-slate-600">I confirm I have my parent or guardian&apos;s permission to create a TeenOp account.</span>
-                  </label>
-                  {fieldErrors.parentPermission && <p className="flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.parentPermission}</p>}
                 </div>
               )}
 

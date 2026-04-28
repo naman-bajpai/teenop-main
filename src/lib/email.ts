@@ -277,6 +277,40 @@ export class EmailService {
     return this.sendEmail(data.parentEmail, subject, html);
   }
 
+  async sendBuyerPaymentConfirmed(data: {
+    buyerName: string;
+    buyerEmail: string;
+  }) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
+    const subject = "You're Booked - Your Service is Confirmed!";
+    const html = buildEmail(
+      'Service Confirmed',
+      "You're Booked - Your Service is Confirmed!",
+      '',
+      `
+      <p>Hi ${data.buyerName},</p>
+      <p>Your service has been successfully scheduled and payment has been completed.</p>
+
+      <p class="section-title">What to expect next</p>
+      <ul>
+        <li>You can message your teen provider anytime through TeenOp to coordinate details.</li>
+        <li>You'll receive reminder emails 24 hours and 3 hours before your service.</li>
+        <li>After the service, mark service completed under the Requests page to release payment to teen provider.</li>
+      </ul>
+
+      <div class="btn-center">
+        <a href="${appUrl}/my-requests" class="btn">Mark Service Completed</a>
+      </div>
+
+      <p>Your payment is held securely through Stripe until you confirm the service has been completed. It is then transferred directly to the teen provider.</p>
+      <p>We're excited to be part of this experience and appreciate your support in helping young entrepreneurs grow.</p>
+      <p>Best,<br>The TeenOp Team</p>
+      `
+    );
+
+    return this.sendEmail(data.buyerEmail, subject, html);
+  }
+
   // -------------------------------------------------------------------------
   // Buyer — 24-hour reminder
   // -------------------------------------------------------------------------

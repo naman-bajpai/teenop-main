@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
-import { createClient, createAdminClient } from '@/lib/supabase';
-import { emailService } from '@/lib/email';
-import { smsService } from '@/lib/sms';
-import { randomBytes } from 'crypto';
+import { createClient } from '@/lib/supabase';
 import { enforceAuthRateLimit } from '@/lib/rate-limit';
+import { isSchoolEmail } from '@/lib/school-email';
 
 export async function POST(request: Request) {
   try {
     const limited = enforceAuthRateLimit(request, 'signup');
     if (limited) return limited;
 
-    const { email, password, firstName, lastName, age, role, phone, parentEmail, parentPhone, parentPermission } = await request.json();
+    const { email, password, firstName, lastName, age, role, phone } = await request.json();
     
     console.log('Signup attempt for:', { email, firstName, lastName, age, role });
 
@@ -23,7 +21,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate age and parent contact for teen accounts
+    // Validate teen-specific requirements
     if (role === 'teen') {
       if (!age) {
         return NextResponse.json(
@@ -37,23 +35,9 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      const hasParentEmail = parentEmail && String(parentEmail).trim().length > 0;
-      const hasParentPhone = parentPhone && String(parentPhone).trim().length > 0;
-      if (!hasParentEmail || !hasParentPhone) {
+      if (!isSchoolEmail(String(email))) {
         return NextResponse.json(
-          { error: 'Parent/guardian email and phone are required so we can request approval.' },
-          { status: 400 }
-        );
-      }
-      if (!parentPermission) {
-        return NextResponse.json(
-          { error: 'You must confirm that you have your parent or guardian permission to sign up.' },
-          { status: 400 }
-        );
-      }
-      if (hasParentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(parentEmail).trim())) {
-        return NextResponse.json(
-          { error: 'Please enter a valid parent/guardian email address.' },
+          { error: 'Teen accounts require a valid school email address.' },
           { status: 400 }
         );
       }
@@ -113,8 +97,6 @@ export async function POST(request: Request) {
             role: role || 'teen',
             age: age,
             phone: phone,
-            parent_email: parentEmail,
-            parent_phone: parentPhone,
           }
       }
     });
@@ -153,7 +135,7 @@ export async function POST(request: Request) {
       .eq('id', authData.user.id)
       .maybeSingle();
 
-    const nextStatus = role === 'teen' ? 'pending_verification' : 'active';
+    const nextStatus = 'active';
     if (!existingProfile) {
       console.log('Profile not found, creating manually...');
       const { error: profileError } = await supabase
@@ -166,8 +148,6 @@ export async function POST(request: Request) {
           age: age || null,
           phone: phone || null,
           role: (role || 'teen') as any,
-          parent_email: parentEmail || null,
-          parent_phone: parentPhone || null,
           status: nextStatus as any,
         });
 
@@ -185,8 +165,6 @@ export async function POST(request: Request) {
           age: age || null,
           phone: phone || null,
           role: (role || 'teen') as any,
-          parent_email: parentEmail || null,
-          parent_phone: parentPhone || null,
           status: nextStatus as any,
         })
         .eq('id', authData.user.id);
@@ -197,69 +175,15 @@ export async function POST(request: Request) {
       }
     }
 
-    // For teen accounts: create parent verification token and send email to parent
-    if (role === 'teen' && (parentEmail?.trim() || parentPhone?.trim())) {
-      const sendToEmail = parentEmail?.trim();
-      const sendToPhone = parentPhone?.trim();
-      if (sendToEmail) {
-        try {
-          const admin = createAdminClient();
-          const token = randomBytes(32).toString('hex');
-          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-          const { error: tokenError } = await admin
-            .from('parent_verification_tokens')
-            .insert({
-              profile_id: authData.user.id,
-              token,
-              expires_at: expiresAt,
-            });
-          if (tokenError) {
-            console.error('Failed to create parent verification token:', tokenError);
-          } else {
-            // Use origin only so the link is always https://yourdomain.com/parent/verify?token=...
-            let origin = process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin') || '';
-            try {
-              if (origin) {
-                origin = new URL(origin).origin;
-              } else if (request.url) {
-                origin = new URL(request.url).origin;
-              }
-            } catch {
-              origin = origin.replace(/\/.*$/, '').replace(/\/+$/, '');
-            }
-            const verifyLink = origin ? `${origin}/parent/verify?token=${token}` : `/parent/verify?token=${token}`;
-            await emailService.sendParentVerificationEmail({
-              parentEmail: sendToEmail,
-              childFirstName: firstName,
-              childLastName: lastName,
-              verifyLink,
-            });
-            if (sendToPhone) {
-              await smsService.sendParentVerificationSMS({
-                parentPhone: sendToPhone,
-                verifyLink,
-              });
-            }
-          }
-        } catch (e) {
-          console.error('Failed to send parent verification notifications:', e);
-        }
-      }
-    }
-
     return NextResponse.json(
       { 
-        message: role === 'teen'
-          ? "Account created. A verification email has been sent to your parent/guardian. They must confirm before you can log in."
-          : "Account created successfully. Please check your email for verification.",
+        message: "Account created successfully. Please check your email for verification.",
         user: {
           id: authData.user.id,
           email: authData.user.email,
           first_name: firstName,
           last_name: lastName,
         },
-        requiresParentVerification: role === 'teen',
-        pendingApproval: role === 'teen',
       },
       { status: 201 }
     );

@@ -87,6 +87,7 @@ export default function EarningsPage() {
     const success = params.get('stripe_success');
     const code = params.get('code');
     const state = params.get('state');
+    const setup = params.get('setup');
     
     if (code && state && !success && !error) {
       toast({ title: "Processing Connection", description: "Please wait while we complete the connection..." });
@@ -103,6 +104,11 @@ export default function EarningsPage() {
       toast({ title: "Account Connected!", description: "Your payment account has been successfully set up." });
       window.history.replaceState({}, '', window.location.pathname);
       setTimeout(() => fetchAccountStatus(0, true), 500);
+    }
+
+    if (setup === 'stripe' && !code && !state && !success && !error) {
+      toast({ title: "Stripe Setup", description: "Redirecting you to Stripe to complete setup..." });
+      setTimeout(() => handleStripeConnectSetup(), 250);
     }
   }, []);
 
@@ -542,6 +548,25 @@ export default function EarningsPage() {
                     Connect with Stripe
                     <ArrowUpRight className="ml-2 h-4 w-4" />
                   </Button>
+                  <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-4">
+                      Before You Connect
+                    </p>
+                    <ul className="space-y-3 text-sm font-medium text-slate-200 leading-relaxed list-disc pl-5">
+                      <li>
+                        For industry, choose the closest category to the service you will offer (does not have to be exact).
+                      </li>
+                      <li>
+                        For website, type &ldquo;www.teenop.com&rdquo;.
+                      </li>
+                      <li>
+                        For Product description, describe the services you will offer.
+                      </li>
+                      <li>
+                        After connecting your bank account for TeenOp earnings, select Manual Payouts (you will only need to manage your earnings within the TeenOp platform).
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-6">

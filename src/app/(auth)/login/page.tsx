@@ -188,18 +188,6 @@ function LoginInner() {
         return;
       }
 
-      if (profile.status === "pending_verification" && profile.role === "teen") {
-        setError(
-          "Pending Approval: your parent or guardian still needs to approve your TeenOp account before it can go live."
-        );
-        if (session) {
-          await supabase.auth.setSession(session);
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-        router.push("/pending-approval");
-        return;
-      }
-
       if (session) {
         await supabase.auth.setSession(session);
         await new Promise((resolve) => setTimeout(resolve, 100));

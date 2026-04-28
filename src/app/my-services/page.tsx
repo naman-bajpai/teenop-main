@@ -292,6 +292,7 @@ export default function MyServicesPage() {
   const [pricingModel, setPricingModel] = useState<"per_job" | "per_hour">("per_hour");
   const [deliveryMethod, setDeliveryMethod] = useState<"in_person" | "online">("in_person");
   const [locationType, setLocationType] = useState<"public_address" | "client_location">("public_address");
+  const [locationNotes, setLocationNotes] = useState("");
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [serviceImages, setServiceImages] = useState<ServiceImage[]>([]);
   const [serviceAvailability, setServiceAvailability] = useState<Record<string, Array<{ start: string; end: string }>>>({});
@@ -359,6 +360,7 @@ export default function MyServicesPage() {
     setIsQuoteBased(false);
     setDeliveryMethod("in_person");
     setLocationType("public_address");
+    setLocationNotes("");
     setBannerUrl(null);
     setServiceImages([]);
     setServiceAvailability({});
@@ -381,6 +383,7 @@ export default function MyServicesPage() {
     setIsQuoteBased(service.pricing_model === 'quote');
     setDeliveryMethod((service.delivery_method as any) || "in_person");
     setLocationType((service.location_type as any) || "public_address");
+    setLocationNotes("");
     setBannerUrl(service.banner_url);
     setServiceImages(service.images || []);
     setServiceAvailability(service.availability || {});
@@ -553,7 +556,7 @@ export default function MyServicesPage() {
                   </p>
                 </div>
                 <Button
-                  onClick={() => window.location.href = '/my-teen-hustle'}
+                  onClick={() => window.location.href = '/earnings?setup=stripe'}
                   className="bg-orange-500 hover:bg-orange-600 text-white rounded-[20px] px-8 h-14 font-black shadow-lg shadow-orange-200 shrink-0 transition-transform active:scale-95"
                 >
                   Connect Now <ArrowRight className="w-5 h-5 ml-2" />
@@ -917,6 +920,15 @@ export default function MyServicesPage() {
                     )}
                   </div>
                 )}
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Additional Meeting Notes (Optional)</Label>
+                  <Textarea
+                    value={locationNotes}
+                    onChange={(e) => setLocationNotes(e.target.value)}
+                    placeholder="Add additional notes about where you want the service to take place or specific meeting spots."
+                    className="min-h-[96px] rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all font-semibold text-sm"
+                  />
+                </div>
               </div>
 
               {/* Experience & Credentials */}
