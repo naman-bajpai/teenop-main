@@ -342,8 +342,16 @@ export async function GET(request: NextRequest) {
     // Combine all bookings
     const allBookings = [...(myBookings as any || []), ...incomingBookings];
 
-    // Type assertion for bookings data
-    const bookingsData = allBookings;
+    // Hide placeholder bookings used purely as conversation threads for quote requests.
+    // These are filtered server-side so neither the customer's "My Requests" nor the
+    // teen's "Booking Dashboard" surfaces a fake $0.01 booking; the conversation is
+    // still reachable via /messages?booking_id= because individual booking lookups
+    // do not apply this filter.
+    const bookingsData = allBookings.filter(
+      (b: any) =>
+        typeof b?.special_instructions !== "string" ||
+        !b.special_instructions.includes("[QUOTE_REQUEST]")
+    );
 
     // Separate bookings into incoming (where user is provider) and my requests (where user is customer)
     const incoming: any[] = [];

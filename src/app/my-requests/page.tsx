@@ -20,7 +20,6 @@ import {
   DollarSign,
   User,
   Sparkles,
-  FileText,
   Star,
   Info
 } from "lucide-react";
@@ -448,6 +447,63 @@ export default function MyRequestsPage() {
     }
   };
 
+  const handleAcceptQuote = async (quoteId: string) => {
+    try {
+      setUpdating(quoteId);
+      const response = await fetch(`/api/quotes/${quoteId}/accept`, {
+        method: "POST",
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to accept quote");
+      }
+
+      if (result.booking) {
+        setSelectedBooking(result.booking);
+        setPaymentModalOpen(true);
+      }
+      await fetchBookings(true);
+      toast({
+        title: "Quote Accepted",
+        description: "Please complete payment to confirm your booking.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to accept quote",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleRejectQuote = async (quoteId: string) => {
+    try {
+      setUpdating(quoteId);
+      const response = await fetch(`/api/quotes/${quoteId}/reject`, {
+        method: "POST",
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to decline quote");
+      }
+      await fetchBookings(true);
+      toast({
+        title: "Quote Declined",
+        description: "The provider has been notified.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to decline quote",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   // Helper function to check if quote request is past due
   const isQuoteRequestPastDue = (qr: any): boolean => {
     if (!qr.requested_date || !qr.requested_time) return false;
@@ -484,30 +540,35 @@ export default function MyRequestsPage() {
 
   // Filter bookings by status (any request past its requested date goes under Expired)
   const pendingStatuses = (b: Booking) =>
-    b.status === "pending" || b.status === "alternative_proposed" || b.status === "confirmed";
+    b.status === "pending" || b.status === "alternative_proposed";
   const expiredBookings = bookings.filter(
     (b) => pendingStatuses(b) && isBookingExpired(b)
   );
   const pendingBookings = bookings.filter(
     (b) => pendingStatuses(b) && !isBookingExpired(b)
   );
-  const scheduledBookings = bookings.filter((b) => b.status === "paid");
+  const scheduledBookings = bookings.filter((b) => b.status === "paid" || b.status === "confirmed");
   const completedBookings = bookings.filter((b) => b.status === "completed");
   const cancelledBookings = bookings.filter(
     (b) => b.status === "cancelled" || b.status === "rejected"
   );
 
-  // Filter quote requests by status (only show in pending tab)
+  // Keep quote requests entirely inside My Requests by tabbing them like bookings.
   const pendingQuoteRequests = quoteRequests.filter((qr: any) =>
-    qr.status === "pending" || qr.status === "quoted"
+    (qr.status === "pending" || qr.status === "quoted") && !isQuoteRequestPastDue(qr)
+  );
+  const expiredQuoteRequests = quoteRequests.filter((qr: any) =>
+    (qr.status === "pending" || qr.status === "quoted") && isQuoteRequestPastDue(qr)
+  );
+  const cancelledQuoteRequests = quoteRequests.filter((qr: any) =>
+    qr.status === "cancelled" || qr.status === "rejected"
   );
 
   /** Payment due or provider offered a new time — show Pending tab attention bubble */
   const pendingTabNeedsAttention = pendingBookings.some(
     (b) =>
-      b.status === "confirmed" ||
-      (b.status === "alternative_proposed" &&
-        Boolean(b.alternative_date && b.alternative_time))
+      b.status === "alternative_proposed" &&
+      Boolean(b.alternative_date && b.alternative_time)
   );
 
   // Calculate stats
@@ -660,20 +721,20 @@ export default function MyRequestsPage() {
             <div className="mb-8 rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
               <p className="text-sm font-semibold text-gray-700">
                 {activeTab === "pending" && "Pending: Booking not yet confirmed, awaiting response from the teen."}
-                {activeTab === "expired" && "Expired: Booking request expired due to no response or missed confirmation."}
-                {activeTab === "scheduled" && "Scheduled: Payment completed and service is confirmed."}
+                {activeTab === "expired" && "Expired: Booking or quote request expired due to no response or missed confirmation."}
+                {activeTab === "scheduled" && "Scheduled: Includes awaiting payment and paid bookings."}
                 {activeTab === "completed" && "History: Past bookings including completed services, reviews, and payments."}
-                {activeTab === "cancelled" && "Cancelled: Bookings that were canceled and refunded."}
+                {activeTab === "cancelled" && "Cancelled: Bookings or quote requests that were canceled."}
               </p>
             </div>
 
             {/* Status-specific tabs */}
             {[
               { value: "pending", bookings: pendingBookings, quoteRequests: pendingQuoteRequests, icon: <AlertCircle className="w-12 h-12" />, title: "No pending requests", description: "All your requests have been processed." },
-              { value: "expired", bookings: expiredBookings, quoteRequests: [], icon: <Clock className="w-12 h-12" />, title: "No expired requests", description: "Requests that passed their scheduled date will appear here." },
-              { value: "scheduled", bookings: scheduledBookings, quoteRequests: [], icon: <Calendar className="w-12 h-12" />, title: "No scheduled services", description: "Paid services will appear here once payment is completed." },
+              { value: "expired", bookings: expiredBookings, quoteRequests: expiredQuoteRequests, icon: <Clock className="w-12 h-12" />, title: "No expired requests", description: "Requests that passed their scheduled date will appear here." },
+              { value: "scheduled", bookings: scheduledBookings, quoteRequests: [], icon: <Calendar className="w-12 h-12" />, title: "No scheduled services", description: "Accepted bookings awaiting payment and paid services will appear here." },
               { value: "completed", bookings: completedBookings, quoteRequests: [], icon: <CheckCircle className="w-12 h-12" />, title: "No history yet", description: "Your completed services will appear here." },
-              { value: "cancelled", bookings: cancelledBookings, quoteRequests: [], icon: <XCircle className="w-12 h-12" />, title: "No cancelled requests", description: "Cancelled requests will appear here." }
+              { value: "cancelled", bookings: cancelledBookings, quoteRequests: cancelledQuoteRequests, icon: <XCircle className="w-12 h-12" />, title: "No cancelled requests", description: "Cancelled requests will appear here." }
             ].map(({ value, bookings: tabBookings, quoteRequests: tabQuoteRequests, icon, title, description }) => (
               <TabsContent key={value} value={value} className="mt-0 outline-none">
                 {(tabBookings.length > 0 || tabQuoteRequests.length > 0) ? (
@@ -705,7 +766,7 @@ export default function MyRequestsPage() {
                       );
                     })}
                     {/* Quote Requests (only in pending tab) */}
-                    {value === "pending" && tabQuoteRequests.map((qr: any) => {
+                    {tabQuoteRequests.map((qr: any) => {
                       const pastDue = isQuoteRequestPastDue(qr);
                       return (
                         <div key={qr.id} className="group bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col h-full">
@@ -758,18 +819,38 @@ export default function MyRequestsPage() {
                             )}
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3 mt-auto pt-6 border-t border-gray-50">
-                            <Button
-                              variant="outline"
-                              className="rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11"
-                              onClick={() => router.push(`/my-quote-requests`)}
-                            >
-                              <FileText className="w-4 h-4 mr-2" /> Details
-                            </Button>
+                          <div className="flex flex-col gap-3 mt-auto pt-6 border-t border-gray-50">
+                            {qr.status === "quoted" && qr.quotes?.length > 0 && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <Button
+                                  disabled={updating === qr.quotes[0].id}
+                                  className="w-full rounded-xl font-bold h-11 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white"
+                                  onClick={() => handleAcceptQuote(qr.quotes[0].id)}
+                                >
+                                  {updating === qr.quotes[0].id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <><CheckCircle className="w-4 h-4 mr-2" /> Accept Quote</>
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  disabled={updating === qr.quotes[0].id}
+                                  className="w-full rounded-xl font-bold border-gray-100 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all h-11"
+                                  onClick={() => handleRejectQuote(qr.quotes[0].id)}
+                                >
+                                  {updating === qr.quotes[0].id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <><XCircle className="w-4 h-4 mr-2" /> Decline Quote</>
+                                  )}
+                                </Button>
+                              </div>
+                            )}
                             <Button
                               variant="outline"
                               disabled={openingQuoteMessageId === qr.id}
-                              className="rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11 disabled:opacity-50"
+                              className="w-full rounded-xl font-bold border-gray-100 hover:bg-[#434c9d] hover:text-white transition-all h-11 disabled:opacity-50"
                               onClick={() => handleMessageQuoteRequest(qr)}
                             >
                               {openingQuoteMessageId === qr.id ? (
@@ -777,13 +858,13 @@ export default function MyRequestsPage() {
                               ) : (
                                 <MessageCircle className="w-4 h-4 mr-2" />
                               )}
-                              Message
+                              Message Provider
                             </Button>
-                            {(pastDue || qr.status === "pending" || qr.status === "quoted") && (
+                            {(value === "pending" || value === "expired") && (pastDue || qr.status === "pending" || qr.status === "quoted") && (
                               <Button
                                 variant="outline"
                                 disabled={updating === qr.id}
-                                className="col-span-2 rounded-xl font-bold border-gray-100 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all h-11"
+                                className="w-full rounded-xl font-bold border-gray-100 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all h-11"
                                 onClick={() => handleCancelQuoteRequest(qr.id)}
                               >
                                 {updating === qr.id ? (

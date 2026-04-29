@@ -143,14 +143,17 @@ export async function GET(request: NextRequest) {
 
     console.log(`[GET /api/services] Returning ${transformedServices.length} services for user ${user.id} (allServices: ${allServices})`);
 
-    // Add cache headers based on request type
-    const cacheMaxAge = allServices ? 30 : 10; // Public services cache longer
+    // Only cache public marketplace results.
+    // User-scoped service lists must not be publicly cached or they can appear stale after mutations.
+    const cacheControl = allServices
+      ? "public, s-maxage=30, stale-while-revalidate=60"
+      : "private, no-store, max-age=0, must-revalidate";
     return NextResponse.json({ 
       success: true,
       services: transformedServices 
     }, {
       headers: {
-        'Cache-Control': `public, s-maxage=${cacheMaxAge}, stale-while-revalidate=60`
+        "Cache-Control": cacheControl
       }
     });
   } catch (error) {
@@ -365,14 +368,23 @@ export async function PUT(request: NextRequest) {
       'delivery_method', 'location_type', 'banner_url', 'availability'
     ];
 
-    fields.forEach(field => {
-      if (body[field] !== undefined) {
-        if (field === 'title' || field === 'description' || field === 'location') {
-          updateData[field] = body[field].trim();
+    fields.forEach((field) => {
+      if (body[field] === undefined) return;
+
+      if (field === "title" || field === "description" || field === "location") {
+        const value = body[field];
+        if (typeof value === "string") {
+          updateData[field] = value.trim();
+        } else if (value === null) {
+          // Guard against legacy/null values causing runtime .trim() crashes.
+          updateData[field] = "";
         } else {
-          updateData[field] = body[field];
+          updateData[field] = String(value).trim();
         }
+        return;
       }
+
+      updateData[field] = body[field];
     });
 
     // Validation for fields if they are being updated

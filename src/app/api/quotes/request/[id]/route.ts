@@ -118,7 +118,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status } = body;
+    const { status, requested_date, requested_time } = body;
 
     // Get quote request
     const { data: quoteRequest, error: fetchError } = await supabase
@@ -155,7 +155,7 @@ export async function PATCH(
     }
 
     // Check if quote request is past due
-    const isPastDue = qr.requested_date && qr.requested_time ? 
+    const isPastDue = qr.requested_date && qr.requested_time ?
       new Date(`${qr.requested_date}T${qr.requested_time}`) < new Date() : false;
 
     // Allow cancelling if:
@@ -171,11 +171,37 @@ export async function PATCH(
       }
     }
 
+    // Only the provider may rewrite the requested date/time (used for "propose different time").
+    if ((requested_date !== undefined || requested_time !== undefined) && !isProvider) {
+      return NextResponse.json(
+        { success: false, error: "Only the provider can propose a new time" },
+        { status: 403 }
+      );
+    }
+
+    // Providers must send a priced quote via POST /api/quotes — not by setting "accepted" here.
+    if (status === "accepted" && !isCustomer) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Only the customer can accept after you send a quote. Use Send quote to submit your price.",
+        },
+        { status: 403 }
+      );
+    }
+
     // Update quote request
     const quoteRequestUpdatePayload: QuoteRequestsUpdate = {
       status: status,
       updated_at: new Date().toISOString()
     };
+    if (requested_date !== undefined) {
+      (quoteRequestUpdatePayload as any).requested_date = requested_date;
+    }
+    if (requested_time !== undefined) {
+      (quoteRequestUpdatePayload as any).requested_time = requested_time;
+    }
     const quoteRequestQuery = supabase.from("quote_requests");
     const { data: updatedRequest, error: updateError } = await (quoteRequestQuery as any)
       .update(quoteRequestUpdatePayload)

@@ -44,16 +44,20 @@ export async function GET() {
     }
 
     const bookingEvents = (bookings || []).filter((b: any) => {
-      if (b.status === "pending") return false;
-      if ((b.status === "confirmed" || b.status === "alternative_proposed") && isBookingExpired(b)) return false;
-      return ["confirmed", "alternative_proposed", "paid", "completed", "cancelled", "rejected"].includes(b.status);
+      // Parent attention is only for requests that currently need a customer decision/action.
+      if (b.status === "confirmed") return !isBookingExpired(b);
+      if (b.status === "alternative_proposed") {
+        if (!b.alternative_date || !b.alternative_time) return false;
+        return !isBookingExpired(b);
+      }
+      return false;
     }).length;
 
     const { data: quoteRequests, error: quoteError } = await supabase
       .from("quote_requests")
       .select("status")
       .eq("customer_id" as any, user.id as any)
-      .in("status" as any, ["quoted", "cancelled"] as any);
+      .in("status" as any, ["quoted"] as any);
 
     const quoteEvents = quoteError ? 0 : (quoteRequests || []).length;
 

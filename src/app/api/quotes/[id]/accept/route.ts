@@ -112,13 +112,33 @@ export async function POST(
     // Check for existing bookings for the same time slot
     const { data: existingBookings } = await supabase
       .from("bookings")
-      .select("id, status")
+      .select("id, status, special_instructions, quote_id")
       .eq("service_id" as any, quoteRequest.service_id as any)
       .eq("requested_date" as any, quoteRequest.requested_date as any)
       .eq("requested_time" as any, quoteRequest.requested_time as any)
       .in("status" as any, ["pending" as any, "confirmed" as any, "paid" as any]);
 
-    if (existingBookings && existingBookings.length > 0) {
+    // Prefer reusing an existing booking row for this slot if it belongs to this quote flow.
+    // This avoids unique-slot conflicts and preserves existing message threads.
+    const reusableBooking = (existingBookings || []).find((b: any) => {
+      const instructions = typeof b?.special_instructions === "string" ? b.special_instructions : "";
+      const isQuoteThreadPlaceholder = instructions.includes("[QUOTE_REQUEST]");
+      return (
+        b?.id === quoteRequest.booking_id ||
+        b?.quote_id === id ||
+        isQuoteThreadPlaceholder
+      );
+    });
+
+    // Ignore reusable placeholder/linked bookings; anything else is a true conflict.
+    const blockingBookings = (existingBookings || []).filter((b: any) => {
+      if (reusableBooking && b?.id === reusableBooking.id) return false;
+      const instructions = typeof b?.special_instructions === "string" ? b.special_instructions : "";
+      const isQuoteThreadPlaceholder = instructions.includes("[QUOTE_REQUEST]");
+      return !isQuoteThreadPlaceholder;
+    });
+
+    if (blockingBookings.length > 0) {
       return NextResponse.json(
         { success: false, error: "This time slot is already booked" },
         { status: 400 }
@@ -130,37 +150,107 @@ export async function POST(
     const platformFee = 0.00; // $0 platform fee
     const totalPrice = servicePrice + platformFee;
 
-    // Create booking with quote price
-    const { data: booking, error: bookingError } = await supabase
-      .from("bookings")
-      .insert({
-        service_id: quoteRequest.service_id,
-        user_id: user.id,
-        requested_date: quoteRequest.requested_date,
-        requested_time: quoteRequest.requested_time,
-        special_instructions: quoteRequest.special_instructions,
-        service_price: servicePrice,
-        platform_fee: platformFee,
-        total_price: totalPrice,
-        duration: quoteData.estimated_duration || quoteRequest.services?.duration || 60,
-        status: "pending",
-        quote_id: id
-      } as any)
-      .select(`
-        *,
-        services (
-          id,
-          title,
-          description,
-          pricing_model,
-          location,
-          category
-        )
-      `)
-      .single();
+    // Create/attach booking with quote price.
+    // If a quote-thread placeholder booking already exists, convert it into the real booking
+    // so the existing message thread stays connected.
+    const bookingPayload = {
+      service_id: quoteRequest.service_id,
+      user_id: user.id,
+      requested_date: quoteRequest.requested_date,
+      requested_time: quoteRequest.requested_time,
+      special_instructions: quoteRequest.special_instructions,
+      service_price: servicePrice,
+      platform_fee: platformFee,
+      total_price: totalPrice,
+      duration: quoteData.estimated_duration || quoteRequest.services?.duration || 60,
+      status: "confirmed",
+      quote_id: id,
+      updated_at: new Date().toISOString(),
+    } as any;
 
-    if (bookingError) {
-      console.error("Error creating booking:", bookingError);
+    let booking: any = null;
+    let bookingError: any = null;
+    const placeholderBookingId = quoteRequest.booking_id as string | null;
+
+    if (reusableBooking?.id) {
+      const { data, error } = await (supabase as any)
+        .from("bookings")
+        .update(bookingPayload)
+        .eq("id", reusableBooking.id)
+        .select(`
+          *,
+          services (
+            id,
+            title,
+            description,
+            pricing_model,
+            location,
+            category
+          )
+        `)
+        .single();
+      booking = data;
+      bookingError = error;
+    } else if (placeholderBookingId) {
+      const { data: existingPlaceholder } = await supabase
+        .from("bookings")
+        .select("id, special_instructions, service_id, user_id")
+        .eq("id", placeholderBookingId)
+        .single();
+
+      const isQuoteThreadPlaceholder =
+        typeof (existingPlaceholder as any)?.special_instructions === "string" &&
+        (existingPlaceholder as any).special_instructions.includes("[QUOTE_REQUEST]");
+
+      if (
+        existingPlaceholder &&
+        isQuoteThreadPlaceholder &&
+        (existingPlaceholder as any).service_id === quoteRequest.service_id &&
+        (existingPlaceholder as any).user_id === user.id
+      ) {
+        const { data, error } = await (supabase as any)
+          .from("bookings")
+          .update(bookingPayload)
+          .eq("id", placeholderBookingId)
+          .select(`
+            *,
+            services (
+              id,
+              title,
+              description,
+              pricing_model,
+              location,
+              category
+            )
+          `)
+          .single();
+        booking = data;
+        bookingError = error;
+      }
+    }
+
+    if (!booking) {
+      const { data, error } = await supabase
+        .from("bookings")
+        .insert(bookingPayload)
+        .select(`
+          *,
+          services (
+            id,
+            title,
+            description,
+            pricing_model,
+            location,
+            category
+          )
+        `)
+        .single();
+      booking = data;
+      bookingError = error;
+    }
+
+    if (bookingError || !booking) {
+      console.error("Error creating/updating booking for accepted quote:", bookingError);
       return NextResponse.json(
         { success: false, error: "Failed to create booking" },
         { status: 500 }
@@ -182,6 +272,7 @@ export async function POST(
       status: "accepted",
       updated_at: new Date().toISOString()
     };
+    (quoteRequestUpdatePayload as any).booking_id = booking.id;
     const quoteRequestQuery = supabase.from("quote_requests");
     await (quoteRequestQuery as any)
       .update(quoteRequestUpdatePayload)

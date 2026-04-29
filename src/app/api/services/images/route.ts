@@ -71,6 +71,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Check whether this service already has a primary image.
+    const { data: existingPrimary } = await (supabase as any)
+      .from('service_images')
+      .select('id')
+      .eq('service_id', serviceId)
+      .eq('is_primary', true)
+      .limit(1);
+    const hasExistingPrimary = Array.isArray(existingPrimary) && existingPrimary.length > 0;
+
     // Upload files and save to database
     const uploadedImages: any[] = [];
     const errors: Array<{ file: string; error: string }> = [];
@@ -101,9 +110,9 @@ export async function POST(req: NextRequest) {
           .from(BUCKET)
           .getPublicUrl(fileName);
 
-        // Save to service_images table
-        // First image is primary by default
-        const isPrimary = i === 0;
+        // Save to service_images table.
+        // Only set a new primary when the service currently has none.
+        const isPrimary = !hasExistingPrimary && i === 0;
         const { data: imageRecord, error: dbError } = await (supabase as any)
           .from('service_images')
           .insert({

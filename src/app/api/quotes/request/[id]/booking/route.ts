@@ -97,7 +97,9 @@ export async function GET(
       });
     }
 
-    // No booking found, create a new one
+    // No booking found, create a placeholder for the conversation thread.
+    // Schema requires total_price > 0, so we use $0.01 as a sentinel; this booking
+    // is filtered out of regular booking lists by its [QUOTE_REQUEST] marker.
     const { data: newBooking, error: bookingError } = await supabase
       .from("bookings")
       .insert({
@@ -107,8 +109,8 @@ export async function GET(
         requested_time: qr.requested_time || "12:00",
         status: "pending" as any,
         duration: 60,
-        total_price: 0,
-        service_price: 0,
+        total_price: 0.01,
+        service_price: 0.01,
         platform_fee: 0.00,
         special_instructions: `[QUOTE_REQUEST] Quote request ID: ${quoteRequestId}. Please message to discuss pricing and details.`,
       } as any)

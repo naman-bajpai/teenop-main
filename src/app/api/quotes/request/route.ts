@@ -133,8 +133,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create a booking for messaging purposes (so provider can message the requester)
-    // This booking is used to establish a conversation thread
+    // Create a booking for messaging purposes (so provider can message the requester).
+    // This is a placeholder booking that only carries the conversation thread; it is
+    // filtered out of regular booking lists by the [QUOTE_REQUEST] marker. The schema
+    // requires total_price > 0, so we use a $0.01 placeholder until a real quote is
+    // accepted and a real booking is created from the quote.
     const { data: messagingBooking, error: bookingError } = await supabase
       .from("bookings")
       .insert({
@@ -144,9 +147,9 @@ export async function POST(request: NextRequest) {
         requested_time,
         status: "pending" as any,
         duration: 60, // Default duration
-        total_price: 0, // Will be set when quote is accepted
-        service_price: 0,
-        platform_fee: 0.00, // $0 platform fee
+        total_price: 0.01,
+        service_price: 0.01,
+        platform_fee: 0.00,
         special_instructions: `[QUOTE_REQUEST] Quote request ID: ${quoteRequest.id}. Please message the customer to discuss pricing and details.`,
       } as any)
       .select("id")
@@ -319,9 +322,14 @@ export async function GET(request: NextRequest) {
       query = query.eq("customer_id" as any, user.id as any);
     }
 
-    // Filter by status
+    // Filter by status (single value or comma-separated, e.g. pending,quoted)
     if (status) {
-      query = query.eq("status" as any, status as any);
+      const statuses = status.split(",").map((s) => s.trim()).filter(Boolean);
+      if (statuses.length === 1) {
+        query = query.eq("status" as any, statuses[0] as any);
+      } else if (statuses.length > 1) {
+        query = query.in("status" as any, statuses as any);
+      }
     }
 
     // Filter by service_id

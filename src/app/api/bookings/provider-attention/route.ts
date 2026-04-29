@@ -58,6 +58,7 @@ export async function GET() {
         requested_time,
         alternative_date,
         alternative_time,
+        special_instructions,
         services!inner (
           user_id
         )
@@ -75,10 +76,13 @@ export async function GET() {
       requested_time: string;
       alternative_date?: string | null;
       alternative_time?: string | null;
+      special_instructions?: string | null;
     }>) || [];
 
     let bookingCount = 0;
     for (const b of incoming) {
+      // Skip placeholder bookings that exist purely as conversation threads for quote requests.
+      if (typeof b.special_instructions === "string" && b.special_instructions.includes("[QUOTE_REQUEST]")) continue;
       if (!["pending", "confirmed", "paid", "cancelled", "rejected"].includes(b.status)) continue;
       if ((b.status === "pending" || b.status === "confirmed") && isBookingExpired(b)) continue;
       bookingCount++;

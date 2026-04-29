@@ -42,11 +42,11 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
         </motion.div>
       </div>
 
-      {/* Content wrapper — full height, flex row */}
-      <div className="relative z-10 flex flex-row min-h-[calc(100vh-72px)] w-full">
+      {/* Content wrapper — row by default, stacked only on mobile */}
+      <div className="relative z-10 flex flex-row max-sm:flex-col min-h-[calc(100vh-72px)] w-full">
 
         {/* Left: Logo + Tagline + Buttons */}
-        <div className="flex flex-col items-start justify-start px-8 sm:px-12 lg:px-16 pt-10 lg:pt-14 max-w-xl">
+        <div className="flex flex-col items-start justify-start px-8 max-sm:px-6 sm:px-12 lg:px-16 pt-10 lg:pt-14 max-w-xl">
 
           {/* Logo */}
           <Image
@@ -58,7 +58,10 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
           />
 
           {/* Tagline */}
-          <p className="mt-5 text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight max-w-md lg:max-w-lg">
+          <p
+            className="mt-5 text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight max-w-md lg:max-w-lg"
+            style={{ textShadow: "0 2px 10px rgba(255, 255, 255, 0.45)" }}
+          >
             Talented Teens Offering Services to Their Community
           </p>
 
@@ -94,11 +97,11 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
           </div>
         </div>
 
-        {/* Spacer pushes card to the right */}
-        <div className="flex-1" />
+        {/* Spacer pushes card to the right (hidden on mobile stack) */}
+        <div className="flex-1 max-sm:hidden" />
 
-        {/* Middle-right: Definition Card — top-aligned with left column so it can extend downward */}
-        <div className="flex items-start self-stretch px-8 sm:px-12 lg:px-16 pt-10 lg:pt-14 pb-10">
+        {/* Middle-right: Definition Card — mobile-only placement below CTAs */}
+        <div className="flex items-start self-stretch px-8 max-sm:px-6 sm:px-12 lg:px-16 pt-10 max-sm:pt-8 lg:pt-14 pb-10">
           <div className="w-full max-w-md rounded-3xl bg-white/90 backdrop-blur-md px-8 py-8 sm:px-9 sm:py-10 shadow-2xl ring-1 ring-black/5">
             {/* Card header */}
             <div className="border-b border-slate-100 pb-5">

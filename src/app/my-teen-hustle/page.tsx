@@ -15,7 +15,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,6 +54,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
+import { getQuoteReferenceImageUrls } from "@/lib/quote-reference-images";
 
 export type Service = {
   id: string;
@@ -475,6 +475,18 @@ export default function TeenHustlePage() {
   const [completedBookings, setCompletedBookings] = useState<Booking[]>([]);
   const [cancelledBookings, setCancelledBookings] = useState<Booking[]>([]);
   const [quoteRequests, setQuoteRequests] = useState<any[]>([]);
+  const [proposeTimeState, setProposeTimeState] = useState<{
+    quoteRequestId: string;
+    alternativeDate: string;
+    alternativeTime: string;
+  } | null>(null);
+  const [sendQuoteState, setSendQuoteState] = useState<{
+    quoteRequestId: string;
+    price: string;
+    notes: string;
+    estimatedDurationMinutes: string;
+  } | null>(null);
+  const [processingQuoteRequestId, setProcessingQuoteRequestId] = useState<string | null>(null);
   const [servicesNeedingCompletion, setServicesNeedingCompletion] = useState<number>(0);
   const [cancellingQuoteRequest, setCancellingQuoteRequest] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("pending");
@@ -518,7 +530,7 @@ export default function TeenHustlePage() {
         fetch("/api/services", fetchOptions),
         fetch("/api/bookings", fetchOptions),
         fetch("/api/earnings", fetchOptions),
-        fetch("/api/quotes/request?role=provider&status=pending", fetchOptions),
+        fetch("/api/quotes/request?role=provider&status=pending,quoted", fetchOptions),
         fetch("/api/stripe/connect/setup", fetchOptions)
       ]);
 
@@ -586,6 +598,22 @@ export default function TeenHustlePage() {
       toast({ title: "Error", description: error.message || "Failed to deny quote request", variant: "destructive" });
     } finally {
       setCancellingQuoteRequest(null);
+    }
+  };
+
+  const patchQuoteRequest = async (
+    quoteRequestId: string,
+    payload: { status?: string; requested_date?: string; requested_time?: string }
+  ) => {
+    const response = await fetch(`/api/quotes/request/${quoteRequestId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data?.success) {
+      throw new Error(data?.error || "Failed to update quote request");
     }
   };
 
@@ -663,8 +691,135 @@ export default function TeenHustlePage() {
       await fetchEverything(true);
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
+      throw e;
     }
   };
+
+  const openSendQuoteDialog = (quoteRequest: any) => {
+    setSendQuoteState({
+      quoteRequestId: quoteRequest.id,
+      price: "",
+      notes: "",
+      estimatedDurationMinutes: "",
+    });
+  };
+
+  const handleSubmitSendQuote = async () => {
+    if (!sendQuoteState) return;
+    const price = parseFloat(sendQuoteState.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      toast({
+        title: "Enter a valid price",
+        description: "Please enter how much you will charge (greater than $0).",
+        variant: "destructive",
+      });
+      return;
+    }
+    let estimatedDuration: number | undefined;
+    if (sendQuoteState.estimatedDurationMinutes.trim()) {
+      const n = parseInt(sendQuoteState.estimatedDurationMinutes, 10);
+      if (!Number.isFinite(n) || n < 1) {
+        toast({
+          title: "Invalid duration",
+          description: "Estimated duration must be a positive number of minutes.",
+          variant: "destructive",
+        });
+        return;
+      }
+      estimatedDuration = n;
+    }
+    try {
+      setProcessingQuoteRequestId(sendQuoteState.quoteRequestId);
+      const res = await fetch("/api/quotes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quote_request_id: sendQuoteState.quoteRequestId,
+          price,
+          notes: sendQuoteState.notes.trim() || undefined,
+          estimated_duration: estimatedDuration,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || "Failed to send quote");
+      }
+      setSendQuoteState(null);
+      toast({
+        title: "Quote sent",
+        description: "The customer has been notified and can accept or decline.",
+      });
+      await fetchEverything(true);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send quote",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingQuoteRequestId(null);
+    }
+  };
+
+  const openProposeTimeForQuoteRequest = (quoteRequest: any) => {
+    setProposeTimeState({
+      quoteRequestId: quoteRequest.id,
+      alternativeDate: "",
+      alternativeTime: "",
+    });
+  };
+
+  const handleSubmitQuoteRequestAlternative = async () => {
+    if (!proposeTimeState) return;
+    if (!proposeTimeState.alternativeDate || !proposeTimeState.alternativeTime) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide both an alternative date and time.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      setProcessingQuoteRequestId(proposeTimeState.quoteRequestId);
+      await patchQuoteRequest(proposeTimeState.quoteRequestId, {
+        status: "quoted",
+        requested_date: proposeTimeState.alternativeDate,
+        requested_time: proposeTimeState.alternativeTime,
+      });
+      setProposeTimeState(null);
+      toast({
+        title: "Alternative Proposed",
+        description: "The customer has been notified of the new time.",
+      });
+      await fetchEverything(true);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to propose alternative time",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingQuoteRequestId(null);
+    }
+  };
+
+  const formatQuoteDate = (dateString: string) => {
+    const [year, month, day] = dateString.split("-").map(Number);
+    const localDate = new Date(year, (month || 1) - 1, day || 1);
+    return localDate.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const formatQuoteTime = (timeString: string) =>
+    new Date(`2000-01-01T${timeString}`).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
 
   useEffect(() => { fetchEverything(); }, [user]);
 
@@ -801,6 +956,23 @@ export default function TeenHustlePage() {
                     {pendingBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}
                     {quoteRequests.map((qr: any) => (
                       <div key={qr.id} className="bg-white rounded-[24px] p-6 border-2 border-dashed border-[#96cbc3]/30 hover:border-[#96cbc3] transition-all">
+                        {(() => {
+                          const refImageUrls = getQuoteReferenceImageUrls(qr);
+                          return refImageUrls.length > 0 ? (
+                            <div className="mb-4 rounded-2xl overflow-hidden border border-gray-100 relative">
+                              <img
+                                src={refImageUrls[0]}
+                                alt="Quote request reference"
+                                className="w-full h-40 object-cover"
+                              />
+                              {refImageUrls.length > 1 && (
+                                <span className="absolute bottom-2 right-2 rounded-lg bg-black/70 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1">
+                                  +{refImageUrls.length - 1}
+                                </span>
+                              )}
+                            </div>
+                          ) : null;
+                        })()}
                         <div className="flex justify-between items-start mb-6">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
@@ -811,14 +983,78 @@ export default function TeenHustlePage() {
                           </div>
                           <div className="flex gap-2" />
                         </div>
+                        {(qr.requested_date || qr.requested_time || qr.service_address) && (
+                          <div className="mb-4 p-4 bg-gray-50/70 rounded-xl border border-gray-100 space-y-1.5">
+                            {qr.requested_date && (
+                              <p className="text-sm text-gray-700 font-semibold">
+                                Requested date:{" "}
+                                <span className="text-gray-900 font-bold">{formatQuoteDate(qr.requested_date)}</span>
+                              </p>
+                            )}
+                            {qr.requested_time && (
+                              <p className="text-sm text-gray-700 font-semibold">
+                                Requested time:{" "}
+                                <span className="text-gray-900 font-bold">{formatQuoteTime(qr.requested_time)}</span>
+                              </p>
+                            )}
+                            {qr.service_address && (
+                              <p className="text-sm text-gray-700 font-semibold">
+                                Location: <span className="text-gray-900 font-bold">{qr.service_address}</span>
+                              </p>
+                            )}
+                          </div>
+                        )}
                         {qr.special_instructions && <p className="text-sm text-gray-500 leading-relaxed bg-gray-50 p-4 rounded-xl italic mb-4">&quot;{qr.special_instructions}&quot;</p>}
+                        <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+                          <p className="text-xs font-semibold text-blue-900 leading-relaxed">
+                            You will receive an email notification when the parent responds. After you accept and the parent pays, this will appear under your Bookings tab.
+                          </p>
+                        </div>
+                        {Array.isArray(qr.quotes) && qr.quotes.length > 0 && (
+                          <div className="mb-4 p-4 bg-[#96cbc3]/10 rounded-2xl border border-[#96cbc3]/25">
+                            <p className="text-[10px] font-black text-[#96cbc3] uppercase tracking-widest mb-1">Your quote</p>
+                            <p className="text-2xl font-black text-gray-900">
+                              ${Number(qr.quotes[0].price).toFixed(2)}
+                            </p>
+                            {qr.quotes[0].estimated_duration != null && (
+                              <p className="text-xs text-gray-600 font-medium mt-1">
+                                Est. duration: {qr.quotes[0].estimated_duration} min
+                              </p>
+                            )}
+                            {qr.quotes[0].notes && (
+                              <p className="text-sm text-gray-600 mt-2 leading-relaxed">{qr.quotes[0].notes}</p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-2">
+                              Waiting for the customer to accept or decline this quote.
+                            </p>
+                          </div>
+                        )}
                         {(qr.status === "pending" || qr.status === "quoted") && (
-                          <div className="flex gap-2 pt-2 border-t border-gray-100">
+                          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-100">
+                            {!qr.quotes?.length ? (
+                              <Button
+                                size="sm"
+                                onClick={() => openSendQuoteDialog(qr)}
+                                disabled={processingQuoteRequestId === qr.id}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl h-10 font-bold"
+                              >
+                                Send quote
+                              </Button>
+                            ) : null}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openProposeTimeForQuoteRequest(qr)}
+                              disabled={processingQuoteRequestId === qr.id}
+                              className="flex-1 text-gray-700 border-gray-200 hover:bg-gray-50 rounded-xl h-10 font-bold"
+                            >
+                              Propose Different Time
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleDenyQuoteRequest(qr.id)}
-                              disabled={cancellingQuoteRequest === qr.id}
+                              disabled={cancellingQuoteRequest === qr.id || processingQuoteRequestId === qr.id}
                               className="flex-1 text-red-600 border-red-100 hover:bg-red-50 rounded-xl h-10 font-bold"
                             >
                               {cancellingQuoteRequest === qr.id ? (
@@ -884,6 +1120,170 @@ export default function TeenHustlePage() {
           </Tabs>
         </div>
       </div>
+      <Dialog
+        open={!!proposeTimeState}
+        onOpenChange={(openState) => {
+          if (!openState) setProposeTimeState(null);
+        }}
+      >
+        <DialogContent className="rounded-[28px] p-7">
+          <DialogHeader>
+            <DialogTitle>Propose a different time</DialogTitle>
+            <DialogDescription>
+              Suggest a new date and time for this quote request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">New Date</Label>
+              <Input
+                type="date"
+                min={new Date().toISOString().split("T")[0]}
+                value={proposeTimeState?.alternativeDate ?? ""}
+                onChange={(e) =>
+                  setProposeTimeState((prev) =>
+                    prev ? { ...prev, alternativeDate: e.target.value } : prev
+                  )
+                }
+                className="rounded-xl bg-gray-50/50 border-gray-100"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">New Time</Label>
+              <Input
+                type="time"
+                value={proposeTimeState?.alternativeTime ?? ""}
+                onChange={(e) =>
+                  setProposeTimeState((prev) =>
+                    prev ? { ...prev, alternativeTime: e.target.value } : prev
+                  )
+                }
+                className="rounded-xl bg-gray-50/50 border-gray-100"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 mt-5">
+            <Button
+              variant="outline"
+              className="sm:flex-1 rounded-xl"
+              onClick={() => setProposeTimeState(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="sm:flex-1 rounded-xl bg-[#434c9d] hover:bg-[#434c9d]/90"
+              onClick={handleSubmitQuoteRequestAlternative}
+              disabled={
+                !proposeTimeState?.alternativeDate ||
+                !proposeTimeState?.alternativeTime ||
+                processingQuoteRequestId === proposeTimeState?.quoteRequestId
+              }
+            >
+              {processingQuoteRequestId === proposeTimeState?.quoteRequestId ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Propose New Time"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!sendQuoteState}
+        onOpenChange={(openState) => {
+          if (!openState) setSendQuoteState(null);
+        }}
+      >
+        <DialogContent className="rounded-[28px] p-7 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send your quote</DialogTitle>
+            <DialogDescription>
+              Enter how much you will charge. The customer will get an email and can accept to book and pay.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Your price (USD)</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  placeholder="0.00"
+                  value={sendQuoteState?.price ?? ""}
+                  onChange={(e) =>
+                    setSendQuoteState((prev) =>
+                      prev ? { ...prev, price: e.target.value } : prev
+                    )
+                  }
+                  className="rounded-xl bg-gray-50/50 border-gray-100 pl-9 font-semibold"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                Estimated duration (minutes, optional)
+              </Label>
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                placeholder="e.g. 60"
+                value={sendQuoteState?.estimatedDurationMinutes ?? ""}
+                onChange={(e) =>
+                  setSendQuoteState((prev) =>
+                    prev ? { ...prev, estimatedDurationMinutes: e.target.value } : prev
+                  )
+                }
+                className="rounded-xl bg-gray-50/50 border-gray-100"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                Notes (optional)
+              </Label>
+              <Textarea
+                placeholder="Anything the customer should know about what’s included"
+                value={sendQuoteState?.notes ?? ""}
+                onChange={(e) =>
+                  setSendQuoteState((prev) =>
+                    prev ? { ...prev, notes: e.target.value } : prev
+                  )
+                }
+                className="rounded-xl bg-gray-50/50 border-gray-100 min-h-[88px] resize-none"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 mt-2">
+            <Button
+              variant="outline"
+              className="sm:flex-1 rounded-xl"
+              onClick={() => setSendQuoteState(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="sm:flex-1 rounded-xl bg-green-600 hover:bg-green-700"
+              onClick={handleSubmitSendQuote}
+              disabled={processingQuoteRequestId === sendQuoteState?.quoteRequestId}
+            >
+              {processingQuoteRequestId === sendQuoteState?.quoteRequestId ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Submit quote"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

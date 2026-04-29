@@ -423,7 +423,7 @@ export default function ServiceDetailsPage() {
       setTimeout(() => {
         setIsQuoteDialogOpen(false);
         setQuoteRequestSuccess(false);
-        router.push("/my-quote-requests");
+        router.push("/my-requests");
       }, 2000);
     } catch (err: any) {
       console.error("Error creating quote request:", err);
