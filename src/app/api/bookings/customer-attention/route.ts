@@ -36,7 +36,7 @@ export async function GET() {
 
     const { data: bookings, error: bookingError } = await supabase
       .from("bookings")
-      .select("status, requested_date, requested_time, alternative_date, alternative_time")
+      .select("id, status, requested_date, requested_time, alternative_date, alternative_time")
       .eq("user_id" as any, user.id as any);
 
     if (bookingError) {
@@ -61,9 +61,26 @@ export async function GET() {
 
     const quoteEvents = quoteError ? 0 : (quoteRequests || []).length;
 
+    const completedBookingIdsNeedingReview = (bookings || [])
+      .filter((b: any) => b.status === "completed")
+      .map((b: any) => b.id);
+
+    let reviewEvents = 0;
+    if (completedBookingIdsNeedingReview.length > 0) {
+      const { data: existingReviews, error: reviewError } = await supabase
+        .from("reviews")
+        .select("booking_id")
+        .in("booking_id" as any, completedBookingIdsNeedingReview as any);
+
+      if (!reviewError) {
+        const reviewedBookingIds = new Set((existingReviews || []).map((r: any) => r.booking_id));
+        reviewEvents = completedBookingIdsNeedingReview.filter((id: string) => !reviewedBookingIds.has(id)).length;
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      count: bookingEvents + quoteEvents,
+      count: bookingEvents + quoteEvents + reviewEvents,
     });
   } catch (e) {
     console.error("customer-attention:", e);
