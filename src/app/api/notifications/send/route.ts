@@ -170,6 +170,13 @@ export async function POST(request: NextRequest) {
           location: service.location || 'Online',
           bookingId: bookingData.id,
         });
+
+        if (!result?.success) {
+          return NextResponse.json(
+            { success: false, error: result?.error || "Failed to send buyer 24-hour reminder" },
+            { status: 500 }
+          );
+        }
         break;
 
       case 'buyer_3_hour_reminder':
@@ -190,6 +197,13 @@ export async function POST(request: NextRequest) {
           location: service.location || 'Online',
           bookingId: bookingData.id,
         });
+
+        if (!result?.success) {
+          return NextResponse.json(
+            { success: false, error: result?.error || "Failed to send buyer 3-hour reminder" },
+            { status: 500 }
+          );
+        }
         break;
 
       case 'service_provider_24_hour_reminder':

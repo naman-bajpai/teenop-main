@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createServerClient();
     const now = new Date();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     
     // Calculate time ranges for reminders (24 hours ± 1 hour window, 3 hours ± 30 min window, 1 hour ± 15 min window)
     const twentyFourHoursFromNow = new Date(now);
@@ -130,7 +131,7 @@ export async function GET(request: NextRequest) {
           // Send buyer 24-hour reminder
           if (customer?.email) {
             try {
-              const buyerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
+              const buyerResponse = await fetch(`${appUrl}/api/notifications/send`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -157,7 +158,7 @@ export async function GET(request: NextRequest) {
           // Send service provider 24-hour reminder (email)
           if (provider?.email) {
             try {
-              const providerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
+              const providerResponse = await fetch(`${appUrl}/api/notifications/send`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -199,7 +200,7 @@ export async function GET(request: NextRequest) {
           // Send buyer 3-hour reminder
           if (customer?.email) {
             try {
-              const buyerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
+              const buyerResponse = await fetch(`${appUrl}/api/notifications/send`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -226,7 +227,7 @@ export async function GET(request: NextRequest) {
           // Send service provider 3-hour reminder (email)
           if (provider?.email) {
             try {
-              const providerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
+              const providerResponse = await fetch(`${appUrl}/api/notifications/send`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

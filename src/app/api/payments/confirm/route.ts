@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
     try {
       const { data: parentProfile } = await supabase
         .from("profiles")
-        .select("first_name")
+        .select("first_name, email")
         .eq("id", user.id)
         .single();
 
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
 
       await emailService.sendBuyerPaymentConfirmed({
         buyerName: parentName,
-        buyerEmail: user.email || "",
+        buyerEmail: (parentProfile as any)?.email || user.email || "",
       });
     } catch (parentEmailError) {
       console.error("Error sending booking confirmation email to parent:", parentEmailError);
