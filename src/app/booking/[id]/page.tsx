@@ -230,6 +230,12 @@ export default function BookingDetailsPage() {
     }
   };
 
+  const formatHoursFromMinutes = (minutes: number) => {
+    const hours = minutes / 60;
+    const rounded = Number.isInteger(hours) ? hours.toString() : hours.toFixed(1).replace(/\.0$/, "");
+    return `${rounded} hour${rounded === "1" ? "" : "s"}`;
+  };
+
   const isProvider = user && booking && booking.service.user_id === user.id;
   const isCustomer = user && booking && booking.user_id === user.id;
 
@@ -342,7 +348,7 @@ export default function BookingDetailsPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Clock className="w-4 h-4" />
-                    {booking.service.duration} minutes
+                    {formatHoursFromMinutes(booking.service.duration)}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <MapPin className="w-4 h-4" />
@@ -576,7 +582,7 @@ export default function BookingDetailsPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Duration</span>
-                  <span className="font-medium">{booking.duration} min</span>
+                  <span className="font-medium">{formatHoursFromMinutes(booking.duration)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Pricing</span>

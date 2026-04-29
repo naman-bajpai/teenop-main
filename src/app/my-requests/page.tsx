@@ -113,6 +113,12 @@ function getStatusConfig(status: string): StatusConfig {
   return configs[status] || configs.pending;
 }
 
+function formatHoursFromMinutes(minutes: number): string {
+  const hours = minutes / 60;
+  const rounded = Number.isInteger(hours) ? hours.toString() : hours.toFixed(1).replace(/\.0$/, "");
+  return `${rounded} hour${rounded === "1" ? "" : "s"}`;
+}
+
 export default function MyRequestsPage() {
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
@@ -813,7 +819,7 @@ export default function MyRequestsPage() {
                                 <p className="text-[10px] font-black text-[#96cbc3] uppercase tracking-widest mb-1">Provider's Quote</p>
                                 <p className="text-2xl font-black text-gray-900">{formatPrice(qr.quotes[0].price)}</p>
                                 {qr.quotes[0].estimated_duration && (
-                                  <p className="text-xs font-bold text-gray-500 mt-1">Est. {qr.quotes[0].estimated_duration} minutes</p>
+                                  <p className="text-xs font-bold text-gray-500 mt-1">Est. {formatHoursFromMinutes(qr.quotes[0].estimated_duration)}</p>
                                 )}
                               </div>
                             )}

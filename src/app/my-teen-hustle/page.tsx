@@ -484,7 +484,7 @@ export default function TeenHustlePage() {
     quoteRequestId: string;
     price: string;
     notes: string;
-    estimatedDurationMinutes: string;
+    estimatedDurationHours: string;
   } | null>(null);
   const [processingQuoteRequestId, setProcessingQuoteRequestId] = useState<string | null>(null);
   const [servicesNeedingCompletion, setServicesNeedingCompletion] = useState<number>(0);
@@ -700,7 +700,7 @@ export default function TeenHustlePage() {
       quoteRequestId: quoteRequest.id,
       price: "",
       notes: "",
-      estimatedDurationMinutes: "",
+      estimatedDurationHours: "",
     });
   };
 
@@ -716,17 +716,17 @@ export default function TeenHustlePage() {
       return;
     }
     let estimatedDuration: number | undefined;
-    if (sendQuoteState.estimatedDurationMinutes.trim()) {
-      const n = parseInt(sendQuoteState.estimatedDurationMinutes, 10);
-      if (!Number.isFinite(n) || n < 1) {
+    if (sendQuoteState.estimatedDurationHours.trim()) {
+      const n = parseFloat(sendQuoteState.estimatedDurationHours);
+      if (!Number.isFinite(n) || n <= 0) {
         toast({
           title: "Invalid duration",
-          description: "Estimated duration must be a positive number of minutes.",
+          description: "Estimated duration must be a positive number of hours.",
           variant: "destructive",
         });
         return;
       }
-      estimatedDuration = n;
+      estimatedDuration = Math.round(n * 60);
     }
     try {
       setProcessingQuoteRequestId(sendQuoteState.quoteRequestId);
@@ -820,6 +820,12 @@ export default function TeenHustlePage() {
       minute: "2-digit",
       hour12: true,
     });
+
+  const formatHours = (minutes: number) => {
+    const hours = minutes / 60;
+    const rounded = Number.isInteger(hours) ? hours.toString() : hours.toFixed(1).replace(/\.0$/, "");
+    return `${rounded} hour${rounded === "1" ? "" : "s"}`;
+  };
 
   useEffect(() => { fetchEverything(); }, [user]);
 
@@ -1018,7 +1024,7 @@ export default function TeenHustlePage() {
                             </p>
                             {qr.quotes[0].estimated_duration != null && (
                               <p className="text-xs text-gray-600 font-medium mt-1">
-                                Est. duration: {qr.quotes[0].estimated_duration} min
+                                Est. duration: {formatHours(qr.quotes[0].estimated_duration)}
                               </p>
                             )}
                             {qr.quotes[0].notes && (
@@ -1227,17 +1233,17 @@ export default function TeenHustlePage() {
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                Estimated duration (minutes, optional)
+                Estimated duration (hours, optional)
               </Label>
               <Input
                 type="number"
-                min={1}
-                step={1}
-                placeholder="e.g. 60"
-                value={sendQuoteState?.estimatedDurationMinutes ?? ""}
+                min={0.25}
+                step={0.25}
+                placeholder="e.g. 1.5"
+                value={sendQuoteState?.estimatedDurationHours ?? ""}
                 onChange={(e) =>
                   setSendQuoteState((prev) =>
-                    prev ? { ...prev, estimatedDurationMinutes: e.target.value } : prev
+                    prev ? { ...prev, estimatedDurationHours: e.target.value } : prev
                   )
                 }
                 className="rounded-xl bg-gray-50/50 border-gray-100"
