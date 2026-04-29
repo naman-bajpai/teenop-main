@@ -302,54 +302,7 @@ export async function PATCH(
         );
       }
 
-      // Send cancellation email notifications
-      try {
-        const { data: customerProfile } = await supabase
-          .from("profiles")
-          .select("first_name, last_name, email")
-          .eq("id", bookingData.user_id)
-          .single();
-
-        const { data: providerProfile } = await supabase
-          .from("profiles")
-          .select("first_name, last_name, email")
-          .eq("id", bookingData.services?.user_id)
-          .single();
-
-        const { emailService } = await import("@/lib/email");
-        const serviceTitle = bookingData.services?.title || "Service";
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-        // Notify the other party
-        if (isCustomer && providerProfile && (providerProfile as any).email) {
-          // Customer cancelled, notify provider
-          await emailService.sendEmail(
-            (providerProfile as any).email,
-            "Service Cancellation Notice",
-            `
-              <h2>Service Cancellation</h2>
-              <p>The customer has cancelled the booking for: <strong>${serviceTitle}</strong></p>
-              <p>If you have any questions, please contact TeenOp support.</p>
-              <p>Best,<br>The TeenOp Team</p>
-            `
-          );
-        } else if (isProvider && customerProfile && (customerProfile as any).email) {
-          // Provider cancelled, notify customer
-          await emailService.sendEmail(
-            (customerProfile as any).email,
-            "Service Cancellation Notice",
-            `
-              <h2>Service Cancellation</h2>
-              <p>The service provider has cancelled the booking for: <strong>${serviceTitle}</strong></p>
-              <p>If you have any questions or need assistance, please contact TeenOp support.</p>
-              <p>Best,<br>The TeenOp Team</p>
-            `
-          );
-        }
-      } catch (emailError) {
-        console.error("Error sending cancellation email:", emailError);
-        // Don't fail the cancellation if email fails
-      }
+      // Emails are sent in the unified notification block below so both parties are notified.
     } else if (status === "completed") {
       // Service provider OR customer can mark as completed, and only when status is "paid"
       const isProvider = bookingData.services?.user_id === user.id;
@@ -614,166 +567,96 @@ export async function PATCH(
       }
     }
 
-    // Send notifications based on status change
+    // Send notifications based on status change (notify both customer and teen)
     try {
-      if (status === "confirmed") {
-        // When teen confirms, send email to parent asking them to pay
-        // Get customer profile for email
-        const { data: customerProfile } = await supabase
-          .from("profiles")
-          .select("first_name, last_name, email")
-          .eq("id", bookingData.user_id)
-          .single();
+      const { emailService } = await import("@/lib/email");
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const serviceTitle = updatedBookingData.services?.title || "Service";
 
-        if (customerProfile && (customerProfile as any).email) {
-          const { emailService } = await import("@/lib/email");
-          const serviceTitle = updatedBookingData.services?.title || "Service";
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const { data: customerProfile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name, email")
+        .eq("id", bookingData.user_id)
+        .single();
 
-          await emailService.sendEmail(
-            (customerProfile as any).email,
-            "Good News! Your TeenOp Service Is Ready to Be Confirmed",
+      const { data: providerProfile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name, email")
+        .eq("id", bookingData.services?.user_id)
+        .single();
+
+      let customerEmail = (customerProfile as any)?.email as string | undefined;
+      let providerEmail = (providerProfile as any)?.email as string | undefined;
+
+      // Fallback to auth email in case profiles.email is missing/outdated.
+      const serviceRole = createServiceRoleClient();
+      if (!customerEmail && bookingData.user_id) {
+        try {
+          const { data, error } = await serviceRole.auth.admin.getUserById(bookingData.user_id);
+          if (!error) customerEmail = data.user?.email;
+        } catch {}
+      }
+      if (!providerEmail && bookingData.services?.user_id) {
+        try {
+          const { data, error } = await serviceRole.auth.admin.getUserById(bookingData.services.user_id);
+          if (!error) providerEmail = data.user?.email;
+        } catch {}
+      }
+
+      const customerName = `${(customerProfile as any)?.first_name || "Customer"} ${(customerProfile as any)?.last_name || ""}`.trim();
+      const providerName = `${(providerProfile as any)?.first_name || "Teen"} ${(providerProfile as any)?.last_name || ""}`.trim();
+
+      const statusLabelMap: Record<string, string> = {
+        confirmed: "confirmed",
+        rejected: "rejected",
+        alternative_proposed: "updated with an alternative time",
+        cancelled: "cancelled",
+        completed: "marked completed",
+        paid: "paid",
+      };
+      const statusLabel = statusLabelMap[status] || status;
+
+      if (customerEmail) {
+        const customerSubject =
+          status === "completed"
+            ? `Service Completed: Please Review & Tip - ${serviceTitle}`
+            : `TeenOp Update: ${serviceTitle}`;
+        const customerBody =
+          status === "completed"
+            ? `
+              <p>Hi ${customerName},</p>
+              <p>Your booking for <strong>${serviceTitle}</strong> is now <strong>completed</strong>.</p>
+              <p>If everything went well, please take a moment to leave a review and tip your teen provider.</p>
+              <p>Your feedback helps trusted teens grow on TeenOp and supports your local community.</p>
+              <p><a href="${appUrl}/my-requests" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Leave Review & Tip</a></p>
+              <p>Thank you for using TeenOp,<br>The TeenOp Team</p>
             `
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <meta charset="utf-8">
-                <title>Service Ready to Confirm</title>
-                <style>
-                  body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                  .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                  .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-                  .content { background: white; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
-                  .booking-details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
-                  .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #666; }
-                  .button { display: inline-block; background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <div class="header">
-                    <h1>Good News! Your TeenOp Service Is Ready to Be Confirmed</h1>
-                    <p>A teen has accepted your service request, and you're almost all set.</p>
-                  </div>
-                  
-                  <div class="content">
-                    <div class="booking-details">
-                      <h3>Service Details</h3>
-                      <p><strong>Service:</strong> ${serviceTitle}</p>
-                    </div>
+            : `
+              <p>Hi ${customerName},</p>
+              <p>Your service request for <strong>${serviceTitle}</strong> was <strong>${statusLabel}</strong>.</p>
+              <p>You can view the latest details in your Requests page.</p>
+              <p><a href="${appUrl}/my-requests" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Open My Requests</a></p>
+              <p>Best,<br>The TeenOp Team</p>
+            `;
 
-                    <h3>What's next?</h3>
-                    <ul>
-                      <li>To officially schedule the service, simply complete payment within TeenOp.</li>
-                      <li>Click the button below to confirm and pay with Stripe.</li>
-                      <li>Once payment is complete, your booking will be confirmed and you'll receive all the details.</li>
-                    </ul>
+        await emailService.sendEmail(customerEmail, customerSubject, customerBody);
+      }
 
-                    <p style="text-align: center; margin: 20px 0;">
-                      <a href="${appUrl}/my-requests" class="button">Click here to confirm and pay with Stripe</a>
-                    </p>
-
-                    <p><strong>Important:</strong> Please complete payment as soon as possible to secure your booking.</p>
-                    
-                    <p>Thank you for supporting a local teen and for being part of the TeenOp community!</p>
-                  </div>
-
-                  <div class="footer">
-                    <p>Best,<br>The TeenOp Team</p>
-                    <p>teenop.co@gmail.com | www.teenop.com</p>
-                  </div>
-                </div>
-              </body>
-              </html>
-            `
-          );
-        }
-      } else if (status === "rejected") {
-        // Send rejection notification to buyer
-        const { data: customerProfile } = await supabase
-          .from("profiles")
-          .select("first_name, last_name, email")
-          .eq("id", bookingData.user_id)
-          .single();
-
-        if (customerProfile && (customerProfile as any).email) {
-          const { emailService } = await import("@/lib/email");
-          const serviceTitle = updatedBookingData.services?.title || "Service";
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-          await emailService.sendEmail(
-            (customerProfile as any).email,
-            "Service Request Update",
-            `
-              <p>Hello,</p>
-              <p>We wanted to let you know that the teen is unable to move forward with your service request at this time.</p>
-              <p>If you'd like to request this service again for a different date or time, you can return to the original listing and submit a new request that works for you.</p>
-              <p><a href="${appUrl}/services/${updatedBookingData.services?.id}" style="background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Click here to view the listing and request again</a></p>
-              <p>Thank you for your understanding and for being part of the TeenOp community. We hope you're able to find the help you need on TeenOp with one of our many talented teens.</p>
-              <p>Warmly,<br>The TeenOp Team</p>
-            `
-          );
-        }
-      } else if (status === "alternative_proposed") {
-        // Send alternative time proposal notification to buyer
-        const { data: customerProfile } = await supabase
-          .from("profiles")
-          .select("first_name, last_name, email")
-          .eq("id", bookingData.user_id)
-          .single();
-
-        let customerEmail = (customerProfile as any)?.email as string | undefined;
-
-        // Fallback to auth email in case profiles.email is missing/outdated.
-        if (!customerEmail) {
-          try {
-            const serviceRole = createServiceRoleClient();
-            const { data: authUserData, error: authUserError } = await serviceRole.auth.admin.getUserById(bookingData.user_id);
-            if (!authUserError) {
-              customerEmail = authUserData.user?.email;
-            } else {
-              console.warn("Failed to fetch customer auth email for alternative proposal:", authUserError.message);
-            }
-          } catch (fallbackError) {
-            console.warn("Alternative proposal email fallback failed:", fallbackError);
-          }
-        }
-
-        if (customerEmail) {
-          const { emailService } = await import("@/lib/email");
-          const serviceTitle = updatedBookingData.services?.title || "Service";
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-          const formatDate = (dateString: string) => {
-            return new Date(dateString).toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            });
-          };
-          const formatTime = (timeString: string) => {
-            const [hours, minutes] = timeString.split(':');
-            const hour = parseInt(hours);
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            const displayHour = hour % 12 || 12;
-            return `${displayHour}:${minutes} ${ampm}`;
-          };
-
-          await emailService.sendEmail(
-            customerEmail,
-            "Your Action Needed: New TeenOp Service Time Proposed",
-            `
-              <p>Hello,</p>
-              <p>The original date and time didn't work with the teen's schedule, so they're proposing a new date and time for your service request.</p>
-              <p>Please review the updated details and choose to accept and complete payment, or decline the alternative timing.</p>
-              <p><a href="${appUrl}/my-requests" style="background: #434c9d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Click here to review and respond</a></p>
-              <p>Thanks for using TeenOp,<br>The TeenOp Team</p>
-            `
-          );
-        }
+      if (providerEmail) {
+        await emailService.sendEmail(
+          providerEmail,
+          `TeenOp Update: ${serviceTitle}`,
+          `
+            <p>Hi ${providerName},</p>
+            <p>The booking for <strong>${serviceTitle}</strong> was <strong>${statusLabel}</strong>.</p>
+            <p>You can view the latest details in your Booking Dashboard.</p>
+            <p><a href="${appUrl}/my-teen-hustle" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Open Booking Dashboard</a></p>
+            <p>Best,<br>The TeenOp Team</p>
+          `
+        );
       }
     } catch (notificationError) {
-      console.error("Error sending notification:", notificationError);
+      console.error("Error sending status update emails:", notificationError);
       // Don't fail the booking update if notification fails
     }
 

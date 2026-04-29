@@ -981,6 +981,7 @@ export default function MyServicesPage() {
                     serviceId={editingService?.id}
                     initialAvailability={serviceAvailability}
                     onSave={setServiceAvailability}
+                    showSaveButton={false}
                   />
                 </div>
               </div>

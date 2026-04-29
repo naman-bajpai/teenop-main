@@ -122,9 +122,18 @@ export class EmailService {
 
     if (alreadyStandardized) return html;
 
+    // Normalize callers that pass full HTML documents so we can still enforce
+    // one shared TeenOp visual format.
+    const normalizedBody = this.extractBodyContent(trimmed);
     const headerTitle = subject || 'TeenOp Update';
     const headerSubtitle = 'Important update from TeenOp';
-    return buildEmail(subject || 'TeenOp Update', headerTitle, headerSubtitle, html);
+    return buildEmail(subject || 'TeenOp Update', headerTitle, headerSubtitle, normalizedBody);
+  }
+
+  private extractBodyContent(html: string): string {
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if (bodyMatch?.[1]) return bodyMatch[1].trim();
+    return html;
   }
 
   // -------------------------------------------------------------------------

@@ -162,6 +162,28 @@ export async function POST(request: NextRequest) {
             // Don't fail the webhook if email fails
           }
 
+          // Send confirmation email to parent/customer when payment succeeds
+          try {
+            const { data: customerProfile } = await supabase
+              .from("profiles")
+              .select("first_name, email")
+              .eq("id", bookingData.user_id)
+              .single();
+
+            const customerEmail = (customerProfile as any)?.email || null;
+            if (customerEmail) {
+              const { emailService } = await import("@/lib/email");
+              const customerName = (customerProfile as any)?.first_name || "there";
+              await emailService.sendBuyerPaymentConfirmed({
+                buyerName: customerName,
+                buyerEmail: customerEmail,
+              });
+            }
+          } catch (parentEmailError) {
+            console.error("Error sending payment confirmation email to parent via webhook:", parentEmailError);
+            // Don't fail webhook if parent email fails
+          }
+
           console.log(`Payment succeeded for booking ${bookingId}`);
         }
         break;

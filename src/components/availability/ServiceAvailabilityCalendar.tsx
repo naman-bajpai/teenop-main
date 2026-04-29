@@ -30,6 +30,7 @@ interface ServiceAvailabilityCalendarProps {
   initialAvailability?: Availability;
   readOnly?: boolean;
   onSave?: (availability: Availability) => void;
+  showSaveButton?: boolean;
 }
 
 export default function ServiceAvailabilityCalendar({
@@ -37,6 +38,7 @@ export default function ServiceAvailabilityCalendar({
   initialAvailability,
   readOnly = false,
   onSave,
+  showSaveButton = true,
 }: ServiceAvailabilityCalendarProps) {
   const { toast } = useToast();
   const [availability, setAvailability] = useState<Availability>(initialAvailability || {});
@@ -161,6 +163,12 @@ export default function ServiceAvailabilityCalendar({
     }
   };
 
+  useEffect(() => {
+    if (onSave) {
+      onSave(availability);
+    }
+  }, [availability, onSave]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -177,7 +185,7 @@ export default function ServiceAvailabilityCalendar({
 
   return (
     <div className="space-y-4">
-      {!readOnly && (
+      {!readOnly && showSaveButton && (
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Clock className="w-5 h-5" />

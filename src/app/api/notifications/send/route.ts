@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 import { emailService } from "@/lib/email";
 import { smsService } from "@/lib/sms";
 
@@ -74,6 +75,25 @@ export async function POST(request: NextRequest) {
     const customer = bookingData.profiles;
     const provider = service?.profiles;
 
+    const resolveEmailWithFallback = async (
+      profileEmail: string | undefined,
+      userId: string | undefined
+    ) => {
+      if (profileEmail) return profileEmail;
+      if (!userId) return null;
+      try {
+        const serviceRole = createServiceRoleClient();
+        const { data, error } = await serviceRole.auth.admin.getUserById(userId);
+        if (error) return null;
+        return data.user?.email || null;
+      } catch {
+        return null;
+      }
+    };
+
+    const customerEmail = await resolveEmailWithFallback(customer?.email, bookingData.user_id);
+    const providerEmail = await resolveEmailWithFallback(provider?.email, service?.user_id);
+
     // Format date and time
     const formatDate = (dateString: string) => {
       const date = new Date(dateString);
@@ -137,7 +157,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'buyer_rejection':
-        if (!customer?.email) {
+        if (!customerEmail) {
           return NextResponse.json(
             { success: false, error: "Customer email not found" },
             { status: 400 }
@@ -146,13 +166,13 @@ export async function POST(request: NextRequest) {
 
         result = await emailService.sendBuyerRejection({
           buyerName: `${customer.first_name} ${customer.last_name}`.trim(),
-          buyerEmail: customer.email,
+          buyerEmail: customerEmail,
           serviceName: service.title,
         });
         break;
 
       case 'buyer_24_hour_reminder':
-        if (!customer?.email) {
+        if (!customerEmail) {
           return NextResponse.json(
             { success: false, error: "Customer email not found" },
             { status: 400 }
@@ -161,9 +181,9 @@ export async function POST(request: NextRequest) {
 
         result = await emailService.sendBuyer24HourReminder({
           buyerName: `${customer.first_name} ${customer.last_name}`.trim(),
-          buyerEmail: customer.email,
+          buyerEmail: customerEmail,
           serviceName: service.title,
-          teenName: `${provider.first_name} ${provider.last_name}`.trim(),
+          teenName: `${provider?.first_name || ""} ${provider?.last_name || ""}`.trim() || "Teen Provider",
           date: formattedDate,
           time: formattedTime,
           timeZone,
@@ -180,7 +200,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'buyer_3_hour_reminder':
-        if (!customer?.email) {
+        if (!customerEmail) {
           return NextResponse.json(
             { success: false, error: "Customer email not found" },
             { status: 400 }
@@ -189,9 +209,9 @@ export async function POST(request: NextRequest) {
 
         result = await emailService.sendBuyer3HourReminder({
           buyerName: `${customer.first_name} ${customer.last_name}`.trim(),
-          buyerEmail: customer.email,
+          buyerEmail: customerEmail,
           serviceName: service.title,
-          teenName: `${provider.first_name} ${provider.last_name}`.trim(),
+          teenName: `${provider?.first_name || ""} ${provider?.last_name || ""}`.trim() || "Teen Provider",
           time: formattedTime,
           timeZone,
           location: service.location || 'Online',
@@ -207,7 +227,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'service_provider_24_hour_reminder':
-        if (!provider?.email) {
+        if (!providerEmail) {
           return NextResponse.json(
             { success: false, error: "Provider email not found" },
             { status: 400 }
@@ -216,7 +236,7 @@ export async function POST(request: NextRequest) {
 
         result = await emailService.sendServiceProvider24HourReminder({
           providerName: `${provider.first_name} ${provider.last_name}`.trim(),
-          providerEmail: provider.email,
+          providerEmail: providerEmail,
           serviceName: service.title,
           buyerName: `${customer.first_name} ${customer.last_name}`.trim(),
           date: formattedDate,
@@ -228,7 +248,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'service_provider_3_hour_reminder':
-        if (!provider?.email) {
+        if (!providerEmail) {
           return NextResponse.json(
             { success: false, error: "Provider email not found" },
             { status: 400 }
@@ -237,7 +257,7 @@ export async function POST(request: NextRequest) {
 
         result = await emailService.sendServiceProvider3HourReminder({
           providerName: `${provider.first_name} ${provider.last_name}`.trim(),
-          providerEmail: provider.email,
+          providerEmail: providerEmail,
           serviceName: service.title,
           buyerName: `${customer.first_name} ${customer.last_name}`.trim(),
           time: formattedTime,

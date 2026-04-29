@@ -59,7 +59,7 @@ export default function HeroSection({ user: _user }: HeroSectionProps) {
 
           {/* Tagline */}
           <p
-            className="mt-5 text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight max-w-md lg:max-w-lg"
+            className="mt-5 inline-block rounded-xl bg-white/75 px-3 py-2 text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight max-w-md lg:max-w-lg backdrop-blur-sm"
             style={{ textShadow: "0 2px 10px rgba(255, 255, 255, 0.45)" }}
           >
             Talented Teens Offering Services to Their Community
