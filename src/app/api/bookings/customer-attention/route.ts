@@ -45,7 +45,7 @@ export async function GET() {
 
     const bookingEvents = (bookings || []).filter((b: any) => {
       // Parent attention is only for requests that currently need a customer decision/action.
-      if (b.status === "confirmed") return !isBookingExpired(b);
+      if (b.status === "awaiting_payment" || b.status === "confirmed") return !isBookingExpired(b);
       if (b.status === "alternative_proposed") {
         if (!b.alternative_date || !b.alternative_time) return false;
         return !isBookingExpired(b);

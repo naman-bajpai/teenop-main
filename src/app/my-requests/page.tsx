@@ -33,6 +33,7 @@ import { useToast } from "@/components/ui/use-toast";
 import ReviewForm from "@/components/reviews/ReviewForm";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { isAwaitingPaymentStatus } from "@/lib/booking-status";
 
 // Status configuration helper function
 type StatusConfig = {
@@ -52,12 +53,19 @@ function getStatusConfig(status: string): StatusConfig {
       icon: <AlertCircle className="w-4 h-4" />,
       label: "Pending"
     },
+    awaiting_payment: {
+      color: "text-blue-700",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-200",
+      icon: <Clock className="w-4 h-4" />,
+      label: "Waiting for payment"
+    },
     confirmed: {
       color: "text-blue-700",
       bgColor: "bg-blue-50",
       borderColor: "border-blue-200",
-      icon: <CheckCircle className="w-4 h-4" />,
-      label: "Confirmed"
+      icon: <Clock className="w-4 h-4" />,
+      label: "Waiting for payment"
     },
     in_progress: {
       color: "text-purple-700",
@@ -245,14 +253,14 @@ export default function MyRequestsPage() {
     try {
       setUpdating(bookingId);
 
-      // Update booking with alternative date/time and set status to confirmed
+      // Update booking with alternative date/time; status becomes awaiting payment
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          status: "confirmed",
+          status: "awaiting_payment",
           requested_date: alternativeDate,
           requested_time: alternativeTime
         }),
@@ -269,7 +277,7 @@ export default function MyRequestsPage() {
       if (bookingResponse.ok) {
         const bookingResult = await bookingResponse.json();
         if (bookingResult.success && bookingResult.booking) {
-          setSelectedBooking({ ...bookingResult.booking, status: "confirmed" as any });
+          setSelectedBooking({ ...bookingResult.booking, status: "awaiting_payment" as any });
           setPaymentModalOpen(true);
         }
       }
@@ -279,7 +287,7 @@ export default function MyRequestsPage() {
 
       toast({
         title: "Alternative Time Accepted",
-        description: "Please complete payment to confirm the booking.",
+        description: "Please complete payment to finalize the booking.",
       });
     } catch (err: any) {
       console.error("Error accepting alternative time:", err);
@@ -471,7 +479,7 @@ export default function MyRequestsPage() {
       await fetchBookings(true);
       toast({
         title: "Quote Accepted",
-        description: "Please complete payment to confirm your booking.",
+        description: "Please complete payment to finalize your booking.",
       });
     } catch (err: any) {
       toast({
@@ -553,7 +561,9 @@ export default function MyRequestsPage() {
   const pendingBookings = bookings.filter(
     (b) => pendingStatuses(b) && !isBookingExpired(b)
   );
-  const scheduledBookings = bookings.filter((b) => b.status === "paid" || b.status === "confirmed");
+  const scheduledBookings = bookings.filter(
+    (b) => b.status === "paid" || b.status === "awaiting_payment" || b.status === "confirmed"
+  );
   const completedBookings = bookings.filter((b) => b.status === "completed");
   const cancelledBookings = bookings.filter(
     (b) => b.status === "cancelled" || b.status === "rejected"
@@ -726,7 +736,7 @@ export default function MyRequestsPage() {
             </div>
             <div className="mb-8 rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
               <p className="text-sm font-semibold text-gray-700">
-                {activeTab === "pending" && "Pending: Booking not yet confirmed, awaiting response from the teen."}
+                {activeTab === "pending" && "Pending: Awaiting a response from the teen."}
                 {activeTab === "expired" && "Expired: Booking or quote request expired due to no response or missed confirmation."}
                 {activeTab === "scheduled" && "Scheduled: Includes awaiting payment and paid bookings."}
                 {activeTab === "completed" && "History: Past bookings including completed services, reviews, and payments."}
@@ -1181,7 +1191,7 @@ function BookingCard({
             </div>
           )}
 
-          {!isExpired && booking.status === "confirmed" && (
+          {!isExpired && isAwaitingPaymentStatus(booking.status) && (
             <div className="space-y-2">
               <p className="text-[11px] font-semibold text-gray-600 px-1">
                 You will receive an email notification when the teen provider responds. View the status of your request under the Requests tab.
@@ -1190,7 +1200,7 @@ function BookingCard({
                 onClick={onPay}
                 className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-xl font-black h-12 shadow-xl shadow-[#434c9d]/20 transition-all active:scale-95"
               >
-                <CreditCard className="w-5 h-5 mr-2" /> Confirm and Pay
+                <CreditCard className="w-5 h-5 mr-2" /> Pay now
               </Button>
               <div className="flex gap-2">
                 <Button

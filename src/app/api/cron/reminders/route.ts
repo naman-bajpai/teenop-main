@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
           phone
         )
       `)
-      .in("status", ["confirmed", "paid"])
+      .in("status", ["awaiting_payment", "confirmed", "paid"])
       .gte("requested_date", now.toISOString().split('T')[0])
       .lte("requested_date", maxDate.toISOString().split('T')[0]);
 

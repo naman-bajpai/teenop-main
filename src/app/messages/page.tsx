@@ -713,7 +713,9 @@ function MessagesPageContent() {
                     </div>
                     <Badge variant="outline" className={cn(
                       "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5",
-                      selectedConversation.booking.status === "confirmed" && "bg-green-50 text-green-700 border-green-100",
+                      (selectedConversation.booking.status === "awaiting_payment" ||
+                        selectedConversation.booking.status === "confirmed") &&
+                      "bg-amber-50 text-amber-900 border-amber-100",
                       selectedConversation.booking.status === "pending" && "bg-yellow-50 text-yellow-700 border-yellow-100",
                       selectedConversation.booking.status === "paid" && "bg-blue-50 text-blue-700 border-blue-100",
                       selectedConversation.booking.status === "completed" && "bg-gray-50 text-gray-700 border-gray-100",

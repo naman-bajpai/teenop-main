@@ -79,14 +79,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for existing pending/confirmed bookings for the same time slot
+    // Check for existing pending / awaiting-payment bookings for the same time slot
     const { data: existingBookings, error: bookingCheckError } = await supabase
       .from("bookings")
       .select("id, status")
       .eq("service_id" as any, service_id as any)
       .eq("requested_date" as any, requested_date as any)
       .eq("requested_time" as any, requested_time as any)
-      .in("status" as any, ["pending" as any, "confirmed" as any]);
+      .in("status" as any, ["pending" as any, "awaiting_payment" as any, "confirmed" as any]);
 
     if (bookingCheckError) {
       console.error("Error checking existing bookings:", bookingCheckError);

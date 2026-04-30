@@ -116,7 +116,7 @@ export async function POST(
       .eq("service_id" as any, quoteRequest.service_id as any)
       .eq("requested_date" as any, quoteRequest.requested_date as any)
       .eq("requested_time" as any, quoteRequest.requested_time as any)
-      .in("status" as any, ["pending" as any, "confirmed" as any, "paid" as any]);
+      .in("status" as any, ["pending" as any, "awaiting_payment" as any, "confirmed" as any, "paid" as any]);
 
     // Prefer reusing an existing booking row for this slot if it belongs to this quote flow.
     // This avoids unique-slot conflicts and preserves existing message threads.
@@ -163,7 +163,7 @@ export async function POST(
       platform_fee: platformFee,
       total_price: totalPrice,
       duration: quoteData.estimated_duration || quoteRequest.services?.duration || 60,
-      status: "confirmed",
+      status: "awaiting_payment",
       quote_id: id,
       updated_at: new Date().toISOString(),
     } as any;

@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { formatBookingStatusLabel, isAwaitingPaymentStatus } from "@/lib/booking-status";
 import MultiImageUpload, { ServiceImage } from "@/components/ui/multi-image-upload";
 import { RatingDisplay, RatingForm } from "@/components/ui/rating";
 import ServiceAvailabilityCalendar from "@/components/availability/ServiceAvailabilityCalendar";
@@ -109,6 +110,7 @@ const getStatusColor = (status: string) => {
   switch (status) {
     case "active": return "bg-green-50 text-green-700";
     case "paused": return "bg-yellow-50 text-yellow-700";
+    case "awaiting_payment":
     case "confirmed": return "bg-green-50 text-green-700";
     case "completed": return "bg-gray-50 text-gray-700";
     case "paid": return "bg-blue-50 text-blue-700";
@@ -147,7 +149,7 @@ function BookingCard({ booking, onStatusUpdate }: {
     return localDate.toLocaleDateString("en-US");
   };
 
-  const handleAccept = async () => await onStatusUpdate(booking.id, "confirmed");
+  const handleAccept = async () => await onStatusUpdate(booking.id, "awaiting_payment");
   const handleDecline = () => setShowAlternativeDialog(true);
 
   const handleProposeAlternative = async () => {
@@ -282,7 +284,7 @@ function BookingCard({ booking, onStatusUpdate }: {
           </p>
         </div>
         <Badge className={cn("text-[10px] font-bold uppercase tracking-widest px-3 py-1 border-none", getStatusColor(booking.status))}>
-          {booking.status === "confirmed" ? "Awaiting Payment" : booking.status}
+          {formatBookingStatusLabel(booking.status)}
         </Badge>
       </div>
 
@@ -332,13 +334,13 @@ function BookingCard({ booking, onStatusUpdate }: {
         {booking.status === "pending" && (
           <>
             <p className="w-full text-[11px] font-semibold text-gray-600 mb-1">
-              You will be notified by email when the buyer completes payment and booking is confirmed.
+              You will be notified by email when the buyer completes payment.
             </p>
             <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-6 h-10 font-bold" onClick={handleAccept}>Accept Request</Button>
             <Button variant="outline" size="sm" className="text-red-600 border-red-100 hover:bg-red-50 rounded-xl px-6 h-10 font-bold" onClick={handleDecline}>Decline / Propose Time</Button>
           </>
         )}
-        {(booking.status === "confirmed" || booking.status === "paid" || booking.status === "completed" || booking.status === "rejected") && (
+        {(isAwaitingPaymentStatus(booking.status) || booking.status === "paid" || booking.status === "completed" || booking.status === "rejected") && (
           <Button variant="outline" size="sm" onClick={() => router.push(`/booking/${booking.id}`)} className="border-gray-100 text-gray-600 hover:bg-gray-50 rounded-xl px-6 h-10 font-bold flex items-center gap-2">
             <Eye className="w-4 h-4" /> View Details
           </Button>
@@ -356,7 +358,7 @@ function BookingCard({ booking, onStatusUpdate }: {
           </>
         )}
 
-        {(booking.status === "paid" || booking.status === "confirmed") && (
+        {booking.status === "paid" && (
           <>
             <Button
               variant="outline"
@@ -539,8 +541,8 @@ export default function TeenHustlePage() {
         const bData = await bRes.json();
         if (bData.success) {
           const allIncoming = bData.incoming || [];
-          const activeIncoming = allIncoming.filter((b: Booking) => (b.status === "pending" || b.status === "confirmed" || b.status === "alternative_proposed") ? !isBookingExpired(b) : true);
-          setPendingBookings(activeIncoming.filter((b: Booking) => b.status === "pending" || b.status === "confirmed" || b.status === "alternative_proposed"));
+          const activeIncoming = allIncoming.filter((b: Booking) => (b.status === "pending" || isAwaitingPaymentStatus(b.status) || b.status === "alternative_proposed") ? !isBookingExpired(b) : true);
+          setPendingBookings(activeIncoming.filter((b: Booking) => b.status === "pending" || isAwaitingPaymentStatus(b.status) || b.status === "alternative_proposed"));
           const scheduled = allIncoming.filter((b: Booking) => b.status === "paid");
           setScheduledBookings(scheduled);
           const now = new Date();
@@ -625,8 +627,8 @@ export default function TeenHustlePage() {
       
       setPendingBookings(prev => {
         const updated = prev.map(updateBooking);
-        // If status changed to something other than pending/confirmed/alternative_proposed, remove from pending
-        if (!["pending", "confirmed", "alternative_proposed"].includes(status)) {
+        // If status changed to something other than pending / awaiting payment / alternative_proposed, remove from pending
+        if (!["pending", "awaiting_payment", "confirmed", "alternative_proposed"].includes(status)) {
           return updated.filter(b => b.id !== bookingId);
         }
         return updated;
@@ -949,8 +951,8 @@ export default function TeenHustlePage() {
             </div>
             <div className="mb-6 rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
               <p className="text-sm font-semibold text-gray-700">
-                {activeTab === "pending" && "Pending: Booking not yet confirmed, awaiting payment or a response to an alternative time request."}
-                {activeTab === "scheduled" && "Scheduled: Payment received and service is confirmed."}
+                {activeTab === "pending" && "Pending: Awaiting teen response, customer payment, or a response to an alternative time request."}
+                {activeTab === "scheduled" && "Scheduled: Payment received; your service is locked in."}
                 {activeTab === "completed" && "History: Completed or past bookings, including reviews and payments."}
               </p>
             </div>

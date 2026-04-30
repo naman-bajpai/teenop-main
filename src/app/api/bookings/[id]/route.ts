@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { normalizeIncomingBookingStatus } from "@/lib/booking-status";
 
 // GET specific booking details
 export async function GET(
@@ -179,7 +180,8 @@ export async function PATCH(
 
     const { id: bookingId } = await params;
     const body = await request.json();
-    const { status, alternative_date, alternative_time, requested_date, requested_time } = body;
+    let { status, alternative_date, alternative_time, requested_date, requested_time } = body;
+    status = normalizeIncomingBookingStatus(status);
 
     // Debug log
     console.log("Booking update request:", {
@@ -191,7 +193,7 @@ export async function PATCH(
     });
 
     // Validate status
-    if (!status || !["confirmed", "rejected", "completed", "paid", "cancelled", "alternative_proposed"].includes(status)) {
+    if (!status || !["awaiting_payment", "rejected", "completed", "paid", "cancelled", "alternative_proposed"].includes(status)) {
       return NextResponse.json(
         { success: false, error: "Invalid status" },
         { status: 400 }
@@ -246,13 +248,13 @@ export async function PATCH(
           { status: 403 }
         );
       }
-    } else if (status === "confirmed") {
-      // Service provider can confirm initially, customer can confirm when accepting alternative time
+    } else if (status === "awaiting_payment") {
+      // Provider accepted request, or customer accepted an alternative time — awaiting customer payment
       const isProvider = bookingData.services?.user_id === user.id;
       const isCustomer = bookingData.user_id === user.id;
       const isAcceptingAlternative = bookingData.status === "alternative_proposed" && requested_date && requested_time;
 
-      console.log("Permission check for confirmed:", {
+      console.log("Permission check for awaiting_payment:", {
         status,
         bookingServiceUserId: bookingData.services?.user_id,
         bookingUserId: bookingData.user_id,
@@ -267,18 +269,15 @@ export async function PATCH(
         hasRequestedTime: !!requested_time
       });
 
-      // Allow if: (1) provider confirming initially, OR (2) customer accepting alternative time
+      // Allow if: (1) provider accepting initially, OR (2) customer accepting alternative time
       if (isProvider) {
-        // Provider can always confirm
-        console.log("Permission granted: Provider confirming booking");
+        console.log("Permission granted: Provider accepting booking (awaiting payment)");
       } else if (isCustomer && isAcceptingAlternative) {
-        // Customer can confirm when accepting alternative time
         console.log("Permission granted: Customer accepting alternative time");
       } else {
-        // Deny access
         console.log("Permission denied: Not provider and not customer accepting alternative");
         return NextResponse.json(
-          { success: false, error: "Only service provider can confirm bookings, or customer can accept alternative times" },
+          { success: false, error: "Only the service provider can accept a new request, or the customer can accept a proposed alternative time" },
           { status: 403 }
         );
       }
@@ -353,8 +352,8 @@ export async function PATCH(
     // Debug: Log the complete update payload
     console.log("Complete update payload before database update:", JSON.stringify(updatePayload, null, 2));
 
-    // If accepting alternative time (status = confirmed), update requested_date and requested_time
-    if (status === "confirmed" && requested_date && requested_time) {
+    // If accepting alternative time (status = awaiting_payment), update requested_date and requested_time
+    if (status === "awaiting_payment" && requested_date && requested_time) {
       updatePayload.requested_date = requested_date;
       updatePayload.requested_time = requested_time;
       // Clear alternative fields since we're using them now
@@ -610,9 +609,9 @@ export async function PATCH(
       const actorIsProvider = user.id === bookingData.services?.user_id;
       const actorIsCustomer = user.id === bookingData.user_id;
       const teenAcceptedPending =
-        status === "confirmed" && actorIsProvider && prevBookingStatus === "pending";
+        status === "awaiting_payment" && actorIsProvider && prevBookingStatus === "pending";
       const parentAcceptedAlternative =
-        status === "confirmed" &&
+        status === "awaiting_payment" &&
         actorIsCustomer &&
         prevBookingStatus === "alternative_proposed";
 
@@ -639,7 +638,7 @@ export async function PATCH(
               <p><a href="${appUrl}/my-requests" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Leave Review & Tip</a></p>
               <p>Thank you for using TeenOp,<br>The TeenOp Team</p>
             `;
-        } else if (status === "confirmed") {
+        } else if (status === "awaiting_payment") {
           if (teenAcceptedPending) {
             customerSubject = `Teen accepted your request — payment needed: ${serviceTitle}`;
             customerBody = `
@@ -685,7 +684,7 @@ export async function PATCH(
         let providerSubject = `TeenOp Update: ${serviceTitle}`;
         let providerBody: string;
 
-        if (status === "confirmed") {
+        if (status === "awaiting_payment") {
           if (teenAcceptedPending) {
             providerSubject = `You accepted a request — awaiting payment: ${serviceTitle}`;
             providerBody = `

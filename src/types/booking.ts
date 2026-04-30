@@ -38,6 +38,8 @@ export interface Booking {
 
 export type BookingStatus = 
   | "pending"
+  | "awaiting_payment"
+  /** @deprecated pre-payment rows may still use this until migrated */
   | "confirmed"
   | "in_progress"
   | "completed"

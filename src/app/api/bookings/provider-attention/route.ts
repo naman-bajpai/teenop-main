@@ -83,8 +83,8 @@ export async function GET() {
     for (const b of incoming) {
       // Skip placeholder bookings that exist purely as conversation threads for quote requests.
       if (typeof b.special_instructions === "string" && b.special_instructions.includes("[QUOTE_REQUEST]")) continue;
-      if (!["pending", "confirmed", "paid", "cancelled", "rejected"].includes(b.status)) continue;
-      if ((b.status === "pending" || b.status === "confirmed") && isBookingExpired(b)) continue;
+      if (!["pending", "awaiting_payment", "confirmed", "paid", "cancelled", "rejected"].includes(b.status)) continue;
+      if ((b.status === "pending" || b.status === "awaiting_payment" || b.status === "confirmed") && isBookingExpired(b)) continue;
       bookingCount++;
     }
 

@@ -20,6 +20,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useUser } from "@/hooks/useUser";
 import { Booking } from "@/types/booking";
 import { PaymentModal } from "@/components/payments/PaymentModal";
+import { formatBookingStatusLabel, isAwaitingPaymentStatus } from "@/lib/booking-status";
 
 export default function MyBookingsPage() {
   const { user, loading: userLoading } = useUser();
@@ -101,7 +102,8 @@ export default function MyBookingsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending": return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "confirmed": return "bg-blue-100 text-blue-800 border-blue-200";
+      case "awaiting_payment":
+      case "confirmed": return "bg-amber-100 text-amber-900 border-amber-200";
       case "in_progress": return "bg-purple-100 text-purple-800 border-purple-200";
       case "completed": return "bg-green-100 text-green-800 border-green-200";
       case "paid": return "bg-green-100 text-green-800 border-green-200";
@@ -114,7 +116,8 @@ export default function MyBookingsPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "pending": return <AlertCircle className="w-4 h-4" />;
-      case "confirmed": return <CheckCircle className="w-4 h-4" />;
+      case "awaiting_payment":
+      case "confirmed": return <Clock className="w-4 h-4" />;
       case "in_progress": return <Loader2 className="w-4 h-4 animate-spin" />;
       case "completed": return <CheckCircle className="w-4 h-4" />;
       case "paid": return <CheckCircle className="w-4 h-4" />;
@@ -211,7 +214,7 @@ export default function MyBookingsPage() {
                           <h3 className="font-semibold text-gray-900 mb-1">{booking.service?.title}</h3>
                           <Badge className={`text-xs px-2 py-1 border ${getStatusColor(booking.status)}`}>
                             {getStatusIcon(booking.status)}
-                            <span className="ml-1 capitalize">{booking.status}</span>
+                            <span className="ml-1">{formatBookingStatusLabel(booking.status)}</span>
                           </Badge>
                         </div>
                         <div className="text-right">
@@ -317,7 +320,7 @@ export default function MyBookingsPage() {
                           <h3 className="font-semibold text-gray-900 mb-1">{booking.service?.title}</h3>
                           <Badge className={`text-xs px-2 py-1 border ${getStatusColor(booking.status)}`}>
                             {getStatusIcon(booking.status)}
-                            <span className="ml-1 capitalize">{booking.status}</span>
+                            <span className="ml-1">{formatBookingStatusLabel(booking.status)}</span>
                           </Badge>
                         </div>
                         <div className="text-right">
@@ -351,12 +354,12 @@ export default function MyBookingsPage() {
                       {booking.status === "pending" && (
                         <div className="flex gap-2">
                           <Button
-                            onClick={() => updateBookingStatus(booking.id, "confirmed")}
+                            onClick={() => updateBookingStatus(booking.id, "awaiting_payment")}
                             size="sm"
                             disabled={updating === booking.id}
                             className="flex-1 bg-green-600 hover:bg-green-700"
                           >
-                            {updating === booking.id ? "Updating..." : "Confirm"}
+                            {updating === booking.id ? "Updating..." : "Accept"}
                           </Button>
                           <Button
                             onClick={() => updateBookingStatus(booking.id, "rejected")}
@@ -370,16 +373,9 @@ export default function MyBookingsPage() {
                         </div>
                       )}
 
-                      {booking.status === "confirmed" && (
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => updateBookingStatus(booking.id, "in_progress")}
-                            size="sm"
-                            disabled={updating === booking.id}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700"
-                          >
-                            {updating === booking.id ? "Updating..." : "Start Service"}
-                          </Button>
+                      {isAwaitingPaymentStatus(booking.status) && (
+                        <div className="w-full p-3 bg-amber-50 border border-amber-200 rounded-lg text-center text-sm text-amber-900">
+                          Waiting for the customer to complete payment.
                         </div>
                       )}
 

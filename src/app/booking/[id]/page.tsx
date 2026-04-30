@@ -25,6 +25,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import Link from "next/link";
+import { formatBookingStatusLabel, isAwaitingPaymentStatus } from "@/lib/booking-status";
 
 interface BookingDetails {
   id: string;
@@ -79,8 +80,10 @@ const getStatusColor = (status: string) => {
   switch (status) {
     case "pending":
       return "bg-yellow-100 text-yellow-800";
+    case "awaiting_payment":
+      return "bg-amber-100 text-amber-900";
     case "confirmed":
-      return "bg-green-100 text-green-800";
+      return "bg-amber-100 text-amber-900";
     case "rejected":
       return "bg-red-100 text-red-800";
     case "completed":
@@ -98,8 +101,10 @@ const getStatusIcon = (status: string) => {
   switch (status) {
     case "pending":
       return <AlertCircle className="w-4 h-4" />;
+    case "awaiting_payment":
+      return <Clock className="w-4 h-4" />;
     case "confirmed":
-      return <CheckCircle className="w-4 h-4" />;
+      return <Clock className="w-4 h-4" />;
     case "rejected":
       return <XCircle className="w-4 h-4" />;
     case "completed":
@@ -321,7 +326,7 @@ export default function BookingDetailsPage() {
             </div>
             <Badge className={`${getStatusColor(booking.status)} flex items-center gap-2`}>
               {getStatusIcon(booking.status)}
-              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+              {formatBookingStatusLabel(booking.status)}
             </Badge>
           </div>
         </div>
@@ -376,7 +381,7 @@ export default function BookingDetailsPage() {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Actions</h2>
                 <div className="flex gap-3">
                   <Button
-                    onClick={() => handleStatusUpdate("confirmed")}
+                    onClick={() => handleStatusUpdate("awaiting_payment")}
                     disabled={actionLoading}
                     className="bg-green-600 hover:bg-green-700"
                   >
@@ -412,12 +417,12 @@ export default function BookingDetailsPage() {
               </div>
             )}
             
-            {booking.status === "confirmed" && isProvider && (
+            {isAwaitingPaymentStatus(booking.status) && isProvider && (
               <div className="bg-white rounded-xl p-6 border border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Waiting for Payment</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Waiting for payment</h2>
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    Booking will be confirmed when your customer has completed payment. It will then appear on your Booking Dashboard under Scheduled Services.
+                    The customer still needs to pay. After payment, the booking will show as paid on your dashboard and you&apos;ll both get a confirmation email.
                   </p>
                 </div>
               </div>
@@ -482,7 +487,7 @@ export default function BookingDetailsPage() {
             )}
 
             {(isProvider || isCustomer) &&
-              ["pending", "confirmed", "paid"].includes(booking.status) && (
+              ["pending", "awaiting_payment", "confirmed", "paid"].includes(booking.status) && (
                 <div className="bg-white rounded-xl p-6 border border-gray-200">
                   <h2 className="text-xl font-semibold text-gray-900 mb-4">Cancel Service</h2>
                   <div className="space-y-4">

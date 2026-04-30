@@ -1111,7 +1111,7 @@ export default function ServiceDetailsPage() {
                   <div className="space-y-3 text-xs font-bold text-gray-500">
                     <p>1. Send your request with details.</p>
                     <p>2. Provider accepts or suggests a time.</p>
-                    <p>3. Pay securely once confirmed.</p>
+                    <p>3. Pay securely after the teen accepts your request.</p>
                     <p>4. Rate your experience after job.</p>
                   </div>
                 </div>
