@@ -606,8 +606,17 @@ export async function PATCH(
       const customerName = `${(customerProfile as any)?.first_name || "Customer"} ${(customerProfile as any)?.last_name || ""}`.trim();
       const providerName = `${(providerProfile as any)?.first_name || "Teen"} ${(providerProfile as any)?.last_name || ""}`.trim();
 
+      const prevBookingStatus = String(bookingData.status || "");
+      const actorIsProvider = user.id === bookingData.services?.user_id;
+      const actorIsCustomer = user.id === bookingData.user_id;
+      const teenAcceptedPending =
+        status === "confirmed" && actorIsProvider && prevBookingStatus === "pending";
+      const parentAcceptedAlternative =
+        status === "confirmed" &&
+        actorIsCustomer &&
+        prevBookingStatus === "alternative_proposed";
+
       const statusLabelMap: Record<string, string> = {
-        confirmed: "confirmed",
         rejected: "rejected",
         alternative_proposed: "updated with an alternative time",
         cancelled: "cancelled",
@@ -617,43 +626,103 @@ export async function PATCH(
       const statusLabel = statusLabelMap[status] || status;
 
       if (customerEmail) {
-        const customerSubject =
-          status === "completed"
-            ? `Service Completed: Please Review & Tip - ${serviceTitle}`
-            : `TeenOp Update: ${serviceTitle}`;
-        const customerBody =
-          status === "completed"
-            ? `
+        let customerSubject: string;
+        let customerBody: string;
+
+        if (status === "completed") {
+          customerSubject = `Service Completed: Please Review & Tip - ${serviceTitle}`;
+          customerBody = `
               <p>Hi ${customerName},</p>
               <p>Your booking for <strong>${serviceTitle}</strong> is now <strong>completed</strong>.</p>
               <p>If everything went well, please take a moment to leave a review and tip your teen provider.</p>
               <p>Your feedback helps trusted teens grow on TeenOp and supports your local community.</p>
               <p><a href="${appUrl}/my-requests" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Leave Review & Tip</a></p>
               <p>Thank you for using TeenOp,<br>The TeenOp Team</p>
-            `
-            : `
+            `;
+        } else if (status === "confirmed") {
+          if (teenAcceptedPending) {
+            customerSubject = `Teen accepted your request — payment needed: ${serviceTitle}`;
+            customerBody = `
+              <p>Hi ${customerName},</p>
+              <p>The teen has accepted your request for <strong>${serviceTitle}</strong>. Please make a payment.</p>
+              <p>After you pay, you and the teen will each get an email with your finalized booking details.</p>
+              <p><a href="${appUrl}/my-requests" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Open My Requests to pay</a></p>
+              <p>Best,<br>The TeenOp Team</p>
+            `;
+          } else if (parentAcceptedAlternative) {
+            customerSubject = `Complete payment for ${serviceTitle}`;
+            customerBody = `
+              <p>Hi ${customerName},</p>
+              <p>You accepted the teen&apos;s proposed date and time for <strong>${serviceTitle}</strong>. Please make a payment.</p>
+              <p>After you pay, you and the teen will each get an email with your finalized booking details.</p>
+              <p><a href="${appUrl}/my-requests" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Open My Requests to pay</a></p>
+              <p>Best,<br>The TeenOp Team</p>
+            `;
+          } else {
+            customerSubject = `TeenOp update: ${serviceTitle}`;
+            customerBody = `
+              <p>Hi ${customerName},</p>
+              <p>Your booking for <strong>${serviceTitle}</strong> was updated. If payment is still due, you can complete it from My Requests.</p>
+              <p><a href="${appUrl}/my-requests" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Open My Requests</a></p>
+              <p>Best,<br>The TeenOp Team</p>
+            `;
+          }
+        } else {
+          customerSubject = `TeenOp Update: ${serviceTitle}`;
+          customerBody = `
               <p>Hi ${customerName},</p>
               <p>Your service request for <strong>${serviceTitle}</strong> was <strong>${statusLabel}</strong>.</p>
               <p>You can view the latest details in your Requests page.</p>
               <p><a href="${appUrl}/my-requests" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Open My Requests</a></p>
               <p>Best,<br>The TeenOp Team</p>
             `;
+        }
 
         await emailService.sendEmail(customerEmail, customerSubject, customerBody);
       }
 
       if (providerEmail) {
-        await emailService.sendEmail(
-          providerEmail,
-          `TeenOp Update: ${serviceTitle}`,
-          `
+        let providerSubject = `TeenOp Update: ${serviceTitle}`;
+        let providerBody: string;
+
+        if (status === "confirmed") {
+          if (teenAcceptedPending) {
+            providerSubject = `You accepted a request — awaiting payment: ${serviceTitle}`;
+            providerBody = `
+            <p>Hi ${providerName},</p>
+            <p>You accepted the booking request for <strong>${serviceTitle}</strong>. We&apos;ve notified the customer to make a payment.</p>
+            <p>After they pay, you and the customer will each get an email with finalized booking details.</p>
+            <p><a href="${appUrl}/my-teen-hustle" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Open Booking Dashboard</a></p>
+            <p>Best,<br>The TeenOp Team</p>
+          `;
+          } else if (parentAcceptedAlternative) {
+            providerSubject = `Customer accepted your proposed time — awaiting payment: ${serviceTitle}`;
+            providerBody = `
+            <p>Hi ${providerName},</p>
+            <p>The customer accepted your proposed date and time for <strong>${serviceTitle}</strong>. We&apos;ve asked them to make a payment.</p>
+            <p>After they pay, you and the customer will each get an email with finalized booking details.</p>
+            <p><a href="${appUrl}/my-teen-hustle" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Open Booking Dashboard</a></p>
+            <p>Best,<br>The TeenOp Team</p>
+          `;
+          } else {
+            providerBody = `
+            <p>Hi ${providerName},</p>
+            <p>Your booking for <strong>${serviceTitle}</strong> was updated. Check your dashboard for the latest status.</p>
+            <p><a href="${appUrl}/my-teen-hustle" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Open Booking Dashboard</a></p>
+            <p>Best,<br>The TeenOp Team</p>
+          `;
+          }
+        } else {
+          providerBody = `
             <p>Hi ${providerName},</p>
             <p>The booking for <strong>${serviceTitle}</strong> was <strong>${statusLabel}</strong>.</p>
             <p>You can view the latest details in your Booking Dashboard.</p>
             <p><a href="${appUrl}/my-teen-hustle" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Open Booking Dashboard</a></p>
             <p>Best,<br>The TeenOp Team</p>
-          `
-        );
+          `;
+        }
+
+        await emailService.sendEmail(providerEmail, providerSubject, providerBody);
       }
     } catch (notificationError) {
       console.error("Error sending status update emails:", notificationError);
