@@ -70,7 +70,6 @@ function PaymentForm({
         throw new Error('Card element not found');
       }
 
-      // Confirm the payment with Stripe using the card element
       const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
         payment_method: {
           card: cardElement,
