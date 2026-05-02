@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const limited = enforceAuthRateLimit(request, 'signup');
     if (limited) return limited;
 
-    const { email, password, firstName, lastName, age, role, phone } = await request.json();
+    const { email, password, firstName, lastName, age, role, phone, parentName, parentEmail, parentPhone } = await request.json();
     
     console.log('Signup attempt for:', { email, firstName, lastName, age, role });
 
@@ -16,6 +16,14 @@ export async function POST(request: Request) {
       console.log('Missing required fields');
       return NextResponse.json(
         { error: "All required fields must be provided" },
+        { status: 400 }
+      );
+    }
+
+    // Restrict signups to school email domain
+    if (!email.toLowerCase().endsWith('@sses.saintstephens.org')) {
+      return NextResponse.json(
+        { error: 'You must sign up with an @sses.saintstephens.org email address' },
         { status: 400 }
       );
     }
@@ -90,6 +98,9 @@ export async function POST(request: Request) {
             role: role || 'teen',
             age: age,
             phone: phone,
+            parent_name: parentName,
+            parent_email: parentEmail,
+            parent_phone: parentPhone,
           }
       }
     });
@@ -142,6 +153,9 @@ export async function POST(request: Request) {
           phone: phone || null,
           role: (role || 'teen') as any,
           status: nextStatus as any,
+          parent_name: parentName || null,
+          parent_email: parentEmail || null,
+          parent_phone: parentPhone || null,
         });
 
       if (profileError) {
@@ -159,6 +173,9 @@ export async function POST(request: Request) {
           phone: phone || null,
           role: (role || 'teen') as any,
           status: nextStatus as any,
+          parent_name: parentName || null,
+          parent_email: parentEmail || null,
+          parent_phone: parentPhone || null,
         })
         .eq('id', authData.user.id);
       if (profileUpdateError) {

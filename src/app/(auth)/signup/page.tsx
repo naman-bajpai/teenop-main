@@ -29,6 +29,9 @@ export default function SignupPage() {
     confirmPassword: "",
     role: "teen" as "teen" | "parent",
     terms: false,
+    parentName: "",
+    parentEmail: "",
+    parentPhone: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -75,13 +78,15 @@ export default function SignupPage() {
     if (!email.trim()) {
       return `${fieldName} is required`;
     }
-    // Keep this intentionally lightweight to avoid over-rejecting valid addresses.
     const trimmed = email.trim();
     if (!trimmed.includes("@") || !trimmed.includes(".")) {
       return `Please enter a valid ${fieldName.toLowerCase()} address`;
     }
     if (trimmed.length > 254) {
       return `${fieldName} address is too long`;
+    }
+    if (!trimmed.toLowerCase().endsWith("@sses.saintstephens.org")) {
+      return "You must sign up with an @sses.saintstephens.org email address";
     }
     return null;
   };
@@ -297,6 +302,9 @@ export default function SignupPage() {
           age: formData.role === "teen" ? parseInt(formData.age) : undefined,
           phone: formData.phone || undefined,
           role: formData.role || 'teen',
+          parentName: formData.role === "teen" ? (formData.parentName || undefined) : undefined,
+          parentEmail: formData.role === "teen" ? (formData.parentEmail || undefined) : undefined,
+          parentPhone: formData.role === "teen" ? (formData.parentPhone || undefined) : undefined,
         }),
       });
 
@@ -332,6 +340,9 @@ export default function SignupPage() {
         confirmPassword: "",
         role: "teen",
         terms: false,
+        parentName: "",
+        parentEmail: "",
+        parentPhone: "",
       });
       
       setTimeout(() => {
@@ -440,7 +451,7 @@ export default function SignupPage() {
                 <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-slate-700">Email</label>
                 <Input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleInputChange}
                   className={`h-12 w-full rounded-2xl border bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.email ? "border-red-400" : "border-slate-200"}`}
-                  placeholder="you@example.com" disabled={isSubmitting} maxLength={254} />
+                  placeholder="you@sses.saintstephens.org" disabled={isSubmitting} maxLength={254} />
                 {fieldErrors.email && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.email}</p>}
               </div>
 
@@ -470,6 +481,30 @@ export default function SignupPage() {
                         className={`h-12 rounded-2xl border bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.phone ? "border-red-400" : "border-slate-200"}`}
                         placeholder="+1 555 0100" disabled={isSubmitting} maxLength={20} />
                       {fieldErrors.phone && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.phone}</p>}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[#434c9d]/10 pt-4">
+                    <p className="mb-3 text-sm font-semibold text-slate-700">Parent / Guardian information <span className="text-xs font-normal text-slate-400">(optional)</span></p>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <label htmlFor="parentName" className="mb-1.5 block text-sm font-medium text-slate-600">Full name</label>
+                        <Input id="parentName" name="parentName" type="text" value={formData.parentName} onChange={handleInputChange}
+                          className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20"
+                          placeholder="Parent or guardian name" disabled={isSubmitting} maxLength={100} />
+                      </div>
+                      <div>
+                        <label htmlFor="parentEmail" className="mb-1.5 block text-sm font-medium text-slate-600">Email</label>
+                        <Input id="parentEmail" name="parentEmail" type="email" value={formData.parentEmail} onChange={handleInputChange}
+                          className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20"
+                          placeholder="parent@example.com" disabled={isSubmitting} maxLength={254} />
+                      </div>
+                      <div>
+                        <label htmlFor="parentPhone" className="mb-1.5 block text-sm font-medium text-slate-600">Phone</label>
+                        <Input id="parentPhone" name="parentPhone" type="tel" value={formData.parentPhone} onChange={handleInputChange}
+                          className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20"
+                          placeholder="+1 555 0100" disabled={isSubmitting} maxLength={20} />
+                      </div>
                     </div>
                   </div>
 
