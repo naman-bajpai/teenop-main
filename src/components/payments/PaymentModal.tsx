@@ -65,8 +65,6 @@ function PaymentForm({
       if (!data.success) {
         throw new Error(data.error || 'Failed to create payment intent');
       }
-
-      // Get the card element
       const cardElement = elements.getElement(CardElement);
       if (!cardElement) {
         throw new Error('Card element not found');
