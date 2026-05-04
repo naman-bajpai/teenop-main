@@ -1,13 +1,29 @@
 import { NextResponse } from 'next/server';
+import { emailService } from '@/lib/email';
 import { createClient } from '@/lib/supabase';
 import { enforceAuthRateLimit } from '@/lib/rate-limit';
+
+const COMMUNITY_MEMBER_ACCESS_CODE =
+  process.env.COMMUNITY_MEMBER_ACCESS_CODE ?? 'teenopfalcons';
 
 export async function POST(request: Request) {
   try {
     const limited = enforceAuthRateLimit(request, 'signup');
     if (limited) return limited;
 
-    const { email, password, firstName, lastName, age, role, phone, parentName, parentEmail, parentPhone } = await request.json();
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      age,
+      role,
+      phone,
+      parentName,
+      parentEmail,
+      parentPhone,
+      communityAccessCode,
+    } = await request.json();
     
     console.log('Signup attempt for:', { email, firstName, lastName, age, role });
 
@@ -16,14 +32,6 @@ export async function POST(request: Request) {
       console.log('Missing required fields');
       return NextResponse.json(
         { error: "All required fields must be provided" },
-        { status: 400 }
-      );
-    }
-
-    // Restrict signups to school email domain
-    if (!email.toLowerCase().endsWith('@sses.saintstephens.org')) {
-      return NextResponse.json(
-        { error: 'You must sign up with an @sses.saintstephens.org email address' },
         { status: 400 }
       );
     }
@@ -40,6 +48,22 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { error: 'Age must be between 13 and 19' },
           { status: 400 }
+        );
+      }
+    }
+    if (role === 'parent') {
+      const providedAccessCode =
+        typeof communityAccessCode === 'string'
+          ? communityAccessCode.trim()
+          : '';
+      if (providedAccessCode !== COMMUNITY_MEMBER_ACCESS_CODE) {
+        return NextResponse.json(
+          {
+            error:
+              'Invalid or missing access code. Community members must enter the correct access code to sign up.',
+            code: 'COMMUNITY_ACCESS_CODE_INVALID',
+          },
+          { status: 403 }
         );
       }
     }
@@ -182,6 +206,29 @@ export async function POST(request: Request) {
         console.error('Error updating trigger-created profile:', profileUpdateError);
       } else {
         console.log('Profile updated after trigger creation');
+      }
+    }
+
+    const shouldNotifyParent =
+      (role || 'teen') === 'teen' &&
+      typeof parentEmail === 'string' &&
+      parentEmail.trim().length > 0;
+
+    if (shouldNotifyParent) {
+      try {
+        const normalizedParentEmail = parentEmail.trim().toLowerCase();
+        const emailResult = await emailService.sendParentTeenSignupNotification({
+          parentEmail: normalizedParentEmail,
+          parentName: typeof parentName === 'string' ? parentName : undefined,
+          teenFirstName: firstName,
+          teenLastName: lastName,
+        });
+
+        if (!emailResult.success) {
+          console.error('Failed to send parent signup notification email:', emailResult.error);
+        }
+      } catch (parentNotificationError) {
+        console.error('Parent notification flow failed:', parentNotificationError);
       }
     }
 

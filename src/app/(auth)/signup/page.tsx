@@ -28,6 +28,7 @@ export default function SignupPage() {
     password: "",
     confirmPassword: "",
     role: "teen" as "teen" | "parent",
+    communityAccessCode: "",
     terms: false,
     parentName: "",
     parentEmail: "",
@@ -45,6 +46,7 @@ export default function SignupPage() {
     phone?: string;
     password?: string;
     confirmPassword?: string;
+    communityAccessCode?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
@@ -84,9 +86,6 @@ export default function SignupPage() {
     }
     if (trimmed.length > 254) {
       return `${fieldName} address is too long`;
-    }
-    if (!trimmed.toLowerCase().endsWith("@sses.saintstephens.org")) {
-      return "You must sign up with an @sses.saintstephens.org email address";
     }
     return null;
   };
@@ -145,12 +144,20 @@ export default function SignupPage() {
     return null;
   };
 
+  const validateCommunityAccessCode = (accessCode: string, role: "teen" | "parent"): string | null => {
+    if (role !== "parent") return null;
+    if (!accessCode.trim()) {
+      return "Access code is required for community members";
+    }
+    return null;
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type, checked } = e.target as HTMLInputElement;
     
     // Sanitize text inputs
     const sanitizedValue = type === "checkbox" ? checked : 
-      (type === "email" || type === "tel" || name.includes("Email") || name.includes("Phone") 
+      (type === "email" || type === "tel" || name.includes("Email") || name.includes("Phone") || name === "communityAccessCode"
         ? sanitizeInput(value) 
         : (name === "firstName" || name === "lastName" 
           ? sanitizeInput(value) 
@@ -188,8 +195,17 @@ export default function SignupPage() {
     } else if (name === "confirmPassword") {
       const error = value !== formData.password ? "Passwords do not match" : null;
       setFieldErrors(prev => ({ ...prev, confirmPassword: error || undefined }));
+    } else if (name === "communityAccessCode" && typeof sanitizedValue === "string") {
+      const accessCodeError = validateCommunityAccessCode(sanitizedValue, formData.role);
+      setFieldErrors(prev => ({ ...prev, communityAccessCode: accessCodeError || undefined }));
     } else if (name === "role") {
-      setFieldErrors(prev => ({ ...prev, email: undefined }));
+      const nextRole = value as "teen" | "parent";
+      const accessCodeError = validateCommunityAccessCode(formData.communityAccessCode, nextRole);
+      setFieldErrors(prev => ({
+        ...prev,
+        email: undefined,
+        communityAccessCode: accessCodeError || undefined,
+      }));
     }
 
     // Clear errors when user starts typing
@@ -241,6 +257,12 @@ export default function SignupPage() {
     // Validate confirm password
     if (formData.password !== formData.confirmPassword) {
       errors.confirmPassword = "Passwords do not match";
+      hasErrors = true;
+    }
+
+    const accessCodeError = validateCommunityAccessCode(formData.communityAccessCode, formData.role);
+    if (accessCodeError) {
+      errors.communityAccessCode = accessCodeError;
       hasErrors = true;
     }
 
@@ -302,6 +324,10 @@ export default function SignupPage() {
           age: formData.role === "teen" ? parseInt(formData.age) : undefined,
           phone: formData.phone || undefined,
           role: formData.role || 'teen',
+          communityAccessCode:
+            formData.role === "parent"
+              ? (formData.communityAccessCode.trim() || undefined)
+              : undefined,
           parentName: formData.role === "teen" ? (formData.parentName || undefined) : undefined,
           parentEmail: formData.role === "teen" ? (formData.parentEmail || undefined) : undefined,
           parentPhone: formData.role === "teen" ? (formData.parentPhone || undefined) : undefined,
@@ -328,7 +354,11 @@ export default function SignupPage() {
         return;
       }
 
-      setSuccess("Account created successfully! Please check your email for verification.");
+      setSuccess(
+        formData.role === "teen"
+          ? "Account created successfully! Please check your email for verification."
+          : "Account created successfully!"
+      );
       // Reset form
       setFormData({
         firstName: "",
@@ -339,6 +369,7 @@ export default function SignupPage() {
         password: "",
         confirmPassword: "",
         role: "teen",
+        communityAccessCode: "",
         terms: false,
         parentName: "",
         parentEmail: "",
@@ -451,9 +482,29 @@ export default function SignupPage() {
                 <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-slate-700">Email</label>
                 <Input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleInputChange}
                   className={`h-12 w-full rounded-2xl border bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.email ? "border-red-400" : "border-slate-200"}`}
-                  placeholder="you@sses.saintstephens.org" disabled={isSubmitting} maxLength={254} />
+                  placeholder="you@example.com" disabled={isSubmitting} maxLength={254} />
                 {fieldErrors.email && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.email}</p>}
               </div>
+
+              {formData.role === "parent" && (
+                <div>
+                  <label htmlFor="communityAccessCode" className="mb-1.5 block text-sm font-semibold text-slate-700">Community member access code</label>
+                  <Input
+                    id="communityAccessCode"
+                    name="communityAccessCode"
+                    type="text"
+                    autoComplete="off"
+                    required
+                    value={formData.communityAccessCode}
+                    onChange={handleInputChange}
+                    className={`h-12 w-full rounded-2xl border bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 focus:border-[#434c9d] focus:ring-2 focus:ring-[#434c9d]/20 ${fieldErrors.communityAccessCode ? "border-red-400" : "border-slate-200"}`}
+                    placeholder="Enter access code"
+                    disabled={isSubmitting}
+                    maxLength={64}
+                  />
+                  {fieldErrors.communityAccessCode && <p className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{fieldErrors.communityAccessCode}</p>}
+                </div>
+              )}
 
               {formData.role === "teen" && (
                 <div className="space-y-5 rounded-2xl border border-[#434c9d]/15 bg-[#434c9d]/5 p-5">
@@ -485,7 +536,8 @@ export default function SignupPage() {
                   </div>
 
                   <div className="border-t border-[#434c9d]/10 pt-4">
-                    <p className="mb-3 text-sm font-semibold text-slate-700">Parent / Guardian information <span className="text-xs font-normal text-slate-400">(optional)</span></p>
+                    <p className="text-sm font-semibold text-slate-700">Parent / Guardian information</p>
+                    <p className="mb-3 text-xs text-slate-500">This contact will be notified you created an account on TeenOp.</p>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="sm:col-span-2">
                         <label htmlFor="parentName" className="mb-1.5 block text-sm font-medium text-slate-600">Full name</label>

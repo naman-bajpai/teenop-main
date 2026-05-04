@@ -43,7 +43,10 @@ function LoginInner() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    password?: string;
+  }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitLock, setSubmitLock] = useState(false);
   const [rateLimitOpen, setRateLimitOpen] = useState(false);
@@ -107,7 +110,12 @@ function LoginInner() {
     const { name, value, type, checked } = e.target;
     
     // Sanitize text inputs
-    const sanitizedValue = type === "checkbox" ? checked : (type === "email" ? sanitizeInput(value) : value);
+    const sanitizedValue =
+      type === "checkbox"
+        ? checked
+        : type === "email"
+          ? sanitizeInput(value)
+          : value;
     
     setFormData((prev) => ({
       ...prev,

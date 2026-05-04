@@ -803,7 +803,7 @@ export default function TeenHustlePage() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 mb-16">
           <div className="space-y-5">
             <h1 className="text-5xl lg:text-6xl font-black text-gray-900 tracking-tight leading-none">
-              My Teen <span className="text-[#434c9d]">Hustle</span>
+              Bookings <span className="text-[#434c9d]">Dashboard</span>
             </h1>
             <p className="text-xl text-gray-500 font-bold max-w-2xl leading-relaxed">
               Managing your hustle has never been easier. Track requests, schedule jobs, and watch your earnings grow.

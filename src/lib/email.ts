@@ -286,6 +286,33 @@ export class EmailService {
     return this.sendEmail(data.parentEmail, subject, html);
   }
 
+  // -------------------------------------------------------------------------
+  // Parent — teen account signup notification
+  // -------------------------------------------------------------------------
+  async sendParentTeenSignupNotification(data: {
+    parentEmail: string;
+    parentName?: string;
+    teenFirstName: string;
+    teenLastName: string;
+  }) {
+    const subject = 'TeenOp notification: your teen created an account';
+    const teenName = `${data.teenFirstName} ${data.teenLastName}`.trim();
+    const greetingName = data.parentName?.trim() || 'Parent/Guardian';
+    const html = buildEmail(
+      'Teen account notification',
+      'Your teen created a TeenOp account',
+      '',
+      `
+      <p>Hi ${greetingName},</p>
+      <p>This is a notification that <strong>${teenName}</strong> created a TeenOp account and listed you as their parent or guardian contact.</p>
+      <p>They may begin offering services through TeenOp.</p>
+      <p>No action is required from you for this notification.</p>
+      <p>Thanks,<br>The TeenOp Team</p>
+      `
+    );
+    return this.sendEmail(data.parentEmail, subject, html);
+  }
+
   async sendBuyerPaymentConfirmed(data: {
     buyerName: string;
     buyerEmail: string;
