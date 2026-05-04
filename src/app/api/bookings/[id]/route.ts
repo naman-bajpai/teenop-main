@@ -681,6 +681,13 @@ export async function PATCH(
       }
 
       if (providerEmail) {
+        if (status === "completed") {
+          const teenFirstName = String((providerProfile as any)?.first_name || "").trim() || providerName.split(/\s+/)[0] || "there";
+          await emailService.sendTeenEarningsAfterServiceCompleted({
+            teenFirstName,
+            providerEmail,
+          });
+        } else {
         let providerSubject = `TeenOp Update: ${serviceTitle}`;
         let providerBody: string;
 
@@ -722,6 +729,7 @@ export async function PATCH(
         }
 
         await emailService.sendEmail(providerEmail, providerSubject, providerBody);
+        }
       }
     } catch (notificationError) {
       console.error("Error sending status update emails:", notificationError);

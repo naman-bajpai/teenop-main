@@ -544,6 +544,39 @@ export class EmailService {
   }
 
   // -------------------------------------------------------------------------
+  // Service provider — after booking marked completed (earnings / withdrawal)
+  // -------------------------------------------------------------------------
+  async sendTeenEarningsAfterServiceCompleted(data: {
+    teenFirstName: string;
+    providerEmail: string;
+  }) {
+    const subject = 'Receive Earnings from Your Service';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
+    const name = data.teenFirstName.trim() || 'there';
+    const html = buildEmail(
+      subject,
+      'Receive Earnings from Your Service',
+      'Great job completing your service!',
+      `
+      <p>Hi ${name},</p>
+      <p>Great job completing your service! Please follow these steps to receive your earnings.</p>
+      <p class="section-title">Next steps:</p>
+      <ol style="padding-left: 20px; margin: 0 0 16px;">
+        <li style="font-size: 14px; margin-bottom: 8px; color: #555;">Go to your Bookings page and mark the service as complete</li>
+        <li style="font-size: 14px; margin-bottom: 8px; color: #555;">Your earnings will appear in your Earnings page within 1–3 days</li>
+        <li style="font-size: 14px; margin-bottom: 8px; color: #555;">Select Withdraw Cash to transfer the funds to your bank</li>
+      </ol>
+      <div class="btn-center">
+        <a href="${appUrl}/my-teen-hustle" class="btn">Go to Bookings</a>
+      </div>
+      <p>If you have any questions, feel free to contact TeenOp support at <a href="mailto:teenop.co@gmail.com">teenop.co@gmail.com</a>.</p>
+      <p>Best,<br>The TeenOp Team</p>
+      `
+    );
+    return this.sendEmail(data.providerEmail, subject, html);
+  }
+
+  // -------------------------------------------------------------------------
   // Parent verification email
   // -------------------------------------------------------------------------
   async sendParentVerificationEmail(data: {
