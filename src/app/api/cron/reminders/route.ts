@@ -1,5 +1,113 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { emailService } from "@/lib/email";
+import { createServiceRoleClient } from "@/lib/supabase/server";
+
+const BOOKING_TIME_ZONE = process.env.BOOKING_TIME_ZONE || "America/New_York";
+const CRON_INTERVAL_MINUTES = Number(process.env.REMINDER_CRON_INTERVAL_MINUTES || "30");
+
+type ReminderProfile = {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone?: string | null;
+};
+
+type ReminderService = {
+  id: string;
+  title: string | null;
+  location: string | null;
+  user_id: string;
+  profiles: ReminderProfile | null;
+};
+
+type ReminderBooking = {
+  id: string;
+  requested_date: string;
+  requested_time: string;
+  services: ReminderService | null;
+  profiles?: ReminderProfile | null;
+};
+
+function getTimeZoneOffsetMs(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+    hour12: false,
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+
+  return asUtc - date.getTime();
+}
+
+function bookingDateTimeToDate(dateString: string, timeString: string, timeZone = BOOKING_TIME_ZONE) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const [hour, minute = 0, second = 0] = timeString.split(":").map(Number);
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  const offsetMs = getTimeZoneOffsetMs(utcGuess, timeZone);
+
+  return new Date(utcGuess.getTime() - offsetMs);
+}
+
+function isInWindow(date: Date, start: Date, end: Date) {
+  return date >= start && date < end;
+}
+
+function addMinutes(date: Date, minutes: number) {
+  return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
+function addHours(date: Date, hours: number) {
+  return addMinutes(date, hours * 60);
+}
+
+function formatDate(dateString: string) {
+  return bookingDateTimeToDate(dateString, "12:00").toLocaleDateString("en-US", {
+    timeZone: BOOKING_TIME_ZONE,
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function formatTime(timeString: string) {
+  const [hours, minutes] = timeString.split(":");
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minutes} ${ampm}`;
+}
+
+function getTimeZoneLabel(date: Date) {
+  const timeZoneName = new Intl.DateTimeFormat("en-US", {
+    timeZone: BOOKING_TIME_ZONE,
+    timeZoneName: "short",
+  })
+    .formatToParts(date)
+    .find((part) => part.type === "timeZoneName")?.value;
+
+  return timeZoneName || "ET";
+}
+
+function displayName(profile: ReminderProfile | null | undefined, fallback: string) {
+  const name = `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim();
+  return name || fallback;
+}
 
 // Cron job endpoint for sending reminder notifications
 export async function GET(request: NextRequest) {
@@ -15,28 +123,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createServerClient();
+    const supabase = createServiceRoleClient();
     const now = new Date();
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    
-    // Calculate time ranges for reminders (24 hours ± 1 hour window, 3 hours ± 30 min window, 1 hour ± 15 min window)
-    const twentyFourHoursFromNow = new Date(now);
-    twentyFourHoursFromNow.setHours(twentyFourHoursFromNow.getHours() + 24);
-    
-    const twentyFourHoursStart = new Date(twentyFourHoursFromNow);
-    twentyFourHoursStart.setHours(twentyFourHoursStart.getHours() - 1);
-    
-    const twentyFourHoursEnd = new Date(twentyFourHoursFromNow);
-    twentyFourHoursEnd.setHours(twentyFourHoursEnd.getHours() + 1);
-    
-    const threeHoursFromNow = new Date(now);
-    threeHoursFromNow.setHours(threeHoursFromNow.getHours() + 3);
-    
-    const threeHoursStart = new Date(threeHoursFromNow);
-    threeHoursStart.setMinutes(threeHoursStart.getMinutes() - 30);
-    
-    const threeHoursEnd = new Date(threeHoursFromNow);
-    threeHoursEnd.setMinutes(threeHoursEnd.getMinutes() + 30);
+    const intervalMinutes = Number.isFinite(CRON_INTERVAL_MINUTES) && CRON_INTERVAL_MINUTES > 0
+      ? CRON_INTERVAL_MINUTES
+      : 30;
+
+    // Vercel runs this every 30 minutes. Each run owns the next 30-minute
+    // slice for the 24-hour and 3-hour targets, preventing repeat sends.
+    const twentyFourHoursStart = addHours(now, 24);
+    const twentyFourHoursEnd = addMinutes(twentyFourHoursStart, intervalMinutes);
+    const threeHoursStart = addHours(now, 3);
+    const threeHoursEnd = addMinutes(threeHoursStart, intervalMinutes);
 
     // Get all confirmed and paid bookings that might need reminders
     // We'll filter by date/time in JavaScript since we need to combine date and time
@@ -67,7 +165,7 @@ export async function GET(request: NextRequest) {
           phone
         )
       `)
-      .in("status", ["awaiting_payment", "confirmed", "paid"])
+      .in("status", ["confirmed", "paid"])
       .gte("requested_date", now.toISOString().split('T')[0])
       .lte("requested_date", maxDate.toISOString().split('T')[0]);
 
@@ -82,10 +180,12 @@ export async function GET(request: NextRequest) {
     console.log(`Found ${allBookings?.length || 0} confirmed/paid bookings to check for reminders`);
 
     // Filter bookings for 24-hour reminders (24 hours ± 1 hour)
-    const tomorrowBookings = (allBookings || []).filter((booking: any) => {
+    const bookings = (allBookings || []) as ReminderBooking[];
+
+    const tomorrowBookings = bookings.filter((booking) => {
       try {
-        const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
-        const isInRange = bookingDateTime >= twentyFourHoursStart && bookingDateTime <= twentyFourHoursEnd;
+        const bookingDateTime = bookingDateTimeToDate(booking.requested_date, booking.requested_time);
+        const isInRange = isInWindow(bookingDateTime, twentyFourHoursStart, twentyFourHoursEnd);
         if (isInRange) {
           console.log(`Booking ${booking.id} is in 24-hour reminder window: ${bookingDateTime.toISOString()}`);
         }
@@ -97,10 +197,10 @@ export async function GET(request: NextRequest) {
     });
 
     // Filter bookings for 3-hour reminders (3 hours ± 30 minutes)
-    const threeHourBookings = (allBookings || []).filter((booking: any) => {
+    const threeHourBookings = bookings.filter((booking) => {
       try {
-        const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
-        const isInRange = bookingDateTime >= threeHoursStart && bookingDateTime <= threeHoursEnd;
+        const bookingDateTime = bookingDateTimeToDate(booking.requested_date, booking.requested_time);
+        const isInRange = isInWindow(bookingDateTime, threeHoursStart, threeHoursEnd);
         if (isInRange) {
           console.log(`Booking ${booking.id} is in 3-hour reminder window: ${bookingDateTime.toISOString()}`);
         }
@@ -123,67 +223,69 @@ export async function GET(request: NextRequest) {
     if (tomorrowBookings && tomorrowBookings.length > 0) {
       for (const booking of tomorrowBookings) {
         try {
-          const bookingData = booking as any;
+          const bookingData = booking;
           const service = bookingData.services;
           const customer = bookingData.profiles;
           const provider = service?.profiles;
+          const bookingDateTime = bookingDateTimeToDate(bookingData.requested_date, bookingData.requested_time);
+          const date = formatDate(bookingData.requested_date);
+          const time = formatTime(bookingData.requested_time);
+          const timeZone = getTimeZoneLabel(bookingDateTime);
 
           // Send buyer 24-hour reminder
           if (customer?.email) {
             try {
-              const buyerResponse = await fetch(`${appUrl}/api/notifications/send`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.CRON_SECRET}`
-                },
-                body: JSON.stringify({
-                  type: 'buyer_24_hour_reminder',
-                  bookingId: bookingData.id
-                })
+              const buyerResult = await emailService.sendBuyer24HourReminder({
+                buyerName: displayName(customer, "there"),
+                buyerEmail: customer.email,
+                serviceName: service?.title || "Service",
+                teenName: displayName(provider, "Teen Provider"),
+                date,
+                time,
+                timeZone,
+                location: service?.location || "Online",
+                bookingId: bookingData.id,
               });
 
-              if (buyerResponse.ok) {
+              if (buyerResult.success) {
                 results.tomorrowReminders++;
                 console.log(`Sent 24-hour reminder to buyer for booking ${bookingData.id}`);
               } else {
-                const errorData = await buyerResponse.json().catch(() => ({}));
-                results.errors.push(`Buyer 24h reminder failed for booking ${bookingData.id}: ${buyerResponse.status} - ${errorData.error || 'Unknown error'}`);
+                results.errors.push(`Buyer 24h reminder failed for booking ${bookingData.id}: ${buyerResult.error || 'Unknown error'}`);
               }
-            } catch (fetchError) {
-              results.errors.push(`Buyer 24h reminder fetch error for booking ${bookingData.id}: ${fetchError}`);
+            } catch (emailError) {
+              results.errors.push(`Buyer 24h reminder email error for booking ${bookingData.id}: ${emailError}`);
             }
           }
 
           // Send service provider 24-hour reminder (email)
           if (provider?.email) {
             try {
-              const providerResponse = await fetch(`${appUrl}/api/notifications/send`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.CRON_SECRET}`
-                },
-                body: JSON.stringify({
-                  type: 'service_provider_24_hour_reminder',
-                  bookingId: bookingData.id
-                })
+              const providerResult = await emailService.sendServiceProvider24HourReminder({
+                providerName: displayName(provider, "Provider"),
+                providerEmail: provider.email,
+                serviceName: service?.title || "Service",
+                buyerName: displayName(customer, "Customer"),
+                date,
+                time,
+                timeZone,
+                location: service?.location || "Online",
+                bookingId: bookingData.id,
               });
 
-              if (providerResponse.ok) {
+              if (providerResult.success) {
                 results.tomorrowReminders++;
                 console.log(`Sent 24-hour reminder email to provider for booking ${bookingData.id}`);
               } else {
-                const errorData = await providerResponse.json().catch(() => ({}));
-                results.errors.push(`Provider 24h reminder failed for booking ${bookingData.id}: ${providerResponse.status} - ${errorData.error || 'Unknown error'}`);
+                results.errors.push(`Provider 24h reminder failed for booking ${bookingData.id}: ${providerResult.error || 'Unknown error'}`);
               }
-            } catch (fetchError) {
-              results.errors.push(`Provider 24h reminder fetch error for booking ${bookingData.id}: ${fetchError}`);
+            } catch (emailError) {
+              results.errors.push(`Provider 24h reminder email error for booking ${bookingData.id}: ${emailError}`);
             }
           }
         } catch (error) {
           console.error("Error sending 24-hour reminder:", error);
-          results.errors.push(`24-hour reminder error for booking ${(booking as any).id}: ${error}`);
+          results.errors.push(`24-hour reminder error for booking ${booking.id}: ${error}`);
         }
       }
     }
@@ -192,67 +294,66 @@ export async function GET(request: NextRequest) {
     if (threeHourBookings && threeHourBookings.length > 0) {
       for (const booking of threeHourBookings) {
         try {
-          const bookingData = booking as any;
+          const bookingData = booking;
           const service = bookingData.services;
           const customer = bookingData.profiles;
           const provider = service?.profiles;
+          const bookingDateTime = bookingDateTimeToDate(bookingData.requested_date, bookingData.requested_time);
+          const time = formatTime(bookingData.requested_time);
+          const timeZone = getTimeZoneLabel(bookingDateTime);
 
           // Send buyer 3-hour reminder
           if (customer?.email) {
             try {
-              const buyerResponse = await fetch(`${appUrl}/api/notifications/send`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.CRON_SECRET}`
-                },
-                body: JSON.stringify({
-                  type: 'buyer_3_hour_reminder',
-                  bookingId: bookingData.id
-                })
+              const buyerResult = await emailService.sendBuyer3HourReminder({
+                buyerName: displayName(customer, "there"),
+                buyerEmail: customer.email,
+                serviceName: service?.title || "Service",
+                teenName: displayName(provider, "Teen Provider"),
+                time,
+                timeZone,
+                location: service?.location || "Online",
+                bookingId: bookingData.id,
               });
 
-              if (buyerResponse.ok) {
+              if (buyerResult.success) {
                 results.threeHourReminders++;
                 console.log(`Sent 3-hour reminder to buyer for booking ${bookingData.id}`);
               } else {
-                const errorData = await buyerResponse.json().catch(() => ({}));
-                results.errors.push(`Buyer 3h reminder failed for booking ${bookingData.id}: ${buyerResponse.status} - ${errorData.error || 'Unknown error'}`);
+                results.errors.push(`Buyer 3h reminder failed for booking ${bookingData.id}: ${buyerResult.error || 'Unknown error'}`);
               }
-            } catch (fetchError) {
-              results.errors.push(`Buyer 3h reminder fetch error for booking ${bookingData.id}: ${fetchError}`);
+            } catch (emailError) {
+              results.errors.push(`Buyer 3h reminder email error for booking ${bookingData.id}: ${emailError}`);
             }
           }
 
           // Send service provider 3-hour reminder (email)
           if (provider?.email) {
             try {
-              const providerResponse = await fetch(`${appUrl}/api/notifications/send`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.CRON_SECRET}`
-                },
-                body: JSON.stringify({
-                  type: 'service_provider_3_hour_reminder',
-                  bookingId: bookingData.id
-                })
+              const providerResult = await emailService.sendServiceProvider3HourReminder({
+                providerName: displayName(provider, "Provider"),
+                providerEmail: provider.email,
+                serviceName: service?.title || "Service",
+                buyerName: displayName(customer, "Customer"),
+                time,
+                timeZone,
+                location: service?.location || "Online",
+                bookingId: bookingData.id,
               });
 
-              if (providerResponse.ok) {
+              if (providerResult.success) {
                 results.threeHourReminders++;
                 console.log(`Sent 3-hour reminder email to provider for booking ${bookingData.id}`);
               } else {
-                const errorData = await providerResponse.json().catch(() => ({}));
-                results.errors.push(`Provider 3h reminder failed for booking ${bookingData.id}: ${providerResponse.status} - ${errorData.error || 'Unknown error'}`);
+                results.errors.push(`Provider 3h reminder failed for booking ${bookingData.id}: ${providerResult.error || 'Unknown error'}`);
               }
-            } catch (fetchError) {
-              results.errors.push(`Provider 3h reminder fetch error for booking ${bookingData.id}: ${fetchError}`);
+            } catch (emailError) {
+              results.errors.push(`Provider 3h reminder email error for booking ${bookingData.id}: ${emailError}`);
             }
           }
         } catch (error) {
           console.error("Error sending 3-hour reminder:", error);
-          results.errors.push(`3-hour reminder error for booking ${(booking as any).id}: ${error}`);
+          results.errors.push(`3-hour reminder error for booking ${booking.id}: ${error}`);
         }
       }
     }
@@ -281,9 +382,9 @@ export async function GET(request: NextRequest) {
     let completionReminders = 0;
     if (!paidBookingsError && paidBookings) {
       // Filter for bookings that have passed their scheduled time (date + time has passed)
-      const pastDueBookings = paidBookings.filter((booking: any) => {
+      const pastDueBookings = (paidBookings as ReminderBooking[]).filter((booking) => {
         try {
-          const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
+          const bookingDateTime = bookingDateTimeToDate(booking.requested_date, booking.requested_time);
           // Check if booking time has passed (at least 1 hour after scheduled time to give buffer)
           const oneHourAfterBooking = new Date(bookingDateTime);
           oneHourAfterBooking.setHours(oneHourAfterBooking.getHours() + 1);
@@ -299,7 +400,7 @@ export async function GET(request: NextRequest) {
       // Send completion reminder emails to service providers
       for (const booking of pastDueBookings) {
         try {
-          const bookingData = booking as any;
+          const bookingData = booking;
           const service = bookingData.services;
           const provider = service?.profiles;
 
@@ -322,7 +423,7 @@ export async function GET(request: NextRequest) {
           }
         } catch (error) {
           console.error("Error processing completion reminder:", error);
-          results.errors.push(`Completion reminder error for booking ${(booking as any).id}: ${error}`);
+          results.errors.push(`Completion reminder error for booking ${booking.id}: ${error}`);
         }
       }
     }
