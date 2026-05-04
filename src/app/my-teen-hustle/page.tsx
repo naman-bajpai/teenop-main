@@ -657,9 +657,11 @@ export default function TeenHustlePage() {
           if (!exists) return [...prev, { ...booking, status }];
         }
         if (status === "completed") return prev.filter(b => b.id !== bookingId);
+        if (status === "cancelled" || status === "rejected") return prev.filter(b => b.id !== bookingId);
         return prev.map(updateBooking);
       });
       setCompletedBookings(prev => {
+        if (status === "cancelled" || status === "rejected") return prev.filter(b => b.id !== bookingId);
         const booking = [...pendingBookings, ...scheduledBookings].find(b => b.id === bookingId);
         if (status === "completed" && booking) {
           const exists = prev.some(b => b.id === bookingId);
@@ -766,6 +768,16 @@ export default function TeenHustlePage() {
 
   useEffect(() => { fetchEverything(); }, [user]);
 
+  const historyBookings = useMemo(() => {
+    const merged = [...completedBookings, ...cancelledBookings];
+    merged.sort((a, b) => {
+      const tb = new Date(b.updated_at || b.created_at).getTime();
+      const ta = new Date(a.updated_at || a.created_at).getTime();
+      return tb - ta;
+    });
+    return merged;
+  }, [completedBookings, cancelledBookings]);
+
   if (userLoading || loading) {
     return (
       <DashboardLayout user={user}>
@@ -790,16 +802,6 @@ export default function TeenHustlePage() {
       </DashboardLayout>
     );
   }
-
-  const historyBookings = useMemo(() => {
-    const merged = [...completedBookings, ...cancelledBookings];
-    merged.sort((a, b) => {
-      const tb = new Date(b.updated_at || b.created_at).getTime();
-      const ta = new Date(a.updated_at || a.created_at).getTime();
-      return tb - ta;
-    });
-    return merged;
-  }, [completedBookings, cancelledBookings]);
 
   const tabs = [
     { value: "pending", label: "Pending", count: pendingBookings.length + quoteRequests.length, needsAttention: pendingBookings.some(b => b.status === "pending") || quoteRequests.length > 0 },
