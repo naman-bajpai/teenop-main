@@ -50,6 +50,7 @@ import {
   Loader2,
   Briefcase,
   CalendarPlus,
+  Timer,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -106,17 +107,25 @@ export type Booking = {
   customer_id?: string;
 };
 
-const getStatusColor = (status: string) => {
+const getStatusConfig = (status: string) => {
   switch (status) {
-    case "active": return "bg-green-50 text-green-700";
-    case "paused": return "bg-yellow-50 text-yellow-700";
+    case "pending":
+      return { color: "text-amber-700", bg: "bg-amber-50", label: "Pending Response" };
     case "awaiting_payment":
-    case "confirmed": return "bg-green-50 text-green-700";
-    case "completed": return "bg-gray-50 text-gray-700";
-    case "paid": return "bg-blue-50 text-blue-700";
-    case "rejected": return "bg-red-50 text-red-700";
-    case "cancelled": return "bg-gray-50 text-gray-700";
-    default: return "bg-gray-50 text-gray-700";
+    case "confirmed":
+      return { color: "text-blue-700", bg: "bg-blue-50", label: "Awaiting Payment" };
+    case "paid":
+      return { color: "text-emerald-700", bg: "bg-emerald-50", label: "Paid & Confirmed" };
+    case "completed":
+      return { color: "text-gray-600", bg: "bg-gray-50", label: "Completed" };
+    case "rejected":
+      return { color: "text-red-700", bg: "bg-red-50", label: "Rejected" };
+    case "cancelled":
+      return { color: "text-gray-600", bg: "bg-gray-50", label: "Cancelled" };
+    case "alternative_proposed":
+      return { color: "text-orange-700", bg: "bg-orange-50", label: "Alt. Proposed" };
+    default:
+      return { color: "text-gray-600", bg: "bg-gray-50", label: status.replace(/_/g, " ") };
   }
 };
 
@@ -134,19 +143,18 @@ function BookingCard({ booking, onStatusUpdate }: {
 
   const formatTime = (timeString: string) => {
     try {
-      const [hours, minutes] = timeString.split(':');
+      const [hours, minutes] = timeString.split(":");
       const hour = parseInt(hours);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const ampm = hour >= 12 ? "PM" : "AM";
       const displayHour = hour % 12 || 12;
       return `${displayHour}:${minutes} ${ampm}`;
     } catch { return timeString; }
   };
 
   const formatDate = (dateString: string) => {
-    // Parse YYYY-MM-DD as a local calendar date to avoid timezone day-shift.
     const [year, month, day] = dateString.split("-").map(Number);
     const localDate = new Date(year, (month || 1) - 1, day || 1);
-    return localDate.toLocaleDateString("en-US");
+    return localDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   };
 
   const handleAccept = async () => await onStatusUpdate(booking.id, "awaiting_payment");
@@ -164,7 +172,7 @@ function BookingCard({ booking, onStatusUpdate }: {
       setAlternativeDate("");
       setAlternativeTime("");
       toast({ title: "Alternative Proposed", description: "The customer has been notified." });
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to propose alternative time.", variant: "destructive" });
     } finally { setIsSubmitting(false); }
   };
@@ -174,7 +182,7 @@ function BookingCard({ booking, onStatusUpdate }: {
     try {
       await onStatusUpdate(booking.id, "rejected");
       setShowAlternativeDialog(false);
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to reject booking.", variant: "destructive" });
     } finally { setIsSubmitting(false); }
   };
@@ -184,12 +192,7 @@ function BookingCard({ booking, onStatusUpdate }: {
     if (Number.isNaN(startDate.getTime())) return null;
     const endDate = new Date(startDate.getTime() + booking.duration * 60 * 1000);
     const formatForGoogle = (date: Date) => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-    const details = [
-      `Booking ID: ${booking.id}`,
-      booking.special_instructions ? `Notes: ${booking.special_instructions}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
+    const details = [`Booking ID: ${booking.id}`, booking.special_instructions ? `Notes: ${booking.special_instructions}` : ""].filter(Boolean).join("\n");
     const params = new URLSearchParams({
       action: "TEMPLATE",
       text: `${booking.service.title} (TeenOp)`,
@@ -204,58 +207,26 @@ function BookingCard({ booking, onStatusUpdate }: {
     const startDate = new Date(`${booking.requested_date}T${booking.requested_time}`);
     if (Number.isNaN(startDate.getTime())) return null;
     const endDate = new Date(startDate.getTime() + booking.duration * 60 * 1000);
-    const formatIcsDate = (date: Date) =>
-      date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-
+    const formatIcsDate = (date: Date) => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
     const escapeText = (value: string) =>
-      value
-        .replace(/\\/g, "\\\\")
-        .replace(/,/g, "\\,")
-        .replace(/;/g, "\\;")
-        .replace(/\n/g, "\\n");
-
-    const description = [
-      `TeenOp Service Booking`,
-      `Booking ID: ${booking.id}`,
-      booking.special_instructions ? `Notes: ${booking.special_instructions}` : "",
-    ]
-      .filter(Boolean)
-      .join("\\n");
-
-    return [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//TeenOp//Booking Calendar//EN",
-      "CALSCALE:GREGORIAN",
-      "BEGIN:VEVENT",
-      `UID:${booking.id}@teenop.com`,
-      `DTSTAMP:${formatIcsDate(new Date())}`,
-      `DTSTART:${formatIcsDate(startDate)}`,
-      `DTEND:${formatIcsDate(endDate)}`,
-      `SUMMARY:${escapeText(`${booking.service.title} (TeenOp)`)}`,
-      `DESCRIPTION:${escapeText(description)}`,
-      `LOCATION:${escapeText(booking.service.location || "")}`,
-      "END:VEVENT",
-      "END:VCALENDAR",
-    ].join("\r\n");
+      value.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
+    const description = [`TeenOp Service Booking`, `Booking ID: ${booking.id}`, booking.special_instructions ? `Notes: ${booking.special_instructions}` : ""].filter(Boolean).join("\\n");
+    return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TeenOp//Booking Calendar//EN", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
+      `UID:${booking.id}@teenop.com`, `DTSTAMP:${formatIcsDate(new Date())}`, `DTSTART:${formatIcsDate(startDate)}`,
+      `DTEND:${formatIcsDate(endDate)}`, `SUMMARY:${escapeText(`${booking.service.title} (TeenOp)`)}`,
+      `DESCRIPTION:${escapeText(description)}`, `LOCATION:${escapeText(booking.service.location || "")}`,
+      "END:VEVENT", "END:VCALENDAR"].join("\r\n");
   };
 
   const handleAddToCalendar = () => {
     const url = buildGoogleCalendarUrl();
-    if (!url) {
-      toast({ title: "Unable to add event", description: "This booking has an invalid date/time.", variant: "destructive" });
-      return;
-    }
+    if (!url) { toast({ title: "Unable to add event", description: "This booking has an invalid date/time.", variant: "destructive" }); return; }
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const handleAddToAppleCalendar = () => {
     const icsContent = buildIcsContent();
-    if (!icsContent) {
-      toast({ title: "Unable to add event", description: "This booking has an invalid date/time.", variant: "destructive" });
-      return;
-    }
-
+    if (!icsContent) { toast({ title: "Unable to add event", description: "This booking has an invalid date/time.", variant: "destructive" }); return; }
     const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -267,170 +238,231 @@ function BookingCard({ booking, onStatusUpdate }: {
     URL.revokeObjectURL(objectUrl);
   };
 
+  const statusConfig = getStatusConfig(booking.status);
+
   return (
-    <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-xl font-bold text-gray-900 leading-tight">{booking.service.title}</h3>
+    <div className={cn(
+      "group relative overflow-hidden transition-all duration-500 rounded-[32px] border border-gray-100 bg-white hover:shadow-2xl hover:shadow-[#434c9d]/10 flex flex-col h-full",
+      booking.status === "paid" && "bg-gradient-to-br from-white to-emerald-50/30",
+      booking.status === "pending" && "bg-gradient-to-br from-white to-amber-50/30",
+      booking.status === "alternative_proposed" && "bg-gradient-to-br from-white to-orange-50/30"
+    )}>
+      {/* Decorative accent */}
+      <div className={cn(
+        "absolute top-0 left-0 w-2 h-full opacity-60",
+        booking.status === "paid" ? "bg-emerald-400" :
+        booking.status === "pending" ? "bg-amber-400" :
+        booking.status === "completed" ? "bg-gray-400" : "bg-[#434c9d]"
+      )} />
+
+      <div className="p-8 pb-6 flex-1">
+        {/* Header Section */}
+        <div className="flex justify-between items-start gap-4 mb-6">
+          <div className="flex-1 min-w-0 space-y-3">
+            <Badge className={cn(
+              "text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border-none shadow-sm",
+              statusConfig.bg, statusConfig.color
+            )}>
+              {statusConfig.label}
+            </Badge>
+            <div>
+              <h3 className="text-xl font-black text-gray-900 leading-tight group-hover:text-[#434c9d] transition-colors">
+                {booking.service.title}
+              </h3>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
+                  <User className="w-4 h-4 text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500 font-bold">
+                  {booking.customer_name ? (
+                    booking.customer_id ? (
+                      <span>by <Link href={`/profile/${booking.customer_id}`} className="text-[#434c9d] hover:text-[#ff725a] transition-colors font-black">{booking.customer_name}</Link></span>
+                    ) : `by ${booking.customer_name}`
+                  ) : "Customer request"}
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-gray-500 font-medium flex items-center gap-2">
-            <Users className="w-4 h-4 text-[#96cbc3]" />
-            {booking.customer_name ? (
-              booking.customer_id ? (
-                <span>Requested by <Link href={`/profile/${booking.customer_id}`} className="text-[#434c9d] hover:underline font-bold">{booking.customer_name}</Link></span>
-              ) : `Requested by ${booking.customer_name}`
-            ) : 'Customer request'}
-          </p>
+          <div className="text-right p-4 bg-gray-50/80 rounded-3xl border border-gray-100/50 backdrop-blur-sm shrink-0">
+            <p className="text-2xl font-black text-[#434c9d] leading-none">${booking.total_price}</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Total</p>
+          </div>
         </div>
-        <Badge className={cn("text-[10px] font-bold uppercase tracking-widest px-3 py-1 border-none", getStatusColor(booking.status))}>
-          {formatBookingStatusLabel(booking.status)}
-        </Badge>
-      </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-2xl mb-6">
-        <div className="space-y-1">
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5"><Calendar className="w-3 h-3" /> Date</div>
-          <div className="text-sm font-bold text-gray-900">{formatDate(booking.requested_date)}</div>
-          <div className="text-[10px] font-medium text-gray-500">{formatTime(booking.requested_time)}</div>
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-[#434c9d] shrink-0 border border-blue-100/50">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</p>
+                <p className="text-sm font-black text-gray-900 truncate">{formatDate(booking.requested_date)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 shrink-0 border border-orange-100/50">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Time</p>
+                <p className="text-sm font-black text-gray-900 truncate">{formatTime(booking.requested_time)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0 border border-emerald-100/50">
+                <Timer className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Duration</p>
+                <p className="text-sm font-black text-gray-900 truncate">{booking.duration} min</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center text-red-500 shrink-0 border border-red-100/50">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Location</p>
+                <p className="text-sm font-black text-gray-900 truncate">{booking.service.location}</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="space-y-1 text-right sm:text-left">
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center justify-end sm:justify-start gap-1.5"><DollarSign className="w-3 h-3" /> Price</div>
-          <div className="text-sm font-bold text-gray-900">${booking.total_price}</div>
-          <div className="text-[10px] font-medium text-gray-500">Total amount</div>
-        </div>
-        <div className="space-y-1">
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5"><Clock className="w-3 h-3" /> Duration</div>
-          <div className="text-sm font-bold text-gray-900">{booking.duration} min</div>
-        </div>
-        <div className="space-y-1 text-right sm:text-left">
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center justify-end sm:justify-start gap-1.5"><MapPin className="w-3 h-3" /> Location</div>
-          <div className="text-sm font-bold text-gray-900 truncate">{booking.service.location}</div>
-        </div>
-      </div>
 
-      {booking.special_instructions && (
-        <div className="bg-blue-50/50 rounded-xl p-4 mb-6 text-sm text-blue-700 font-medium leading-relaxed italic border-l-2 border-blue-200">
-          &quot;{booking.special_instructions}&quot;
-        </div>
-      )}
-      {booking.status === "paid" && (
-        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <p className="text-sm font-black text-blue-900 mb-2">Booking Confirmed</p>
-          <p className="text-xs font-bold text-blue-800 mb-2">Here&apos;s what happens next:</p>
-          <ul className="space-y-1 text-xs font-medium text-blue-900 list-disc pl-4">
-            <li>A parent has paid in advance for your service.</li>
-            <li>Funds will be transferred to your account after you mark the service as completed.</li>
-            <li>Be sure to message the parent through the platform to confirm details.</li>
-            <li>You&apos;ll receive email reminders 24 hours and 3 hours before your scheduled service.</li>
-            <li>Once completed, Mark Service Completed on Bookings Page and visit Earnings Page to see how to receive payment.</li>
-            <li>After the service, the parent can tip and leave a review.</li>
-          </ul>
-          <p className="text-xs font-bold text-blue-900 mt-2">You&apos;re all set go do your thing &#128155;</p>
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-2 pt-2">
-        {booking.status === "pending" && (
-          <>
-            <p className="w-full text-[11px] font-semibold text-gray-600 mb-1">
-              You will be notified by email when the buyer completes payment.
+        {/* Special Instructions */}
+        {booking.special_instructions && (
+          <div className="mb-6 p-5 bg-[#96cbc3]/10 rounded-[24px] border border-[#96cbc3]/20 relative overflow-hidden group/note">
+            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover/note:opacity-30 transition-opacity">
+              <FileText className="w-8 h-8 text-[#96cbc3]" />
+            </div>
+            <p className="text-sm text-[#434c9d] font-bold italic leading-relaxed relative z-10">
+              &quot;{booking.special_instructions}&quot;
             </p>
-            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-6 h-10 font-bold" onClick={handleAccept}>Accept Request</Button>
-            <Button variant="outline" size="sm" className="text-red-600 border-red-100 hover:bg-red-50 rounded-xl px-6 h-10 font-bold" onClick={handleDecline}>Decline / Propose Time</Button>
-          </>
+          </div>
         )}
-        {(isAwaitingPaymentStatus(booking.status) || booking.status === "paid" || booking.status === "completed" || booking.status === "rejected") && (
-          <Button variant="outline" size="sm" onClick={() => router.push(`/booking/${booking.id}`)} className="border-gray-100 text-gray-600 hover:bg-gray-50 rounded-xl px-6 h-10 font-bold flex items-center gap-2">
-            <Eye className="w-4 h-4" /> View Details
-          </Button>
-        )}
-        {booking.status === "paid" && (
-          <>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowCompleteDialog(true)}
-              className="bg-[#434c9d] text-white hover:bg-[#434c9d]/90 rounded-xl px-6 h-10 font-bold flex items-center gap-2"
-            >
-              <CheckCircle className="w-4 h-4" /> Mark as Completed
-            </Button>
-          </>
+
+        {/* Status Banners */}
+        {isAwaitingPaymentStatus(booking.status) && (
+          <div className="mb-6 rounded-[24px] border-2 border-dashed border-blue-200 bg-blue-50/40 p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+              <Timer className="w-5 h-5 animate-pulse" />
+            </div>
+            <p className="text-xs font-bold text-blue-800 leading-relaxed pt-1">
+              Almost there! Waiting for the customer to complete payment. We&apos;ll notify you immediately when it&apos;s confirmed.
+            </p>
+          </div>
         )}
 
         {booking.status === "paid" && (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddToCalendar}
-              className="border-gray-100 text-gray-700 hover:bg-gray-50 rounded-xl px-6 h-10 font-bold flex items-center gap-2"
-            >
-              <CalendarPlus className="w-4 h-4" /> Google Calendar
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddToAppleCalendar}
-              className="border-gray-100 text-gray-700 hover:bg-gray-50 rounded-xl px-6 h-10 font-bold flex items-center gap-2"
-            >
-              <CalendarPlus className="w-4 h-4" /> Apple Calendar
-            </Button>
-          </>
+          <div className="mb-6 rounded-[24px] border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <p className="text-sm font-black text-emerald-900">Everything is set!</p>
+            </div>
+            <p className="text-xs font-bold text-emerald-800 mb-3">Next steps for a successful service:</p>
+            <ul className="grid grid-cols-1 gap-2">
+              {[
+                "The parent has paid in advance",
+                "Message them to confirm details",
+                "Earnings unlock after completion"
+              ].map((text, i) => (
+                <li key={i} className="flex items-center gap-2 text-xs font-bold text-emerald-900/70">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  {text}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
 
+      {/* Action Footer */}
+      <div className="p-8 pt-0 mt-auto">
+        <div className="flex flex-col gap-3 pt-6 border-t border-gray-100/50">
+          {booking.status === "pending" && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 px-1">
+                <Info className="w-3.5 h-3.5 text-amber-500" />
+                <p className="text-[11px] font-bold text-amber-700">Accept to allow the buyer to pay.</p>
+              </div>
+              <div className="flex gap-3">
+                <Button size="sm" className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-2xl h-12 font-black shadow-lg shadow-green-500/20 transition-all hover:-translate-y-0.5" onClick={handleAccept}>
+                  <CheckCircle className="w-4 h-4 mr-2" /> Accept
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1 text-red-500 border-red-100 hover:bg-red-50 rounded-2xl h-12 font-black" onClick={handleDecline}>
+                  <XCircle className="w-4 h-4 mr-2" /> Decline
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {(isAwaitingPaymentStatus(booking.status) || booking.status === "paid" || booking.status === "completed" || booking.status === "rejected") && (
+            <Button variant="outline" size="sm" onClick={() => router.push(`/booking/${booking.id}`)} className="w-full border-gray-100 text-[#434c9d] hover:bg-[#434c9d] hover:text-white transition-all rounded-2xl h-12 font-black flex items-center justify-center gap-2">
+              <Eye className="w-4 h-4" /> View Details
+            </Button>
+          )}
+
+          {booking.status === "paid" && (
+            <div className="flex flex-col gap-3">
+              <Button variant="default" size="sm" onClick={() => setShowCompleteDialog(true)} className="w-full bg-[#434c9d] text-white hover:bg-[#434c9d]/90 rounded-2xl h-12 font-black shadow-lg shadow-[#434c9d]/20 transition-all hover:-translate-y-0.5">
+                <CheckCircle className="w-4 h-4 mr-2" /> Mark as Completed
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleAddToCalendar} className="flex-1 border-gray-100 text-gray-700 hover:bg-gray-50 rounded-xl h-10 font-bold text-[10px] uppercase tracking-wider">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Google
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleAddToAppleCalendar} className="flex-1 border-gray-100 text-gray-700 hover:bg-gray-50 rounded-xl h-10 font-bold text-[10px] uppercase tracking-wider">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Apple
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Propose Alternative Dialog */}
       <Dialog open={showAlternativeDialog} onOpenChange={setShowAlternativeDialog}>
         <DialogContent className="rounded-[32px] p-8 border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-gray-900">Propose Alternative</DialogTitle>
-            <DialogDescription className="text-gray-500 pt-2 leading-relaxed">The requested time doesn&apos;t work. Suggest a better time for you.</DialogDescription>
-            <p className="text-xs font-semibold text-[#434c9d]">
-              You will be notified by email when the buyer responds.
-            </p>
+            <DialogTitle className="text-2xl font-black text-gray-900">Propose Alternative</DialogTitle>
+            <DialogDescription className="text-gray-500 pt-2 leading-relaxed font-bold">The requested time doesn&apos;t work. Suggest a better time for you.</DialogDescription>
+            <p className="text-xs font-black text-[#434c9d] uppercase tracking-wider">You will be notified by email when the buyer responds.</p>
           </DialogHeader>
           <div className="space-y-6 py-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">New Date</Label>
-                <Input type="date" value={alternativeDate} onChange={(e) => setAlternativeDate(e.target.value)} min={new Date().toISOString().split("T")[0]} className="rounded-xl bg-gray-50/50 border-gray-100" />
+                <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">New Date</Label>
+                <Input type="date" value={alternativeDate} onChange={(e) => setAlternativeDate(e.target.value)} min={new Date().toISOString().split("T")[0]} className="rounded-2xl bg-gray-50/50 border-gray-100 h-12 font-bold" />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">New Time</Label>
-                <Input type="time" value={alternativeTime} onChange={(e) => setAlternativeTime(e.target.value)} className="rounded-xl bg-gray-50/50 border-gray-100" />
+                <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">New Time</Label>
+                <Input type="time" value={alternativeTime} onChange={(e) => setAlternativeTime(e.target.value)} className="rounded-2xl bg-gray-50/50 border-gray-100 h-12 font-bold" />
               </div>
             </div>
             <div className="flex flex-col gap-3 pt-4">
-              <Button onClick={handleProposeAlternative} disabled={isSubmitting || !alternativeDate || !alternativeTime} className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 rounded-xl h-12 font-bold">Propose New Time</Button>
-              <Button onClick={handleRejectWithoutAlternative} disabled={isSubmitting} variant="ghost" className="w-full text-red-500 hover:bg-red-50 rounded-xl h-12 font-bold">Reject Without Alternative</Button>
+              <Button onClick={handleProposeAlternative} disabled={isSubmitting || !alternativeDate || !alternativeTime} className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 rounded-2xl h-14 font-black shadow-lg shadow-[#434c9d]/20">Propose New Time</Button>
+              <Button onClick={handleRejectWithoutAlternative} disabled={isSubmitting} variant="ghost" className="w-full text-red-500 hover:bg-red-50 rounded-2xl h-12 font-black">Reject Without Alternative</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Mark Complete Confirmation */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="rounded-[28px] p-7">
+        <DialogContent className="rounded-[32px] p-8 border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Mark service as completed?</DialogTitle>
-            <DialogDescription>
-              Confirm once the service has actually been completed. This unlocks earnings for withdrawal.
-            </DialogDescription>
+            <DialogTitle className="text-2xl font-black text-gray-900">Mark service as completed?</DialogTitle>
+            <DialogDescription className="text-gray-500 pt-2 leading-relaxed font-bold">Confirm once the service has actually been completed. This unlocks earnings for withdrawal.</DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col sm:flex-row gap-3 mt-2">
-            <Button
-              variant="outline"
-              className="sm:flex-1 rounded-xl"
-              onClick={() => setShowCompleteDialog(false)}
-            >
-              Not yet
-            </Button>
-            <Button
-              className="sm:flex-1 rounded-xl bg-[#434c9d] hover:bg-[#434c9d]/90"
-              onClick={async () => {
-                setShowCompleteDialog(false);
-                await onStatusUpdate(booking.id, "completed");
-              }}
-            >
+          <div className="flex flex-col sm:flex-row gap-3 mt-6">
+            <Button variant="outline" className="sm:flex-1 rounded-2xl h-12 font-black" onClick={() => setShowCompleteDialog(false)}>Not yet</Button>
+            <Button className="sm:flex-1 rounded-2xl bg-[#434c9d] hover:bg-[#434c9d]/90 h-12 font-black shadow-lg shadow-[#434c9d]/20" onClick={async () => { setShowCompleteDialog(false); await onStatusUpdate(booking.id, "completed"); }}>
               Yes, mark completed
             </Button>
           </div>
@@ -495,45 +527,35 @@ export default function TeenHustlePage() {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('stripe_success') === 'true') {
+    if (urlParams.get("stripe_success") === "true") {
       toast({ title: "Account connected!", description: "Your Stripe Connect account is ready." });
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (urlParams.get('stripe_error')) {
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (urlParams.get("stripe_error")) {
       toast({ title: "Setup failed", description: "Error setting up payment account.", variant: "destructive" });
-      window.history.replaceState({}, '', window.location.pathname);
+      window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
   const isBookingExpired = (booking: Booking): boolean => {
     try {
-      if (
-        booking.status === "alternative_proposed" &&
-        booking.alternative_date &&
-        booking.alternative_time
-      ) {
-        const alt = new Date(`${booking.alternative_date}T${booking.alternative_time}`);
-        return alt < new Date();
+      if (booking.status === "alternative_proposed" && booking.alternative_date && booking.alternative_time) {
+        return new Date(`${booking.alternative_date}T${booking.alternative_time}`) < new Date();
       }
-      const bookingDateTime = new Date(`${booking.requested_date}T${booking.requested_time}`);
-      return bookingDateTime < new Date();
-    } catch {
-      return false;
-    }
+      return new Date(`${booking.requested_date}T${booking.requested_time}`) < new Date();
+    } catch { return false; }
   };
 
   const fetchEverything = async (forceRefresh = false) => {
     if (!user) return;
     try {
       setLoading(true);
-      // Use cache: 'no-store' when forceRefresh is true to bypass browser cache
-      const fetchOptions = forceRefresh ? { cache: 'no-store' as RequestCache } : {};
-      
+      const fetchOptions = forceRefresh ? { cache: "no-store" as RequestCache } : {};
       const [sRes, bRes, eRes, qRes, stripeRes] = await Promise.all([
         fetch("/api/services", fetchOptions),
         fetch("/api/bookings", fetchOptions),
         fetch("/api/earnings", fetchOptions),
         fetch("/api/quotes/request?role=provider&status=pending,quoted", fetchOptions),
-        fetch("/api/stripe/connect/setup", fetchOptions)
+        fetch("/api/stripe/connect/setup", fetchOptions),
       ]);
 
       if (sRes.ok) setServices((await sRes.json()).services ?? []);
@@ -541,7 +563,11 @@ export default function TeenHustlePage() {
         const bData = await bRes.json();
         if (bData.success) {
           const allIncoming = bData.incoming || [];
-          const activeIncoming = allIncoming.filter((b: Booking) => (b.status === "pending" || isAwaitingPaymentStatus(b.status) || b.status === "alternative_proposed") ? !isBookingExpired(b) : true);
+          const activeIncoming = allIncoming.filter((b: Booking) => {
+            if (isAwaitingPaymentStatus(b.status)) return true;
+            if (b.status === "pending" || b.status === "alternative_proposed") return !isBookingExpired(b);
+            return true;
+          });
           setPendingBookings(activeIncoming.filter((b: Booking) => b.status === "pending" || isAwaitingPaymentStatus(b.status) || b.status === "alternative_proposed"));
           const scheduled = allIncoming.filter((b: Booking) => b.status === "paid");
           setScheduledBookings(scheduled);
@@ -585,12 +611,10 @@ export default function TeenHustlePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "cancelled" }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to deny quote request");
       }
-
       const data = await response.json();
       if (data.success) {
         toast({ title: "Quote Request Denied", description: "The quote request has been cancelled." });
@@ -598,9 +622,7 @@ export default function TeenHustlePage() {
       }
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to deny quote request", variant: "destructive" });
-    } finally {
-      setCancellingQuoteRequest(null);
-    }
+    } finally { setCancellingQuoteRequest(null); }
   };
 
   const patchQuoteRequest = async (
@@ -612,41 +634,29 @@ export default function TeenHustlePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
     const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data?.success) {
-      throw new Error(data?.error || "Failed to update quote request");
-    }
+    if (!response.ok || !data?.success) throw new Error(data?.error || "Failed to update quote request");
   };
 
   const handleBookingStatusUpdate = async (bookingId: string, newStatus: string, alternativeDate?: string, alternativeTime?: string) => {
-    // Optimistic UI update - immediately update the booking status in local state
     const updateBookingInState = (status: string) => {
-      const updateBooking = (booking: Booking) => 
-        booking.id === bookingId ? { ...booking, status } : booking;
-      
+      const updateBooking = (booking: Booking) => booking.id === bookingId ? { ...booking, status } : booking;
       setPendingBookings(prev => {
         const updated = prev.map(updateBooking);
-        // If status changed to something other than pending / awaiting payment / alternative_proposed, remove from pending
         if (!["pending", "awaiting_payment", "confirmed", "alternative_proposed"].includes(status)) {
           return updated.filter(b => b.id !== bookingId);
         }
         return updated;
       });
-      
       setScheduledBookings(prev => {
         const booking = [...pendingBookings, ...prev].find(b => b.id === bookingId);
         if (status === "paid" && booking) {
-          // Add to scheduled if not already there
           const exists = prev.some(b => b.id === bookingId);
           if (!exists) return [...prev, { ...booking, status }];
         }
-        if (status === "completed") {
-          return prev.filter(b => b.id !== bookingId);
-        }
+        if (status === "completed") return prev.filter(b => b.id !== bookingId);
         return prev.map(updateBooking);
       });
-      
       setCompletedBookings(prev => {
         const booking = [...pendingBookings, ...scheduledBookings].find(b => b.id === bookingId);
         if (status === "completed" && booking) {
@@ -655,7 +665,6 @@ export default function TeenHustlePage() {
         }
         return prev.map(updateBooking);
       });
-      
       setCancelledBookings(prev => {
         const booking = [...pendingBookings, ...scheduledBookings].find(b => b.id === bookingId);
         if ((status === "cancelled" || status === "rejected") && booking) {
@@ -666,30 +675,13 @@ export default function TeenHustlePage() {
       });
     };
 
-    // Apply optimistic update immediately
     updateBookingInState(newStatus);
-
     try {
       const body: any = { status: newStatus };
-      if (alternativeDate && alternativeTime) {
-        body.alternative_date = alternativeDate;
-        body.alternative_time = alternativeTime;
-      }
-
-      const res = await fetch(`/api/bookings/${bookingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        // Revert optimistic update on failure
-        await fetchEverything(true);
-        throw new Error("Failed to update booking");
-      }
-
+      if (alternativeDate && alternativeTime) { body.alternative_date = alternativeDate; body.alternative_time = alternativeTime; }
+      const res = await fetch(`/api/bookings/${bookingId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!res.ok) { await fetchEverything(true); throw new Error("Failed to update booking"); }
       toast({ title: "Booking updated", description: `Booking ${newStatus} successfully.` });
-      // Fetch fresh data to ensure consistency, with cache bypass
       await fetchEverything(true);
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -698,34 +690,21 @@ export default function TeenHustlePage() {
   };
 
   const openSendQuoteDialog = (quoteRequest: any) => {
-    setSendQuoteState({
-      quoteRequestId: quoteRequest.id,
-      price: "",
-      notes: "",
-      estimatedDurationHours: "",
-    });
+    setSendQuoteState({ quoteRequestId: quoteRequest.id, price: "", notes: "", estimatedDurationHours: "" });
   };
 
   const handleSubmitSendQuote = async () => {
     if (!sendQuoteState) return;
     const price = parseFloat(sendQuoteState.price);
     if (!Number.isFinite(price) || price <= 0) {
-      toast({
-        title: "Enter a valid price",
-        description: "Please enter how much you will charge (greater than $0).",
-        variant: "destructive",
-      });
+      toast({ title: "Enter a valid price", description: "Please enter how much you will charge (greater than $0).", variant: "destructive" });
       return;
     }
     let estimatedDuration: number | undefined;
     if (sendQuoteState.estimatedDurationHours.trim()) {
       const n = parseFloat(sendQuoteState.estimatedDurationHours);
       if (!Number.isFinite(n) || n <= 0) {
-        toast({
-          title: "Invalid duration",
-          description: "Estimated duration must be a positive number of hours.",
-          variant: "destructive",
-        });
+        toast({ title: "Invalid duration", description: "Estimated duration must be a positive number of hours.", variant: "destructive" });
         return;
       }
       estimatedDuration = Math.round(n * 60);
@@ -735,93 +714,47 @@ export default function TeenHustlePage() {
       const res = await fetch("/api/quotes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          quote_request_id: sendQuoteState.quoteRequestId,
-          price,
-          notes: sendQuoteState.notes.trim() || undefined,
-          estimated_duration: estimatedDuration,
-        }),
+        body: JSON.stringify({ quote_request_id: sendQuoteState.quoteRequestId, price, notes: sendQuoteState.notes.trim() || undefined, estimated_duration: estimatedDuration }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.success) {
-        throw new Error(data?.error || "Failed to send quote");
-      }
+      if (!res.ok || !data?.success) throw new Error(data?.error || "Failed to send quote");
       setSendQuoteState(null);
-      toast({
-        title: "Quote sent",
-        description: "The customer has been notified and can accept or decline.",
-      });
+      toast({ title: "Quote sent", description: "The customer has been notified and can accept or decline." });
       await fetchEverything(true);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send quote",
-        variant: "destructive",
-      });
-    } finally {
-      setProcessingQuoteRequestId(null);
-    }
+      toast({ title: "Error", description: error.message || "Failed to send quote", variant: "destructive" });
+    } finally { setProcessingQuoteRequestId(null); }
   };
 
   const openProposeTimeForQuoteRequest = (quoteRequest: any) => {
-    setProposeTimeState({
-      quoteRequestId: quoteRequest.id,
-      alternativeDate: "",
-      alternativeTime: "",
-    });
+    setProposeTimeState({ quoteRequestId: quoteRequest.id, alternativeDate: "", alternativeTime: "" });
   };
 
   const handleSubmitQuoteRequestAlternative = async () => {
     if (!proposeTimeState) return;
     if (!proposeTimeState.alternativeDate || !proposeTimeState.alternativeTime) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide both an alternative date and time.",
-        variant: "destructive",
-      });
+      toast({ title: "Missing Information", description: "Please provide both an alternative date and time.", variant: "destructive" });
       return;
     }
     try {
       setProcessingQuoteRequestId(proposeTimeState.quoteRequestId);
-      await patchQuoteRequest(proposeTimeState.quoteRequestId, {
-        status: "quoted",
-        requested_date: proposeTimeState.alternativeDate,
-        requested_time: proposeTimeState.alternativeTime,
-      });
+      await patchQuoteRequest(proposeTimeState.quoteRequestId, { status: "quoted", requested_date: proposeTimeState.alternativeDate, requested_time: proposeTimeState.alternativeTime });
       setProposeTimeState(null);
-      toast({
-        title: "Alternative Proposed",
-        description: "The customer has been notified of the new time.",
-      });
+      toast({ title: "Alternative Proposed", description: "The customer has been notified of the new time." });
       await fetchEverything(true);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to propose alternative time",
-        variant: "destructive",
-      });
-    } finally {
-      setProcessingQuoteRequestId(null);
-    }
+      toast({ title: "Error", description: error.message || "Failed to propose alternative time", variant: "destructive" });
+    } finally { setProcessingQuoteRequestId(null); }
   };
 
   const formatQuoteDate = (dateString: string) => {
     const [year, month, day] = dateString.split("-").map(Number);
     const localDate = new Date(year, (month || 1) - 1, day || 1);
-    return localDate.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    return localDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
   };
 
   const formatQuoteTime = (timeString: string) =>
-    new Date(`2000-01-01T${timeString}`).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
+    new Date(`2000-01-01T${timeString}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 
   const formatHours = (minutes: number) => {
     const hours = minutes / 60;
@@ -845,453 +778,399 @@ export default function TeenHustlePage() {
     return (
       <DashboardLayout user={null}>
         <div className="p-6 max-w-sm mx-auto text-center py-20">
-          <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-100"><User className="w-8 h-8 text-gray-300" /></div>
+          <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-100">
+            <User className="w-8 h-8 text-gray-300" />
+          </div>
           <h3 className="text-lg font-bold text-gray-900 mb-2">Setup Profile</h3>
-          <p className="text-gray-500 mb-6 text-sm leading-relaxed">Complete your profile to access your Teen Hustle dashboard.</p>
-          <Button onClick={() => window.location.href = '/profile'} className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 rounded-xl h-12 font-bold">Go to Profile</Button>
+          <p className="text-gray-500 mb-6 text-sm leading-relaxed">Complete your profile to access your Booking Dashboard.</p>
+          <Button onClick={() => window.location.href = "/profile"} className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 rounded-xl h-12 font-bold">Go to Profile</Button>
         </div>
       </DashboardLayout>
     );
   }
 
+  const tabs = [
+    { value: "pending", label: "Pending", count: pendingBookings.length + quoteRequests.length, needsAttention: pendingBookings.some(b => b.status === "pending") || quoteRequests.length > 0 },
+    { value: "scheduled", label: "Scheduled", count: scheduledBookings.length, needsAttention: scheduledBookings.length > 0 },
+    { value: "completed", label: "History", count: completedBookings.length, needsAttention: false },
+  ];
+
   return (
     <DashboardLayout user={user}>
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        {/* Page Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 mb-12">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 bg-[#434c9d]/10 text-[#434c9d] rounded-full px-4 py-1.5">
-              <Briefcase className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-[0.15em]">Booking Dashboard</span>
-            </div>
-            <h1 className="page-title text-gray-900">Booking Dashboard</h1>
-            <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">
-              Manage your services, bookings, and earnings.
+      <div className="max-w-6xl mx-auto px-4 pt-10 lg:pt-16 pb-12">
+
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 mb-16">
+          <div className="space-y-5">
+            <h1 className="text-5xl lg:text-6xl font-black text-gray-900 tracking-tight leading-none">
+              My Teen <span className="text-[#434c9d]">Hustle</span>
+            </h1>
+            <p className="text-xl text-gray-500 font-bold max-w-2xl leading-relaxed">
+              Managing your hustle has never been easier. Track requests, schedule jobs, and watch your earnings grow.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-4">
             <Link href="/my-services">
-              <Button variant="outline" className="rounded-2xl border-gray-100 text-gray-700 hover:bg-gray-50 h-12 font-bold">
-                <Star className="w-4 h-4 mr-2 text-yellow-400 fill-yellow-400" /> My Services
+              <Button variant="outline" className="rounded-2xl border-gray-100 text-gray-700 hover:bg-gray-50 h-14 px-8 font-black shadow-sm transition-all hover:-translate-y-0.5">
+                <Star className="w-5 h-5 mr-2 text-yellow-400 fill-yellow-400" /> My Services
+              </Button>
+            </Link>
+            <Link href="/earnings">
+              <Button className="rounded-2xl bg-[#434c9d] hover:bg-[#434c9d]/90 text-white h-14 px-8 font-black shadow-xl shadow-[#434c9d]/20 transition-all hover:-translate-y-0.5">
+                <Wallet className="w-5 h-5 mr-2" /> View Earnings
               </Button>
             </Link>
           </div>
         </div>
 
-        <div className="mb-10 rounded-2xl border border-amber-200 bg-amber-50 p-5">
-          <p className="text-sm font-semibold text-amber-900 leading-relaxed">
-            If you need to cancel, please do so at least 24 hours in advance. Last-minute cancellations should be avoided whenever possible.
+        {/* Stats Row - Minimal Style */}
+        <div className="mb-16 p-8 rounded-[40px] bg-white border border-gray-100 shadow-sm overflow-x-auto custom-scrollbar">
+          <div className="flex items-center justify-between min-w-[800px] lg:min-w-0 gap-8">
+            {[
+              { label: "Total Earned", value: `$${earningsStats.totalEarned.toFixed(2)}`, icon: DollarSign, color: "text-[#434c9d]", bg: "bg-[#434c9d]/10" },
+              { label: "This Week", value: `$${earningsStats.thisWeekEarned.toFixed(2)}`, icon: TrendingUp, color: "text-[#96cbc3]", bg: "bg-[#96cbc3]/10" },
+              { label: "Jobs Completed", value: completedBookings.length, icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-50" },
+              { label: "Upcoming Jobs", value: scheduledBookings.length, icon: Calendar, color: "text-blue-500", bg: "bg-blue-50" },
+            ].map((stat, i) => (
+              <React.Fragment key={i}>
+                <div className="flex items-center gap-5 group">
+                  <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300", stat.bg)}>
+                    <stat.icon className={cn("w-7 h-7", stat.color)} />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-black text-gray-900 leading-none">{stat.value}</div>
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5">{stat.label}</div>
+                  </div>
+                </div>
+                {i < 3 && <div className="h-12 w-px bg-gray-100 hidden lg:block" />}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+
+        {/* Cancellation Policy */}
+        <div className="mb-12 rounded-[32px] border border-[#ff725a]/20 bg-[#ff725a]/5 p-6 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#ff725a] flex items-center justify-center text-white shrink-0 shadow-lg shadow-[#ff725a]/20">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <p className="text-sm font-bold text-gray-700 leading-relaxed">
+            <span className="text-[#ff725a]">Pro Tip:</span> If you need to cancel, please do so at least 24 hours in advance. Providing great reliability helps you get more bookings!
           </p>
         </div>
 
-        {/* Stats Card */}
-        <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-8 mb-12 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#434c9d]/5 rounded-full -mr-32 -mt-32 blur-3xl" />
-          <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="space-y-1">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Total Earnings</div>
-              <div className="text-3xl font-black text-gray-900">${earningsStats.totalEarned.toFixed(2)}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">This Week</div>
-              <div className="text-3xl font-black text-[#96cbc3]">${earningsStats.thisWeekEarned.toFixed(2)}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Total Jobs</div>
-              <div className="text-3xl font-black text-gray-900">{completedBookings.length}</div>
-            </div>
-            <div className="flex items-center">
-              <Link href="/earnings" className="w-full">
-                <Button className="w-full bg-[#434c9d] hover:bg-[#434c9d]/90 rounded-2xl h-14 font-bold shadow-lg shadow-[#434c9d]/20 transition-all active:scale-95 flex items-center justify-center gap-2">
-                  <Wallet className="w-5 h-5" /> Earnings Dashboard<ChevronRight className="w-4 h-4 opacity-50" />
-                </Button>
-              </Link>
-            </div>
+        {/* Bookings Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-8 mb-10">
+            <h2 className="text-3xl font-black text-gray-900 tracking-tight">Your bookings</h2>
+            <TabsList className="bg-gray-100/50 p-2 rounded-[24px] h-auto border border-gray-100 backdrop-blur-sm">
+              {tabs.map(tab => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className={cn(
+                    "rounded-[18px] font-black text-[11px] uppercase tracking-widest px-6 py-3 data-[state=active]:bg-[#434c9d] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-[#434c9d]/20 transition-all relative overflow-visible",
+                    tab.needsAttention && "pr-10"
+                  )}
+                >
+                  {tab.label}
+                  <span className={cn(
+                    "ml-2 px-2 py-0.5 rounded-lg text-[10px] font-black",
+                    activeTab === tab.value ? "bg-white/20 text-white" : "bg-gray-200/60 text-gray-500"
+                  )}>{tab.count}</span>
+                  {tab.needsAttention && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#ff725a] border-2 border-white animate-bounce" />
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
           </div>
-        </div>
 
-        {/* Bookings Section */}
-        <div className="space-y-8">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
-              <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Your bookings</h2>
-              <TabsList className="bg-gray-100/50 p-1 rounded-2xl border border-gray-100">
-                <TabsTrigger
-                  value="pending"
-                  className={cn(
-                    "rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm relative",
-                    pendingBookings.some((b) => b.status === "pending") && "pr-7"
-                  )}
-                >
-                  Pending
-                  {pendingBookings.some((b) => b.status === "pending") && (
-                    <span
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-red-500 animate-pulse"
-                      aria-hidden
-                    />
-                  )}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="scheduled"
-                  className={cn(
-                    "rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm relative",
-                    scheduledBookings.length > 0 && "pr-7"
-                  )}
-                >
-                  Scheduled
-                  {scheduledBookings.length > 0 && (
-                    <span
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-red-500 animate-pulse"
-                      aria-hidden
-                    />
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="completed" className="rounded-xl font-bold text-xs uppercase tracking-wider px-6 data-[state=active]:bg-white data-[state=active]:text-[#434c9d] data-[state=active]:shadow-sm">History</TabsTrigger>
-              </TabsList>
-            </div>
-            <div className="mb-6 rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
-              <p className="text-sm font-semibold text-gray-700">
-                {activeTab === "pending" && "Pending: Awaiting teen response, customer payment, or a response to an alternative time request."}
-                {activeTab === "scheduled" && "Scheduled: Payment received; your service is locked in."}
-                {activeTab === "completed" && "History: Completed or past bookings, including reviews and payments."}
-              </p>
-            </div>
+          {/* Pending Tab Content */}
+          <TabsContent value="pending" className="mt-0 outline-none">
+            {(pendingBookings.length > 0 || quoteRequests.length > 0) ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {pendingBookings.map(b => (
+                  <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />
+                ))}
+                {quoteRequests.map((qr: any) => (
+                  <div key={qr.id} className="group relative bg-white rounded-[32px] overflow-hidden border-2 border-dashed border-[#96cbc3]/40 hover:border-[#96cbc3] transition-all duration-500 flex flex-col h-full hover:shadow-2xl hover:shadow-[#96cbc3]/10">
+                    {/* Decorative accent */}
+                    <div className="absolute top-0 left-0 w-2 h-full bg-[#96cbc3] opacity-40" />
 
-            <TabsContent value="pending">
-              <div className="grid grid-cols-1 gap-6">
-                {(pendingBookings.length > 0 || quoteRequests.length > 0) ? (
-                  <>
-                    {pendingBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)}
-                    {quoteRequests.map((qr: any) => (
-                      <div key={qr.id} className="bg-white rounded-[24px] p-6 border-2 border-dashed border-[#96cbc3]/30 hover:border-[#96cbc3] transition-all">
-                        {(() => {
-                          const refImageUrls = getQuoteReferenceImageUrls(qr);
-                          return refImageUrls.length > 0 ? (
-                            <div className="mb-4 rounded-2xl overflow-hidden border border-gray-100 relative">
-                              <img
-                                src={refImageUrls[0]}
-                                alt="Quote request reference"
-                                className="w-full h-40 object-cover"
-                              />
-                              {refImageUrls.length > 1 && (
-                                <span className="absolute bottom-2 right-2 rounded-lg bg-black/70 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1">
-                                  +{refImageUrls.length - 1}
-                                </span>
-                              )}
-                            </div>
-                          ) : null;
-                        })()}
-                        <div className="flex justify-between items-start mb-6">
+                    <div className="p-8 pb-6 flex-1">
+                      {(() => {
+                        const refImageUrls = getQuoteReferenceImageUrls(qr);
+                        return refImageUrls.length > 0 ? (
+                          <div className="mb-6 rounded-[24px] overflow-hidden border border-gray-100 relative group/img">
+                            <img src={refImageUrls[0]} alt="Quote request reference" className="w-full h-48 object-cover transition-transform duration-700 group-hover/img:scale-110" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity" />
+                            {refImageUrls.length > 1 && (
+                              <span className="absolute bottom-4 right-4 rounded-xl bg-black/70 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border border-white/20">
+                                +{refImageUrls.length - 1} More
+                              </span>
+                            )}
+                          </div>
+                        ) : null;
+                      })()}
+
+                      <div className="flex justify-between items-start gap-4 mb-6">
+                        <div className="space-y-3 flex-1 min-w-0">
+                          <Badge className="bg-[#96cbc3]/10 text-[#96cbc3] border-none text-[10px] font-black uppercase tracking-widest px-4 py-2 shadow-sm">
+                            New Quote Request
+                          </Badge>
                           <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge className="bg-[#96cbc3]/10 text-[#96cbc3] border-none text-[10px] font-bold uppercase tracking-widest px-2 py-0.5">Quote Request</Badge>
-                              <h3 className="text-xl font-bold text-gray-900">{qr.services?.title}</h3>
+                            <h3 className="text-xl font-black text-gray-900 group-hover:text-[#434c9d] transition-colors leading-tight">
+                              {qr.services?.title}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-2">
+                              <div className="w-8 h-8 rounded-full bg-[#96cbc3]/10 flex items-center justify-center text-[#96cbc3] border-2 border-white shadow-sm">
+                                <User className="w-4 h-4" />
+                              </div>
+                              <p className="text-sm text-gray-500 font-bold">
+                                From <span className="text-[#434c9d] font-black">{qr.profiles?.first_name}</span>
+                              </p>
                             </div>
-                            <p className="text-sm text-gray-500 font-medium">From <span className="text-[#434c9d] font-bold">{qr.profiles?.first_name}</span></p>
                           </div>
-                          <div className="flex gap-2" />
                         </div>
-                        {(qr.requested_date || qr.requested_time || qr.service_address) && (
-                          <div className="mb-4 p-4 bg-gray-50/70 rounded-xl border border-gray-100 space-y-1.5">
-                            {qr.requested_date && (
-                              <p className="text-sm text-gray-700 font-semibold">
-                                Requested date:{" "}
-                                <span className="text-gray-900 font-bold">{formatQuoteDate(qr.requested_date)}</span>
-                              </p>
-                            )}
-                            {qr.requested_time && (
-                              <p className="text-sm text-gray-700 font-semibold">
-                                Requested time:{" "}
-                                <span className="text-gray-900 font-bold">{formatQuoteTime(qr.requested_time)}</span>
-                              </p>
-                            )}
-                            {qr.service_address && (
-                              <p className="text-sm text-gray-700 font-semibold">
-                                Location: <span className="text-gray-900 font-bold">{qr.service_address}</span>
-                              </p>
+                      </div>
+
+                      {(qr.requested_date || qr.requested_time || qr.service_address) && (
+                        <div className="mb-6 p-5 bg-gray-50/50 rounded-[24px] border border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {qr.requested_date && (
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-[#434c9d] shrink-0 border border-blue-100/50">
+                                <Calendar className="w-4 h-4" />
+                              </div>
+                              <span className="text-sm font-black text-gray-900">{formatQuoteDate(qr.requested_date)}</span>
+                            </div>
+                          )}
+                          {qr.requested_time && (
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 shrink-0 border border-orange-100/50">
+                                <Clock className="w-4 h-4" />
+                              </div>
+                              <span className="text-sm font-black text-gray-900">{formatQuoteTime(qr.requested_time)}</span>
+                            </div>
+                          )}
+                          {qr.service_address && (
+                            <div className="flex items-center gap-3 sm:col-span-2">
+                              <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-500 shrink-0 border border-red-100/50">
+                                <MapPin className="w-4 h-4" />
+                              </div>
+                              <span className="text-sm font-black text-gray-900 truncate">{qr.service_address}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {qr.special_instructions && (
+                        <div className="mb-6 p-5 bg-[#96cbc3]/5 rounded-[24px] border border-dashed border-[#96cbc3]/20">
+                          <p className="text-sm text-gray-500 leading-relaxed font-bold italic">&quot;{qr.special_instructions}&quot;</p>
+                        </div>
+                      )}
+
+                      {Array.isArray(qr.quotes) && qr.quotes.length > 0 ? (
+                        <div className="p-6 bg-[#96cbc3]/10 rounded-[28px] border border-[#96cbc3]/30 shadow-sm">
+                          <div className="flex items-center justify-between mb-4">
+                            <div>
+                              <p className="text-[10px] font-black text-[#96cbc3] uppercase tracking-widest mb-1">Your Proposed Quote</p>
+                              <p className="text-3xl font-black text-gray-900">${Number(qr.quotes[0].price).toFixed(2)}</p>
+                            </div>
+                            {qr.quotes[0].estimated_duration != null && (
+                              <div className="text-right">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Est. Time</p>
+                                <p className="text-sm font-black text-gray-700">{formatHours(qr.quotes[0].estimated_duration)}</p>
+                              </div>
                             )}
                           </div>
-                        )}
-                        {qr.special_instructions && <p className="text-sm text-gray-500 leading-relaxed bg-gray-50 p-4 rounded-xl italic mb-4">&quot;{qr.special_instructions}&quot;</p>}
-                        <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50/70 p-3">
-                          <p className="text-xs font-semibold text-blue-900 leading-relaxed">
-                            You will receive an email notification when the parent responds. After you accept and the parent pays, this will appear under your Bookings tab.
+                          {qr.quotes[0].notes && (
+                            <p className="text-sm text-gray-600 font-bold mb-3 leading-relaxed bg-white/50 p-3 rounded-xl border border-white/50">{qr.quotes[0].notes}</p>
+                          )}
+                          <div className="flex items-center gap-2 text-xs font-bold text-[#96cbc3]">
+                            <Timer className="w-3.5 h-3.5 animate-pulse" />
+                            <span>Awaiting customer response...</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mb-6 rounded-[24px] border border-blue-100 bg-blue-50/50 p-5 flex items-start gap-4">
+                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                            <Info className="w-5 h-5" />
+                          </div>
+                          <p className="text-xs font-bold text-blue-900 leading-relaxed pt-1">
+                            Review the details and send your quote. After you send it and they pay, it&apos;ll move to your Scheduled tab.
                           </p>
                         </div>
-                        {Array.isArray(qr.quotes) && qr.quotes.length > 0 && (
-                          <div className="mb-4 p-4 bg-[#96cbc3]/10 rounded-2xl border border-[#96cbc3]/25">
-                            <p className="text-[10px] font-black text-[#96cbc3] uppercase tracking-widest mb-1">Your quote</p>
-                            <p className="text-2xl font-black text-gray-900">
-                              ${Number(qr.quotes[0].price).toFixed(2)}
-                            </p>
-                            {qr.quotes[0].estimated_duration != null && (
-                              <p className="text-xs text-gray-600 font-medium mt-1">
-                                Est. duration: {formatHours(qr.quotes[0].estimated_duration)}
-                              </p>
-                            )}
-                            {qr.quotes[0].notes && (
-                              <p className="text-sm text-gray-600 mt-2 leading-relaxed">{qr.quotes[0].notes}</p>
-                            )}
-                            <p className="text-xs text-gray-500 mt-2">
-                              Waiting for the customer to accept or decline this quote.
-                            </p>
-                          </div>
-                        )}
-                        {(qr.status === "pending" || qr.status === "quoted") && (
-                          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-100">
-                            {!qr.quotes?.length ? (
-                              <Button
-                                size="sm"
-                                onClick={() => openSendQuoteDialog(qr)}
-                                disabled={processingQuoteRequestId === qr.id}
-                                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl h-10 font-bold"
-                              >
-                                Send quote
-                              </Button>
-                            ) : null}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openProposeTimeForQuoteRequest(qr)}
-                              disabled={processingQuoteRequestId === qr.id}
-                              className="flex-1 text-gray-700 border-gray-200 hover:bg-gray-50 rounded-xl h-10 font-bold"
-                            >
-                              Propose Different Time
+                      )}
+                    </div>
+
+                    {(qr.status === "pending" || qr.status === "quoted") && (
+                      <div className="p-8 pt-0 mt-auto">
+                        <div className="flex flex-col gap-3 pt-6 border-t border-gray-100/50">
+                          {!qr.quotes?.length && (
+                            <Button size="sm" onClick={() => openSendQuoteDialog(qr)} disabled={processingQuoteRequestId === qr.id} className="w-full bg-green-500 hover:bg-green-600 text-white rounded-2xl h-12 font-black shadow-lg shadow-green-500/20 transition-all hover:-translate-y-0.5">
+                              <DollarSign className="w-4 h-4 mr-2" /> Send Your Quote
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDenyQuoteRequest(qr.id)}
-                              disabled={cancellingQuoteRequest === qr.id || processingQuoteRequestId === qr.id}
-                              className="flex-1 text-red-600 border-red-100 hover:bg-red-50 rounded-xl h-10 font-bold"
-                            >
+                          )}
+                          <div className="flex gap-3">
+                            <Button variant="outline" size="sm" onClick={() => openProposeTimeForQuoteRequest(qr)} disabled={processingQuoteRequestId === qr.id} className="flex-1 text-gray-700 border-gray-100 hover:bg-gray-50 rounded-2xl h-12 font-black transition-all">
+                              <CalendarPlus className="w-4 h-4 mr-2" /> Change Time
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDenyQuoteRequest(qr.id)} disabled={cancellingQuoteRequest === qr.id || processingQuoteRequestId === qr.id} className="flex-1 text-red-500 border-red-100 hover:bg-red-50 rounded-2xl h-12 font-black transition-all">
                               {cancellingQuoteRequest === qr.id ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Denying...
-                                </>
+                                <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Denying...</>
                               ) : (
-                                <>
-                                  <XCircle className="w-4 h-4 mr-2" />
-                                  Deny Request
-                                </>
+                                <><XCircle className="w-4 h-4 mr-2" /> Decline</>
                               )}
                             </Button>
                           </div>
-                        )}
+                        </div>
                       </div>
-                    ))}
-                  </>
-                ) : (
-                  <div className="py-20 text-center bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
-                    <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm"><Info className="w-8 h-8 text-gray-200" /></div>
-                    <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">No new requests</p>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
-            </TabsContent>
+            ) : (
+              <div className="py-24 text-center bg-white rounded-[40px] border-2 border-dashed border-gray-100 shadow-sm">
+                <div className="w-24 h-24 bg-gray-50 rounded-[32px] flex items-center justify-center mx-auto mb-8 transition-transform hover:scale-110 duration-500">
+                  <Info className="w-12 h-12 text-gray-200" />
+                </div>
+                <h3 className="text-2xl font-black text-gray-900 mb-3">No pending requests yet!</h3>
+                <p className="text-lg text-gray-400 font-bold max-w-sm mx-auto">
+                  When customers request your services or ask for quotes, they&apos;ll show up right here.
+                </p>
+              </div>
+            )}
+          </TabsContent>
 
-            <TabsContent value="scheduled">
-              <div className="grid grid-cols-1 gap-6">
-                {servicesNeedingCompletion > 0 && (
-                  <div className="bg-[#ff725a]/10 border border-[#ff725a]/20 rounded-[24px] p-6 flex items-center gap-4">
-                    <div className="p-3 bg-[#ff725a] rounded-2xl text-white shadow-lg shadow-[#ff725a]/20"><AlertCircle className="w-6 h-6" /></div>
-                    <div>
-                      <div className="text-lg font-bold text-gray-900">{servicesNeedingCompletion} services finished!</div>
-                      <p className="text-sm text-gray-600 font-medium">Mark them as completed to receive your payment and reviews.</p>
-                    </div>
-                  </div>
-                )}
-                {scheduledBookings.length > 0 ? (
-                  scheduledBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)
-                ) : (
-                  <div className="py-20 text-center bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
-                    <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm"><Calendar className="w-8 h-8 text-gray-200" /></div>
-                    <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Nothing scheduled</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
 
-            <TabsContent value="completed">
-              <div className="grid grid-cols-1 gap-6 opacity-80">
-                {completedBookings.length > 0 ? (
-                  completedBookings.map((b) => <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />)
-                ) : (
-                  <div className="py-20 text-center bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
-                    <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm"><CheckCircle className="w-8 h-8 text-gray-200" /></div>
-                    <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">No history yet</p>
+          {/* Scheduled Tab */}
+          <TabsContent value="scheduled" className="mt-0 outline-none">
+            <div className="space-y-8">
+              {servicesNeedingCompletion > 0 && (
+                <div className="bg-[#ff725a]/10 border border-[#ff725a]/20 rounded-[32px] p-8 flex items-center gap-6 shadow-sm">
+                  <div className="p-4 bg-[#ff725a] rounded-2xl text-white shadow-lg shadow-[#ff725a]/20 shrink-0">
+                    <AlertCircle className="w-8 h-8" />
                   </div>
-                )}
+                  <div>
+                    <div className="text-xl font-black text-gray-900">{servicesNeedingCompletion} service{servicesNeedingCompletion !== 1 ? "s" : ""} finished!</div>
+                    <p className="text-sm text-gray-600 font-bold mt-1">Don&apos;t forget to mark them as completed to receive your payment and reviews.</p>
+                  </div>
+                </div>
+              )}
+              {scheduledBookings.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {scheduledBookings.map(b => (
+                    <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />
+                  ))}
+                </div>
+              ) : (
+                <div className="py-24 text-center bg-white rounded-[40px] border-2 border-dashed border-gray-100 shadow-sm">
+                  <div className="w-24 h-24 bg-gray-50 rounded-[32px] flex items-center justify-center mx-auto mb-8 transition-transform hover:scale-110 duration-500">
+                    <Calendar className="w-12 h-12 text-gray-200" />
+                  </div>
+                  <h3 className="text-2xl font-black text-gray-900 mb-3">Nothing scheduled yet</h3>
+                  <p className="text-lg text-gray-400 font-bold max-w-sm mx-auto">
+                    Once a customer pays for a service, it will appear here. Get ready to hustle!
+                  </p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* History Tab */}
+          <TabsContent value="completed" className="mt-0 outline-none">
+            {completedBookings.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 opacity-90">
+                {completedBookings.map(b => (
+                  <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />
+                ))}
               </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+            ) : (
+              <div className="py-24 text-center bg-white rounded-[40px] border-2 border-dashed border-gray-100 shadow-sm">
+                <div className="w-24 h-24 bg-gray-50 rounded-[32px] flex items-center justify-center mx-auto mb-8 transition-transform hover:scale-110 duration-500">
+                  <CheckCircle className="w-12 h-12 text-gray-200" />
+                </div>
+                <h3 className="text-2xl font-black text-gray-900 mb-3">No history yet</h3>
+                <p className="text-lg text-gray-400 font-bold max-w-sm mx-auto">
+                  Your completed jobs and achievements will be archived here. Time to start your first hustle!
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
-      <Dialog
-        open={!!proposeTimeState}
-        onOpenChange={(openState) => {
-          if (!openState) setProposeTimeState(null);
-        }}
-      >
-        <DialogContent className="rounded-[28px] p-7">
+
+      {/* Propose Time Dialog (Quote Requests) */}
+      <Dialog open={!!proposeTimeState} onOpenChange={(open) => { if (!open) setProposeTimeState(null); }}>
+        <DialogContent className="rounded-[32px] p-8 border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Propose a different time</DialogTitle>
-            <DialogDescription>
-              Suggest a new date and time for this quote request.
-            </DialogDescription>
+            <DialogTitle className="text-2xl font-black text-gray-900">Propose a different time</DialogTitle>
+            <DialogDescription className="text-gray-500 pt-2 leading-relaxed font-bold">Suggest a new date and time for this quote request.</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">New Date</Label>
-              <Input
-                type="date"
-                min={new Date().toISOString().split("T")[0]}
-                value={proposeTimeState?.alternativeDate ?? ""}
-                onChange={(e) =>
-                  setProposeTimeState((prev) =>
-                    prev ? { ...prev, alternativeDate: e.target.value } : prev
-                  )
-                }
-                className="rounded-xl bg-gray-50/50 border-gray-100"
-              />
+              <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">New Date</Label>
+              <Input type="date" min={new Date().toISOString().split("T")[0]} value={proposeTimeState?.alternativeDate ?? ""} onChange={(e) => setProposeTimeState(prev => prev ? { ...prev, alternativeDate: e.target.value } : prev)} className="rounded-2xl bg-gray-50/50 border-gray-100 h-12 font-bold" />
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">New Time</Label>
-              <Input
-                type="time"
-                value={proposeTimeState?.alternativeTime ?? ""}
-                onChange={(e) =>
-                  setProposeTimeState((prev) =>
-                    prev ? { ...prev, alternativeTime: e.target.value } : prev
-                  )
-                }
-                className="rounded-xl bg-gray-50/50 border-gray-100"
-              />
+              <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">New Time</Label>
+              <Input type="time" value={proposeTimeState?.alternativeTime ?? ""} onChange={(e) => setProposeTimeState(prev => prev ? { ...prev, alternativeTime: e.target.value } : prev)} className="rounded-2xl bg-gray-50/50 border-gray-100 h-12 font-bold" />
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 mt-5">
-            <Button
-              variant="outline"
-              className="sm:flex-1 rounded-xl"
-              onClick={() => setProposeTimeState(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="sm:flex-1 rounded-xl bg-[#434c9d] hover:bg-[#434c9d]/90"
-              onClick={handleSubmitQuoteRequestAlternative}
-              disabled={
-                !proposeTimeState?.alternativeDate ||
-                !proposeTimeState?.alternativeTime ||
-                processingQuoteRequestId === proposeTimeState?.quoteRequestId
-              }
-            >
+          <div className="flex flex-col sm:flex-row gap-3 mt-8">
+            <Button variant="outline" className="sm:flex-1 rounded-2xl h-12 font-black" onClick={() => setProposeTimeState(null)}>Cancel</Button>
+            <Button className="sm:flex-1 rounded-2xl bg-[#434c9d] hover:bg-[#434c9d]/90 h-12 font-black shadow-lg shadow-[#434c9d]/20" onClick={handleSubmitQuoteRequestAlternative} disabled={!proposeTimeState?.alternativeDate || !proposeTimeState?.alternativeDate || processingQuoteRequestId === proposeTimeState?.quoteRequestId}>
               {processingQuoteRequestId === proposeTimeState?.quoteRequestId ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                "Propose New Time"
-              )}
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+              ) : "Propose New Time"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={!!sendQuoteState}
-        onOpenChange={(openState) => {
-          if (!openState) setSendQuoteState(null);
-        }}
-      >
-        <DialogContent className="rounded-[28px] p-7 sm:max-w-md">
+      {/* Send Quote Dialog */}
+      <Dialog open={!!sendQuoteState} onOpenChange={(open) => { if (!open) setSendQuoteState(null); }}>
+        <DialogContent className="rounded-[32px] p-8 border-none shadow-2xl sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Send your quote</DialogTitle>
-            <DialogDescription>
-              Enter how much you will charge. The customer will get an email and can accept to book and pay.
-            </DialogDescription>
+            <DialogTitle className="text-2xl font-black text-gray-900">Send your quote</DialogTitle>
+            <DialogDescription className="text-gray-500 pt-2 leading-relaxed font-bold">Enter how much you will charge. The customer will get an email and can accept to book and pay.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
+          <div className="space-y-5 pt-4">
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Your price (USD)</Label>
+              <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Your price (USD)</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  type="number"
-                  min={0.01}
-                  step={0.01}
-                  placeholder="0.00"
-                  value={sendQuoteState?.price ?? ""}
-                  onChange={(e) =>
-                    setSendQuoteState((prev) =>
-                      prev ? { ...prev, price: e.target.value } : prev
-                    )
-                  }
-                  className="rounded-xl bg-gray-50/50 border-gray-100 pl-9 font-semibold"
-                />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 bg-[#434c9d]/10 rounded-lg flex items-center justify-center text-[#434c9d]">
+                  <DollarSign className="w-4 h-4" />
+                </div>
+                <Input type="number" min={0.01} step={0.01} placeholder="0.00" value={sendQuoteState?.price ?? ""} onChange={(e) => setSendQuoteState(prev => prev ? { ...prev, price: e.target.value } : prev)} className="rounded-2xl bg-gray-50/50 border-gray-100 h-14 pl-12 font-black text-lg focus:bg-white transition-colors" />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                Estimated duration (hours, optional)
-              </Label>
-              <Input
-                type="number"
-                min={0.25}
-                step={0.25}
-                placeholder="e.g. 1.5"
-                value={sendQuoteState?.estimatedDurationHours ?? ""}
-                onChange={(e) =>
-                  setSendQuoteState((prev) =>
-                    prev ? { ...prev, estimatedDurationHours: e.target.value } : prev
-                  )
-                }
-                className="rounded-xl bg-gray-50/50 border-gray-100"
-              />
+              <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Estimated duration (hours, optional)</Label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 bg-orange-50 rounded-lg flex items-center justify-center text-orange-600">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <Input type="number" min={0.25} step={0.25} placeholder="e.g. 1.5" value={sendQuoteState?.estimatedDurationHours ?? ""} onChange={(e) => setSendQuoteState(prev => prev ? { ...prev, estimatedDurationHours: e.target.value } : prev)} className="rounded-2xl bg-gray-50/50 border-gray-100 h-14 pl-12 font-black focus:bg-white transition-colors" />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                Notes (optional)
-              </Label>
-              <Textarea
-                placeholder="Anything the customer should know about what’s included"
-                value={sendQuoteState?.notes ?? ""}
-                onChange={(e) =>
-                  setSendQuoteState((prev) =>
-                    prev ? { ...prev, notes: e.target.value } : prev
-                  )
-                }
-                className="rounded-xl bg-gray-50/50 border-gray-100 min-h-[88px] resize-none"
-              />
+              <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notes (optional)</Label>
+              <Textarea placeholder="Anything the customer should know about what's included" value={sendQuoteState?.notes ?? ""} onChange={(e) => setSendQuoteState(prev => prev ? { ...prev, notes: e.target.value } : prev)} className="rounded-2xl bg-gray-50/50 border-gray-100 min-h-[120px] p-4 font-bold resize-none focus:bg-white transition-colors" />
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 mt-2">
-            <Button
-              variant="outline"
-              className="sm:flex-1 rounded-xl"
-              onClick={() => setSendQuoteState(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="sm:flex-1 rounded-xl bg-green-600 hover:bg-green-700"
-              onClick={handleSubmitSendQuote}
-              disabled={processingQuoteRequestId === sendQuoteState?.quoteRequestId}
-            >
+          <div className="flex flex-col sm:flex-row gap-3 mt-8">
+            <Button variant="outline" className="sm:flex-1 rounded-2xl h-12 font-black" onClick={() => setSendQuoteState(null)}>Cancel</Button>
+            <Button className="sm:flex-1 rounded-2xl bg-green-500 hover:bg-green-600 h-12 font-black text-white shadow-lg shadow-green-500/20" onClick={handleSubmitSendQuote} disabled={processingQuoteRequestId === sendQuoteState?.quoteRequestId}>
               {processingQuoteRequestId === sendQuoteState?.quoteRequestId ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                "Submit quote"
-              )}
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+              ) : "Submit quote"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
     </DashboardLayout>
   );
 }

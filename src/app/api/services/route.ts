@@ -485,6 +485,25 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Only allow deletion after at least one completed booking exists
+    const { data: completedBookings, error: bookingsError } = await (supabase as any)
+      .from("bookings")
+      .select("id")
+      .eq("service_id", id)
+      .eq("status", "completed")
+      .limit(1);
+
+    if (bookingsError) {
+      console.error("Error checking bookings:", bookingsError);
+      return NextResponse.json({ error: "Failed to verify service bookings" }, { status: 500 });
+    }
+
+    if (!completedBookings || completedBookings.length === 0) {
+      return NextResponse.json({
+        error: "This service can only be deleted after at least one booking has been completed.",
+      }, { status: 403 });
+    }
+
     // Delete the service
     const { error } = await (supabase as any)
       .from("services")

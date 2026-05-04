@@ -188,7 +188,7 @@ export default function AuthenticatedNavbar({ user }: AuthenticatedNavbarProps) 
           : 0;
 
   return (
-    <header className="sticky top-0 z-50 px-4 pt-3.5">
+    <header className="sticky top-0 z-50 px-4 pt-1">
       <div
         className={cn(
           "mx-auto w-full max-w-7xl flex flex-col transition-all duration-300",

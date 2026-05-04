@@ -478,11 +478,12 @@ export default function MyServicesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: serviceId }),
       });
-      if (!res.ok) throw new Error("Failed to delete service");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to delete service");
       setServices((prev) => prev.filter(s => s.id !== serviceId));
       toast({ title: "Service deleted" });
     } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: "Cannot delete service", description: e.message, variant: "destructive" });
     }
   }
 

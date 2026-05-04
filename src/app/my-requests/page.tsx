@@ -711,23 +711,23 @@ export default function MyRequestsPage() {
             <div className="flex flex-col sm:flex-row justify-between items-center gap-6 mb-10 pb-6 border-b border-gray-100">
               <TabsList className="bg-gray-100/50 p-1.5 rounded-2xl h-auto flex flex-wrap justify-center">
                 {[
-                  { value: "pending", label: "Pending", count: pendingBookings.length + pendingQuoteRequests.length, color: "text-yellow-600" },
-                  { value: "expired", label: "Expired", count: expiredBookings.length, color: "text-gray-500" },
-                  { value: "scheduled", label: "Scheduled", count: scheduledBookings.length, color: "text-[#434c9d]" },
-                  { value: "completed", label: "History", count: completedBookings.length, color: "text-[#96cbc3]" },
-                  { value: "cancelled", label: "Cancelled", count: cancelledBookings.length, color: "text-red-500" },
+                  { value: "pending", label: "Pending", count: pendingBookings.length + pendingQuoteRequests.length, color: "text-yellow-600", needsAttention: pendingTabNeedsAttention },
+                  { value: "expired", label: "Expired", count: expiredBookings.length, color: "text-gray-500", needsAttention: false },
+                  { value: "scheduled", label: "Scheduled", count: scheduledBookings.length, color: "text-[#434c9d]", needsAttention: scheduledBookings.length > 0 },
+                  { value: "completed", label: "History", count: completedBookings.length, color: "text-[#96cbc3]", needsAttention: false },
+                  { value: "cancelled", label: "Cancelled", count: cancelledBookings.length, color: "text-red-500", needsAttention: false },
                 ].map((tab) => (
                   <TabsTrigger
                     key={tab.value}
                     value={tab.value}
                     className={cn(
                       "rounded-xl px-6 py-3 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all relative",
-                      tab.value === "pending" && pendingTabNeedsAttention && "pr-8"
+                      tab.needsAttention && "pr-8"
                     )}
                   >
                     {tab.label}
                     <span className={cn("ml-2 px-2 py-0.5 rounded-lg bg-current/10 opacity-50", tab.color)}>{tab.count}</span>
-                    {tab.value === "pending" && pendingTabNeedsAttention && (
+                    {tab.needsAttention && (
                       <span className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                     )}
                   </TabsTrigger>
