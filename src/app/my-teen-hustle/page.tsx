@@ -245,14 +245,16 @@ function BookingCard({ booking, onStatusUpdate }: {
       "group relative overflow-hidden transition-all duration-500 rounded-[32px] border border-gray-100 bg-white hover:shadow-2xl hover:shadow-[#434c9d]/10 flex flex-col h-full",
       booking.status === "paid" && "bg-gradient-to-br from-white to-emerald-50/30",
       booking.status === "pending" && "bg-gradient-to-br from-white to-amber-50/30",
-      booking.status === "alternative_proposed" && "bg-gradient-to-br from-white to-orange-50/30"
+      booking.status === "alternative_proposed" && "bg-gradient-to-br from-white to-orange-50/30",
+      (booking.status === "cancelled" || booking.status === "rejected") && "bg-gradient-to-br from-white to-red-50/20"
     )}>
       {/* Decorative accent */}
       <div className={cn(
         "absolute top-0 left-0 w-2 h-full opacity-60",
         booking.status === "paid" ? "bg-emerald-400" :
         booking.status === "pending" ? "bg-amber-400" :
-        booking.status === "completed" ? "bg-gray-400" : "bg-[#434c9d]"
+        booking.status === "completed" ? "bg-gray-400" :
+        booking.status === "cancelled" || booking.status === "rejected" ? "bg-red-400" : "bg-[#434c9d]"
       )} />
 
       <div className="p-8 pb-6 flex-1">
@@ -402,7 +404,7 @@ function BookingCard({ booking, onStatusUpdate }: {
             </div>
           )}
 
-          {(isAwaitingPaymentStatus(booking.status) || booking.status === "paid" || booking.status === "completed" || booking.status === "rejected") && (
+          {(isAwaitingPaymentStatus(booking.status) || booking.status === "paid" || booking.status === "completed" || booking.status === "rejected" || booking.status === "cancelled") && (
             <Button variant="outline" size="sm" onClick={() => router.push(`/booking/${booking.id}`)} className="w-full border-gray-100 text-[#434c9d] hover:bg-[#434c9d] hover:text-white transition-all rounded-2xl h-12 font-black flex items-center justify-center gap-2">
               <Eye className="w-4 h-4" /> View Details
             </Button>
@@ -643,7 +645,7 @@ export default function TeenHustlePage() {
       const updateBooking = (booking: Booking) => booking.id === bookingId ? { ...booking, status } : booking;
       setPendingBookings(prev => {
         const updated = prev.map(updateBooking);
-        if (!["pending", "awaiting_payment", "confirmed", "alternative_proposed"].includes(status)) {
+        if (!(status === "pending" || status === "alternative_proposed" || isAwaitingPaymentStatus(status))) {
           return updated.filter(b => b.id !== bookingId);
         }
         return updated;
@@ -789,10 +791,20 @@ export default function TeenHustlePage() {
     );
   }
 
+  const historyBookings = useMemo(() => {
+    const merged = [...completedBookings, ...cancelledBookings];
+    merged.sort((a, b) => {
+      const tb = new Date(b.updated_at || b.created_at).getTime();
+      const ta = new Date(a.updated_at || a.created_at).getTime();
+      return tb - ta;
+    });
+    return merged;
+  }, [completedBookings, cancelledBookings]);
+
   const tabs = [
     { value: "pending", label: "Pending", count: pendingBookings.length + quoteRequests.length, needsAttention: pendingBookings.some(b => b.status === "pending") || quoteRequests.length > 0 },
-    { value: "scheduled", label: "Scheduled", count: scheduledBookings.length, needsAttention: scheduledBookings.length > 0 },
-    { value: "completed", label: "History", count: completedBookings.length, needsAttention: false },
+    { value: "scheduled", label: "Booked and Paid", count: scheduledBookings.length, needsAttention: scheduledBookings.length > 0 },
+    { value: "completed", label: "History", count: historyBookings.length, needsAttention: false },
   ];
 
   return (
@@ -830,7 +842,7 @@ export default function TeenHustlePage() {
               { label: "Total Earned", value: `$${earningsStats.totalEarned.toFixed(2)}`, icon: DollarSign, color: "text-[#434c9d]", bg: "bg-[#434c9d]/10" },
               { label: "This Week", value: `$${earningsStats.thisWeekEarned.toFixed(2)}`, icon: TrendingUp, color: "text-[#96cbc3]", bg: "bg-[#96cbc3]/10" },
               { label: "Jobs Completed", value: completedBookings.length, icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-50" },
-              { label: "Upcoming Jobs", value: scheduledBookings.length, icon: Calendar, color: "text-blue-500", bg: "bg-blue-50" },
+              { label: "Booked & Paid", value: scheduledBookings.length, icon: Calendar, color: "text-blue-500", bg: "bg-blue-50" },
             ].map((stat, i) => (
               <React.Fragment key={i}>
                 <div className="flex items-center gap-5 group">
@@ -998,7 +1010,7 @@ export default function TeenHustlePage() {
                             <Info className="w-5 h-5" />
                           </div>
                           <p className="text-xs font-bold text-blue-900 leading-relaxed pt-1">
-                            Review the details and send your quote. After you send it and they pay, it&apos;ll move to your Scheduled tab.
+                            Review the details and send your quote. After you send it and they pay, it&apos;ll move to your Booked and Paid tab.
                           </p>
                         </div>
                       )}
@@ -1044,7 +1056,7 @@ export default function TeenHustlePage() {
           </TabsContent>
 
 
-          {/* Scheduled Tab */}
+          {/* Booked and Paid tab */}
           <TabsContent value="scheduled" className="mt-0 outline-none">
             <div className="space-y-8">
               {servicesNeedingCompletion > 0 && (
@@ -1069,7 +1081,7 @@ export default function TeenHustlePage() {
                   <div className="w-24 h-24 bg-gray-50 rounded-[32px] flex items-center justify-center mx-auto mb-8 transition-transform hover:scale-110 duration-500">
                     <Calendar className="w-12 h-12 text-gray-200" />
                   </div>
-                  <h3 className="text-2xl font-black text-gray-900 mb-3">Nothing scheduled yet</h3>
+                  <h3 className="text-2xl font-black text-gray-900 mb-3">Nothing booked and paid yet</h3>
                   <p className="text-lg text-gray-400 font-bold max-w-sm mx-auto">
                     Once a customer pays for a service, it will appear here. Get ready to hustle!
                   </p>
@@ -1078,11 +1090,11 @@ export default function TeenHustlePage() {
             </div>
           </TabsContent>
 
-          {/* History Tab */}
+          {/* History Tab (completed + cancelled + rejected) */}
           <TabsContent value="completed" className="mt-0 outline-none">
-            {completedBookings.length > 0 ? (
+            {historyBookings.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 opacity-90">
-                {completedBookings.map(b => (
+                {historyBookings.map(b => (
                   <BookingCard key={b.id} booking={b} onStatusUpdate={handleBookingStatusUpdate} />
                 ))}
               </div>
@@ -1093,7 +1105,7 @@ export default function TeenHustlePage() {
                 </div>
                 <h3 className="text-2xl font-black text-gray-900 mb-3">No history yet</h3>
                 <p className="text-lg text-gray-400 font-bold max-w-sm mx-auto">
-                  Your completed jobs and achievements will be archived here. Time to start your first hustle!
+                  Completed jobs and cancelled bookings will appear here.
                 </p>
               </div>
             )}

@@ -559,11 +559,11 @@ export default function MyRequestsPage() {
     (b) => pendingStatuses(b) && isBookingExpired(b)
   );
   const pendingBookings = bookings.filter(
-    (b) => pendingStatuses(b) && !isBookingExpired(b)
+    (b) =>
+      isAwaitingPaymentStatus(b.status) ||
+      (pendingStatuses(b) && !isBookingExpired(b))
   );
-  const scheduledBookings = bookings.filter(
-    (b) => b.status === "paid" || b.status === "awaiting_payment" || b.status === "confirmed"
-  );
+  const scheduledBookings = bookings.filter((b) => b.status === "paid");
   const completedBookings = bookings.filter((b) => b.status === "completed");
   const cancelledBookings = bookings.filter(
     (b) => b.status === "cancelled" || b.status === "rejected"
@@ -580,11 +580,12 @@ export default function MyRequestsPage() {
     qr.status === "cancelled" || qr.status === "rejected"
   );
 
-  /** Payment due or provider offered a new time — show Pending tab attention bubble */
+  /** Payment due, provider offered a new time — show Pending tab attention bubble */
   const pendingTabNeedsAttention = pendingBookings.some(
     (b) =>
-      b.status === "alternative_proposed" &&
-      Boolean(b.alternative_date && b.alternative_time)
+      isAwaitingPaymentStatus(b.status) ||
+      (b.status === "alternative_proposed" &&
+        Boolean(b.alternative_date && b.alternative_time))
   );
 
   // Calculate stats
@@ -650,7 +651,7 @@ export default function MyRequestsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-16">
             {[
               { label: "Pending", value: pendingBookings.length + pendingQuoteRequests.length, icon: AlertCircle, color: "text-yellow-500", bg: "bg-yellow-50", description: "Awaiting action" },
-              { label: "Scheduled", value: scheduledBookings.length, icon: Calendar, color: "text-[#434c9d]", bg: "bg-[#434c9d]/10", description: "Upcoming services" },
+              { label: "Booked and Paid", value: scheduledBookings.length, icon: Calendar, color: "text-[#434c9d]", bg: "bg-[#434c9d]/10", description: "Paid & upcoming" },
               { label: "Completed", value: completedBookings.length, icon: CheckCircle, color: "text-[#96cbc3]", bg: "bg-[#96cbc3]/10", description: "Services delivered" },
             ].map((stat, i) => (
               <div key={i} className="bg-white p-8 rounded-[32px] border border-gray-100 flex items-center gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
@@ -713,7 +714,7 @@ export default function MyRequestsPage() {
                 {[
                   { value: "pending", label: "Pending", count: pendingBookings.length + pendingQuoteRequests.length, color: "text-yellow-600", needsAttention: pendingTabNeedsAttention },
                   { value: "expired", label: "Expired", count: expiredBookings.length, color: "text-gray-500", needsAttention: false },
-                  { value: "scheduled", label: "Scheduled", count: scheduledBookings.length, color: "text-[#434c9d]", needsAttention: scheduledBookings.length > 0 },
+                  { value: "scheduled", label: "Booked and Paid", count: scheduledBookings.length, color: "text-[#434c9d]", needsAttention: scheduledBookings.length > 0 },
                   { value: "completed", label: "History", count: completedBookings.length, color: "text-[#96cbc3]", needsAttention: false },
                   { value: "cancelled", label: "Cancelled", count: cancelledBookings.length, color: "text-red-500", needsAttention: false },
                 ].map((tab) => (
@@ -738,7 +739,7 @@ export default function MyRequestsPage() {
               <p className="text-sm font-semibold text-gray-700">
                 {activeTab === "pending" && "Pending: Awaiting a response from the teen."}
                 {activeTab === "expired" && "Expired: Booking or quote request expired due to no response or missed confirmation."}
-                {activeTab === "scheduled" && "Scheduled: Includes awaiting payment and paid bookings."}
+                {activeTab === "scheduled" && "Booked and paid: Services the customer has paid for and is ready to attend."}
                 {activeTab === "completed" && "History: Past bookings including completed services, reviews, and payments."}
                 {activeTab === "cancelled" && "Cancelled: Bookings or quote requests that were canceled."}
               </p>
@@ -748,7 +749,7 @@ export default function MyRequestsPage() {
             {[
               { value: "pending", bookings: pendingBookings, quoteRequests: pendingQuoteRequests, icon: <AlertCircle className="w-12 h-12" />, title: "No pending requests", description: "All your requests have been processed." },
               { value: "expired", bookings: expiredBookings, quoteRequests: expiredQuoteRequests, icon: <Clock className="w-12 h-12" />, title: "No expired requests", description: "Requests that passed their scheduled date will appear here." },
-              { value: "scheduled", bookings: scheduledBookings, quoteRequests: [], icon: <Calendar className="w-12 h-12" />, title: "No scheduled services", description: "Accepted bookings awaiting payment and paid services will appear here." },
+              { value: "scheduled", bookings: scheduledBookings, quoteRequests: [], icon: <Calendar className="w-12 h-12" />, title: "Nothing booked and paid yet", description: "After you pay for an accepted booking, it will appear here." },
               { value: "completed", bookings: completedBookings, quoteRequests: [], icon: <CheckCircle className="w-12 h-12" />, title: "No history yet", description: "Your completed services will appear here." },
               { value: "cancelled", bookings: cancelledBookings, quoteRequests: cancelledQuoteRequests, icon: <XCircle className="w-12 h-12" />, title: "No cancelled requests", description: "Cancelled requests will appear here." }
             ].map(({ value, bookings: tabBookings, quoteRequests: tabQuoteRequests, icon, title, description }) => (
