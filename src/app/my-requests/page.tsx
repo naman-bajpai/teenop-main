@@ -651,7 +651,7 @@ export default function MyRequestsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-16">
             {[
               { label: "Pending", value: pendingBookings.length + pendingQuoteRequests.length, icon: AlertCircle, color: "text-yellow-500", bg: "bg-yellow-50", description: "Awaiting action" },
-              { label: "Booked and Paid", value: scheduledBookings.length, icon: Calendar, color: "text-[#434c9d]", bg: "bg-[#434c9d]/10", description: "Paid & upcoming" },
+              { label: "Booking Paid and Confirmed", value: scheduledBookings.length, icon: Calendar, color: "text-[#434c9d]", bg: "bg-[#434c9d]/10", description: "Paid & upcoming" },
               { label: "Completed", value: completedBookings.length, icon: CheckCircle, color: "text-[#96cbc3]", bg: "bg-[#96cbc3]/10", description: "Services delivered" },
             ].map((stat, i) => (
               <div key={i} className="bg-white p-8 rounded-[32px] border border-gray-100 flex items-center gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
