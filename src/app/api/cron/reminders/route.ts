@@ -374,6 +374,11 @@ export async function GET(request: NextRequest) {
             email,
             phone
           )
+        ),
+        profiles:profiles!bookings_user_id_fkey (
+          first_name,
+          last_name,
+          email
         )
       `)
       .eq("status", "paid")
@@ -419,6 +424,23 @@ export async function GET(request: NextRequest) {
             } catch (emailError) {
               console.error(`Error sending completion reminder email for booking ${bookingData.id}:`, emailError);
               results.errors.push(`Completion reminder failed for booking ${bookingData.id}: ${emailError}`);
+            }
+          }
+
+          const buyer = (bookingData as any).profiles;
+          if (buyer?.email) {
+            try {
+              const { emailService } = await import("@/lib/email");
+              await emailService.sendBuyerMarkServiceCompleteReminder({
+                buyerName: `${buyer.first_name || ''} ${buyer.last_name || ''}`.trim() || 'there',
+                buyerEmail: buyer.email,
+                serviceName: service?.title || 'Service',
+                bookingId: bookingData.id,
+              });
+              console.log(`Sent mark-complete reminder to buyer for booking ${bookingData.id}`);
+            } catch (emailError) {
+              console.error(`Error sending buyer completion reminder for booking ${bookingData.id}:`, emailError);
+              results.errors.push(`Buyer completion reminder failed for booking ${bookingData.id}: ${emailError}`);
             }
           }
         } catch (error) {

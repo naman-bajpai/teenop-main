@@ -295,19 +295,24 @@ export class EmailService {
     teenFirstName: string;
     teenLastName: string;
   }) {
-    const subject = 'TeenOp notification: your teen created an account';
-    const teenName = `${data.teenFirstName} ${data.teenLastName}`.trim();
-    const greetingName = data.parentName?.trim() || 'Parent/Guardian';
+    const subject = 'Your Teen Joined TeenOp';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
+    const greetingName = data.parentName?.trim() || 'there';
     const html = buildEmail(
-      'Teen account notification',
-      'Your teen created a TeenOp account',
+      'Your Teen Joined TeenOp',
+      'Your Teen Joined TeenOp',
       '',
       `
-      <p>Hi ${greetingName},</p>
-      <p>This is a notification that <strong>${teenName}</strong> created a TeenOp account and listed you as their parent or guardian contact.</p>
-      <p>They may begin offering services through TeenOp.</p>
-      <p>No action is required from you for this notification.</p>
-      <p>Thanks,<br>The TeenOp Team</p>
+      <p>Hi ${greetingName}!</p>
+      <p>TeenOp is an online marketplace where teens can list services based on their skills and talents. It is currently offered to the St. Stephen's community as a part of its beta testing period, and requires an access code to join, keeping it a trusted and closed circle.</p>
+      <p>Your teen recently created an account on TeenOp. Our goal is to give students a simple way to gain real experience, connect with families across the lower & upper school, and start building confidence and resumes through work they enjoy.</p>
+      <p>TeenOp was created by a St. Stephen's student who had the idea in high school and is now studying Entrepreneurship as a sophomore at Florida State.</p>
+      <p>This is the first version of TeenOp and we would love to hear your feedback! You can visit our site below. Sign up with the access code: <strong>teenopfalcons</strong></p>
+      <div class="btn-center">
+        <a href="${appUrl}" class="btn">View TeenOp</a>
+      </div>
+      <p>Please feel free to reach out with any questions!</p>
+      <p>Best,<br>The TeenOp Team</p>
       `
     );
     return this.sendEmail(data.parentEmail, subject, html);
@@ -550,25 +555,118 @@ export class EmailService {
     teenFirstName: string;
     providerEmail: string;
   }) {
-    const subject = 'Receive Earnings from Your Service';
+    const subject = 'Nice work! Get paid for your service';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
     const name = data.teenFirstName.trim() || 'there';
     const html = buildEmail(
       subject,
-      'Receive Earnings from Your Service',
+      'Nice work! Get paid for your service',
       'Great job completing your service!',
       `
       <p>Hi ${name},</p>
-      <p>Great job — your service has been marked as completed!</p>
-      <p class="section-title">Next steps:</p>
+      <p>Great job completing your service!</p>
+      <p class="section-title">To receive your earnings, follow these quick steps:</p>
       <ol style="padding-left: 20px; margin: 0 0 16px;">
-        <li style="font-size: 14px; margin-bottom: 8px; color: #555;">Your earnings will appear in your Earnings page within 1–3 days</li>
-        <li style="font-size: 14px; margin-bottom: 8px; color: #555;">Select Withdraw Cash to transfer the funds to your bank</li>
+        <li style="font-size: 14px; margin-bottom: 8px; color: #555;">First, mark the service as complete — this starts your earnings transfer to your TeenOp Cash account</li>
+        <li style="font-size: 14px; margin-bottom: 8px; color: #555;">Go to your Earnings page</li>
+        <li style="font-size: 14px; margin-bottom: 8px; color: #555;">Click <strong>Withdraw Cash</strong> to send money to your bank account</li>
       </ol>
       <div class="btn-center">
-        <a href="${appUrl}/my-teen-hustle" class="btn">Go to Bookings</a>
+        <a href="${appUrl}/my-teen-hustle" class="btn">Mark Service Complete</a>
       </div>
+      <p>Keep up the great work — we're excited to see you grow on TeenOp!</p>
       <p>If you have any questions, feel free to contact TeenOp support at <a href="mailto:teenop.co@gmail.com">teenop.co@gmail.com</a>.</p>
+      <p>Best,<br>The TeenOp Team</p>
+      `
+    );
+    return this.sendEmail(data.providerEmail, subject, html);
+  }
+
+  // -------------------------------------------------------------------------
+  // Buyer — service marked complete notification (rate, tip, review)
+  // -------------------------------------------------------------------------
+  async sendBuyerServiceCompletedEmail(data: {
+    buyerName: string;
+    buyerEmail: string;
+  }) {
+    const subject = 'Your service has been marked as completed';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
+    const name = data.buyerName.trim() || 'there';
+    const html = buildEmail(
+      subject,
+      'Your Service is Complete!',
+      '',
+      `
+      <p>Hi ${name},</p>
+      <p>Your service has been marked as completed. We hope everything went great!</p>
+      <p>You can now rate your experience, leave a review, and add a tip for your teen if you'd like. Your feedback helps young entrepreneurs improve as they build their service businesses.</p>
+      <div class="btn-center">
+        <a href="${appUrl}/my-requests" class="btn">Leave a Review &amp; Tip</a>
+      </div>
+      <p>Thank you for helping us generate a new wave of entrepreneurship. Your support means the world to us.</p>
+      <p>If you have any questions, feel free to reach out to TeenOp support at <a href="mailto:teenop.co@gmail.com">teenop.co@gmail.com</a>.</p>
+      <p>Best,<br>The TeenOp Team</p>
+      `
+    );
+    return this.sendEmail(data.buyerEmail, subject, html);
+  }
+
+  // -------------------------------------------------------------------------
+  // Buyer — reminder to mark service complete (sent by cron after service time)
+  // -------------------------------------------------------------------------
+  async sendBuyerMarkServiceCompleteReminder(data: {
+    buyerName: string;
+    buyerEmail: string;
+    serviceName: string;
+    bookingId: string;
+  }) {
+    const subject = 'Mark Service Complete + Rate, Tip, and Review Recent Teen Service!';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
+    const name = data.buyerName.trim() || 'there';
+    const html = buildEmail(
+      subject,
+      'Mark Service Complete + Rate, Tip, and Review!',
+      '',
+      `
+      <p>Hi ${name},</p>
+      <p>We hope everything went well with your recent service!</p>
+      <p>To complete the process and send payment to your provider, please mark the service as complete:</p>
+      <div class="btn-center">
+        <a href="${appUrl}/my-requests" class="btn">Mark Service Complete</a>
+      </div>
+      <p class="section-title">Once you do this:</p>
+      <ul>
+        <li>Payment will be released to your provider</li>
+        <li>You'll be able to rate, tip, and leave a review</li>
+      </ul>
+      <p>Your feedback helps our teen entrepreneurs grow and improve. Thank you for using TeenOp!</p>
+      <p>Best,<br>The TeenOp Team</p>
+      `
+    );
+    return this.sendEmail(data.buyerEmail, subject, html);
+  }
+
+  // -------------------------------------------------------------------------
+  // Teen — new feedback received notification
+  // -------------------------------------------------------------------------
+  async sendTeenFeedbackReceivedEmail(data: {
+    teenFirstName: string;
+    providerEmail: string;
+  }) {
+    const subject = 'You received new feedback!';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://teenop.com';
+    const name = data.teenFirstName.trim() || 'there';
+    const html = buildEmail(
+      subject,
+      'You Received New Feedback!',
+      '',
+      `
+      <p>Hi ${name},</p>
+      <p>You've received new feedback from your recent service, including a rating, review, or tip.</p>
+      <p>Check it out to see how you did!</p>
+      <div class="btn-center">
+        <a href="${appUrl}/my-teen-hustle" class="btn">View Details</a>
+      </div>
       <p>Best,<br>The TeenOp Team</p>
       `
     );

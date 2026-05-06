@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { emailService } from '@/lib/email';
 
 // POST - Create a review
 export async function POST(request: NextRequest) {
@@ -138,6 +139,25 @@ export async function POST(request: NextRequest) {
       // Check if there's a payment intent for this tip
       // This is handled separately via the tip payment flow before review submission
       console.log(`Tip of $${tip_amount} recorded for review ${review.id}`);
+    }
+
+    // Notify the teen provider that they received new feedback
+    try {
+      const serviceRole = createServiceRoleClient();
+      const { data: providerProfile } = await serviceRole
+        .from("profiles")
+        .select("first_name, email")
+        .eq("id", revieweeId)
+        .single();
+
+      if ((providerProfile as any)?.email) {
+        await emailService.sendTeenFeedbackReceivedEmail({
+          teenFirstName: String((providerProfile as any).first_name || "").trim() || "there",
+          providerEmail: (providerProfile as any).email,
+        });
+      }
+    } catch (notificationError) {
+      console.error("Error sending feedback notification:", notificationError);
     }
 
     return NextResponse.json({

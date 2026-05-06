@@ -625,20 +625,16 @@ export async function PATCH(
       const statusLabel = statusLabelMap[status] || status;
 
       if (customerEmail) {
+        if (status === "completed") {
+          await emailService.sendBuyerServiceCompletedEmail({
+            buyerName: customerName,
+            buyerEmail: customerEmail,
+          });
+        } else {
         let customerSubject: string;
         let customerBody: string;
 
-        if (status === "completed") {
-          customerSubject = `Service Completed: Please Review & Tip - ${serviceTitle}`;
-          customerBody = `
-              <p>Hi ${customerName},</p>
-              <p>Your booking for <strong>${serviceTitle}</strong> is now <strong>completed</strong>.</p>
-              <p>If everything went well, please take a moment to leave a review and tip your teen provider.</p>
-              <p>Your feedback helps trusted teens grow on TeenOp and supports your local community.</p>
-              <p><a href="${appUrl}/my-requests" style="background:#434c9d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Leave Review & Tip</a></p>
-              <p>Thank you for using TeenOp,<br>The TeenOp Team</p>
-            `;
-        } else if (status === "awaiting_payment") {
+        if (status === "awaiting_payment") {
           if (teenAcceptedPending) {
             customerSubject = `Teen accepted your request — payment needed: ${serviceTitle}`;
             customerBody = `
@@ -678,6 +674,7 @@ export async function PATCH(
         }
 
         await emailService.sendEmail(customerEmail, customerSubject, customerBody);
+        }
       }
 
       if (providerEmail) {
