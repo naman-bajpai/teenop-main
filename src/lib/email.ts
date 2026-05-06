@@ -249,7 +249,7 @@ export class EmailService {
       <p>Your teen provider is unable to move forward with your request at this time.</p>
       <p>If you'd like, you can submit a new request with a different time or explore other teens available on TeenOp.</p>
       <div class="btn-center">
-        <a href="${appUrl}/my-requests" class="btn">View Listing</a>
+        <a href="${appUrl}/my-requests" class="btn">View My Requests</a>
       </div>
       <div class="btn-center">
         <a href="${appUrl}/neighborhood" class="btn">View Neighborhood</a>
@@ -373,7 +373,7 @@ export class EmailService {
       <p>You can message your teen provider anytime through TeenOp to confirm final details.</p>
 
       <div class="btn-center">
-        <a href="${appUrl}/my-bookings" class="btn">View Booking</a>
+        <a href="${appUrl}/my-requests" class="btn">View My Requests</a>
       </div>
 
       <div class="btn-center">
@@ -412,7 +412,7 @@ export class EmailService {
       <p>If you need to reach your teen provider, you can message them through the platform.</p>
 
       <div class="btn-center">
-        <a href="${appUrl}/my-bookings" class="btn">View Booking</a>
+        <a href="${appUrl}/my-requests" class="btn">View My Requests</a>
       </div>
 
       <div class="btn-center">
