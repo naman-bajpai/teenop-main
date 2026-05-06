@@ -136,6 +136,10 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (!profile) return;
+    if (!draft.phone.trim()) {
+      setError("Phone number is required.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -143,7 +147,7 @@ export default function ProfilePage() {
         first_name: draft.first_name.trim(),
         last_name: draft.last_name.trim(),
         email: draft.email.trim(),
-        phone: draft.phone.trim() || null,
+        phone: draft.phone.trim(),
         city: draft.city.trim() || null,
         state: draft.state.trim() || null,
         bio: draft.bio.trim() || null,
@@ -384,9 +388,27 @@ export default function ProfilePage() {
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Last Name</label>
                   {isEditing ? <Input value={draft.last_name} onChange={(e) => setDraft({ ...draft, last_name: e.target.value })} className="rounded-xl bg-gray-50/50 border-gray-100 focus:bg-white" /> : <p className="p-3 bg-gray-50/30 rounded-xl text-gray-900 font-medium">{profile.last_name || "-"}</p>}
                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  {isEditing ? (
+                    <Input
+                      value={draft.phone}
+                      onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
+                      placeholder="e.g. (555) 123-4567"
+                      type="tel"
+                      className="rounded-xl bg-gray-50/50 border-gray-100 focus:bg-white"
+                    />
+                  ) : (
+                    <p className="p-3 bg-gray-50/30 rounded-xl text-gray-900 font-medium">
+                      {profile.phone || <span className="text-red-400 text-sm font-semibold">Required — please add a phone number</span>}
+                    </p>
+                  )}
+                </div>
                 <div className="md:col-span-2 p-3 rounded-xl bg-amber-50 border border-amber-100">
                   <p className="text-xs font-semibold text-amber-700">
-                    Contact details are hidden on profiles for safety. TeenOp uses your account email privately for login and notifications.
+                    Contact details are hidden on public profiles for safety. Your phone number is only visible to TeenOp admins.
                   </p>
                 </div>
                 <div className="space-y-1.5">

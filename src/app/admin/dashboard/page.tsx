@@ -1269,10 +1269,15 @@ export default function AdminDashboard() {
                           <Mail className="h-3.5 w-3.5 text-gray-400" />
                           <span className="text-gray-700">{user.email}</span>
                         </div>
-                        {showSensitiveData && user.phone && (
+                        {user.phone ? (
                           <div className="flex items-center space-x-1.5 mt-1.5">
                             <Phone className="h-3.5 w-3.5 text-gray-400" />
                             <span className="text-sm text-gray-600">{user.phone}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1.5 mt-1.5">
+                            <Phone className="h-3.5 w-3.5 text-gray-300" />
+                            <span className="text-sm text-gray-300 italic">No phone</span>
                           </div>
                         )}
                         {showSensitiveData && user.parent_email && (

@@ -530,8 +530,8 @@ export class EmailService {
       `
       <p>Hi ${data.providerName},</p>
       <p>We hope your service went well!</p>
-      <p>Once your service is finished, feel free to mark it as complete on your Bookings page to keep your records up to date.</p>
-      <p>Your customer will be asked to confirm the service shortly. You can also send them a quick message to remind them to confirm so payment can be released.</p>
+      <p>Your payment is held securely until your customer (the parent/buyer) marks the service as completed on their end. Once they do, your earnings will be released.</p>
+      <p>We recommend sending them a quick message through TeenOp to remind them to mark it as completed so your payment can be released promptly.</p>
 
       <div class="btn-center">
         <a href="${appUrl}/my-teen-hustle" class="btn">View Bookings</a>
@@ -559,10 +559,9 @@ export class EmailService {
       'Great job completing your service!',
       `
       <p>Hi ${name},</p>
-      <p>Great job completing your service! Please follow these steps to receive your earnings.</p>
+      <p>Great job — your service has been marked as completed!</p>
       <p class="section-title">Next steps:</p>
       <ol style="padding-left: 20px; margin: 0 0 16px;">
-        <li style="font-size: 14px; margin-bottom: 8px; color: #555;">Go to your Bookings page and mark the service as complete</li>
         <li style="font-size: 14px; margin-bottom: 8px; color: #555;">Your earnings will appear in your Earnings page within 1–3 days</li>
         <li style="font-size: 14px; margin-bottom: 8px; color: #555;">Select Withdraw Cash to transfer the funds to your bank</li>
       </ol>
