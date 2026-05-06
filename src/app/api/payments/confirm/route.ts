@@ -97,75 +97,8 @@ export async function POST(request: NextRequest) {
 
     // Earnings will be created when booking status is updated to "completed"
     // No earnings are created at "paid" status
-
-    // Send email to teen provider when parent pays
-    try {
-      const providerId = bookingData.services?.user_id;
-      const { data: providerProfile } = await supabase
-        .from("profiles")
-        .select("first_name, last_name, email")
-        .eq("id", providerId)
-        .single();
-
-      if (providerProfile && (providerProfile as any).email) {
-        const { emailService } = await import("@/lib/email");
-        const serviceTitle = bookingData.services?.title || "Service";
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        const formatDate = (dateString: string) => {
-          return new Date(dateString).toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          });
-        };
-        const formatTime = (timeString: string) => {
-          const [hours, minutes] = timeString.split(':');
-          const hour = parseInt(hours);
-          const ampm = hour >= 12 ? 'PM' : 'AM';
-          const displayHour = hour % 12 || 12;
-          return `${displayHour}:${minutes} ${ampm}`;
-        };
-        
-        await emailService.sendEmail(
-          (providerProfile as any).email,
-          "You're Booked! Your TeenOp Service Is Scheduled",
-          `
-            <p>Hello,</p>
-            <p>Great news! A community member has scheduled your service, and payment has been completed. Your service is now officially confirmed.</p>
-            <p>You can find the details on your <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">Booking Dashboard</a> under Scheduled Services or <a href="${appUrl}/my-teen-hustle" style="color: #434c9d; text-decoration: underline;">click here</a>.</p>
-            <p>You'll receive an email and text reminder 1 day before and 3 hours before the service.</p>
-            <p>After the service is completed, your payment will be processed and sent to you within 1–3 days.</p>
-            <p>If you need to reach out to your client, you can message them anytime through <a href="${appUrl}/messages" style="color: #434c9d; text-decoration: underline;">TeenOp Messages</a>.</p>
-            <p>Nice work, and good luck with your upcoming service!</p>
-            <p>Best,<br>The TeenOp Team</p>
-          `
-        );
-      }
-    } catch (emailError) {
-      console.error("Error sending email to provider:", emailError);
-      // Don't fail the payment confirmation if email fails
-    }
-
-    // Send booking confirmation email to parent immediately after payment succeeds
-    try {
-      const { data: parentProfile } = await supabase
-        .from("profiles")
-        .select("first_name, email")
-        .eq("id", user.id)
-        .single();
-
-      const { emailService } = await import("@/lib/email");
-      const parentName = (parentProfile as any)?.first_name || user.user_metadata?.first_name || "there";
-
-      await emailService.sendBuyerPaymentConfirmed({
-        buyerName: parentName,
-        buyerEmail: (parentProfile as any)?.email || user.email || "",
-      });
-    } catch (parentEmailError) {
-      console.error("Error sending booking confirmation email to parent:", parentEmailError);
-      // Don't fail payment confirmation if email fails
-    }
+    // NOTE: Payment confirmation emails are sent exclusively via the Stripe webhook
+    // (payment_intent.succeeded) to avoid duplicate sends from this route + webhook.
 
     return NextResponse.json({
       success: true,
