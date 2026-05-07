@@ -59,6 +59,11 @@ export async function POST(request: NextRequest) {
           const bookingData = booking as any;
           const providerId = bookingData.services?.user_id;
 
+          // Idempotency guard: Stripe delivers webhooks at-least-once.
+          // If the booking is already "paid" this is a duplicate delivery — update
+          // the DB (safe/idempotent) but skip sending emails a second time.
+          const alreadyPaid = bookingData.status === 'paid';
+
           // Update booking status to paid
           await (supabase as any)
             .from("bookings")
@@ -69,6 +74,11 @@ export async function POST(request: NextRequest) {
               updated_at: new Date().toISOString()
             })
             .eq("id", bookingId);
+
+          if (alreadyPaid) {
+            console.log(`Webhook duplicate for booking ${bookingId} — already paid, skipping emails.`);
+            break;
+          }
 
           // Earnings will be created when booking status is updated to "completed"
           // No earnings are created at "paid" status

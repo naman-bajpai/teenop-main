@@ -367,10 +367,17 @@ export async function PATCH(
     console.log("Where: id =", bookingId);
     console.log("Update payload:", updatePayload);
 
-    const { data: updatedBooking, error: updateError } = await (supabase as any)
+    // For "completed" status, add a status filter to make the update atomic and
+    // prevent duplicate emails when two concurrent requests both pass the permission check.
+    let updateQuery = (supabase as any)
       .from("bookings")
       .update(updatePayload)
-      .eq("id", bookingId)
+      .eq("id", bookingId);
+    if (status === "completed") {
+      updateQuery = updateQuery.eq("status", "paid");
+    }
+
+    const { data: updatedBooking, error: updateError } = await updateQuery
       .select(`
         *,
         service_price,
@@ -388,7 +395,7 @@ export async function PATCH(
           last_name
         )
       `)
-      .single();
+      .maybeSingle();
 
     // Debug: Log the raw database response
     console.log("Database update response:", {
@@ -406,6 +413,13 @@ export async function PATCH(
         { success: false, error: "Failed to update booking" },
         { status: 500 }
       );
+    }
+
+    // For "completed" status: if no rows were updated, the booking was already
+    // completed by a concurrent request — return success silently to avoid double emails.
+    if (status === "completed" && !updatedBooking) {
+      console.log(`[COMPLETION] Booking ${bookingId} was already completed by a concurrent request — skipping.`);
+      return NextResponse.json({ success: true, booking: null });
     }
 
     // Type assertion for updated booking data

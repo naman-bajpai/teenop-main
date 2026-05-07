@@ -358,7 +358,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check for paid bookings that have passed their scheduled time and need completion
+    // Check for paid bookings that have passed their scheduled time and need completion.
+    // Only look back 48 hours — older bookings have already received enough reminders and
+    // would otherwise get one every cron run until manually resolved.
+    const reminderCutoff = new Date(now);
+    reminderCutoff.setHours(reminderCutoff.getHours() - 48);
+
     const { data: paidBookings, error: paidBookingsError } = await supabase
       .from("bookings")
       .select(`
@@ -382,18 +387,21 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq("status", "paid")
+      .gte("requested_date", reminderCutoff.toISOString().split('T')[0])
       .lte("requested_date", now.toISOString().split('T')[0]);
 
     let completionReminders = 0;
     if (!paidBookingsError && paidBookings) {
-      // Filter for bookings that have passed their scheduled time (date + time has passed)
+      // Filter for bookings where service time has passed by at least 1 hour (give buffer),
+      // and no more than 48 hours ago (prevent repeat spam on old unresolved bookings).
       const pastDueBookings = (paidBookings as ReminderBooking[]).filter((booking) => {
         try {
           const bookingDateTime = bookingDateTimeToDate(booking.requested_date, booking.requested_time);
-          // Check if booking time has passed (at least 1 hour after scheduled time to give buffer)
           const oneHourAfterBooking = new Date(bookingDateTime);
           oneHourAfterBooking.setHours(oneHourAfterBooking.getHours() + 1);
-          return now >= oneHourAfterBooking;
+          const fortyEightHoursAfterBooking = new Date(bookingDateTime);
+          fortyEightHoursAfterBooking.setHours(fortyEightHoursAfterBooking.getHours() + 48);
+          return now >= oneHourAfterBooking && now < fortyEightHoursAfterBooking;
         } catch (error) {
           console.error(`Error parsing date/time for booking ${booking.id}:`, error);
           return false;
