@@ -39,46 +39,57 @@ function ResetPasswordInner() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const code = searchParams.get("code");
-    const tokenHash = searchParams.get("token_hash");
-    const type = searchParams.get("type");
+    let sub: { unsubscribe: () => void } | null = null;
 
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+    async function init() {
+      const code = searchParams.get("code");
+      const tokenHash = searchParams.get("token_hash");
+      const type = searchParams.get("type");
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
           setLinkError("This reset link is invalid or has expired. Please request a new one.");
         } else {
           setIsReady(true);
         }
-      });
-      return;
-    }
-
-    if (tokenHash && type === "recovery") {
-      supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" }).then(({ error }) => {
-        if (error) {
-          setLinkError("This reset link is invalid or has expired. Please request a new one.");
-        } else {
-          setIsReady(true);
-        }
-      });
-      return;
-    }
-
-    // Fallback: implicit flow via hash fragment
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setIsReady(true);
+        return;
       }
-    });
 
-    // If no token in URL at all, the link is bad
-    const hash = window.location.hash;
-    if (!hash.includes("access_token")) {
-      setLinkError("This reset link is invalid or has expired. Please request a new one.");
+      if (tokenHash && type === "recovery") {
+        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+        if (error) {
+          setLinkError("This reset link is invalid or has expired. Please request a new one.");
+        } else {
+          setIsReady(true);
+        }
+        return;
+      }
+
+      // Implicit/hash-fragment flow: the browser client processes the hash on init,
+      // so getSession() may already have the recovery session before the listener is set up.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setIsReady(true);
+        return;
+      }
+
+      // Still no session — set up listener in case the event fires after mount
+      const { data } = supabase.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY") {
+          setIsReady(true);
+        }
+      });
+      sub = data.subscription;
+
+      if (!window.location.hash.includes("access_token")) {
+        setLinkError("This reset link is invalid or has expired. Please request a new one.");
+      }
     }
 
-    return () => subscription.unsubscribe();
+    init();
+
+    return () => { sub?.unsubscribe(); };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
