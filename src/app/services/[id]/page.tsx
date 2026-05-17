@@ -116,7 +116,7 @@ export default function ServiceDetailsPage() {
         .from("services")
         .select(`
          id, user_id, title, description, price, location, category, status,
-         duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url,
+         duration, education, qualifications, address, location_notes, pricing_model, delivery_method, location_type, banner_url,
          availability, created_at, rating, total_bookings
        `)
         .eq("id", id)
@@ -781,6 +781,30 @@ export default function ServiceDetailsPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Address & Meeting Notes */}
+              {(service.address || service.location_notes) && (
+                <div className="space-y-6">
+                  <h3 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 rounded-xl"><MapPin className="w-5 h-5 text-blue-600" /></div>
+                    Meeting Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {service.address && (
+                      <div className="bg-white rounded-3xl p-6 border border-gray-100 space-y-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Address</p>
+                        <p className="text-sm font-bold text-gray-900">{service.address}</p>
+                      </div>
+                    )}
+                    {service.location_notes && (
+                      <div className="bg-white rounded-3xl p-6 border border-gray-100 space-y-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Meeting Notes</p>
+                        <p className="text-sm font-medium text-gray-700 leading-relaxed">{service.location_notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Qualifications */}
               {(service.qualifications || service.education) && (

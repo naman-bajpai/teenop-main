@@ -15,21 +15,11 @@ import {
   Clock,
   ArrowLeft,
   Send,
-  Trash2,
   Image as ImageIcon,
   X,
-  AlertTriangle,
   CheckCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 interface Conversation {
   id: string;
@@ -85,9 +75,6 @@ function MessagesPageContent() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [markingAllRead, setMarkingAllRead] = useState(false);
 
   const addMessageSafely = (newMessage: Message) => {
@@ -426,40 +413,6 @@ function MessagesPageContent() {
     }
   };
 
-  const handleDeleteClick = (conversation: Conversation, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setConversationToDelete(conversation);
-    setDeleteDialogOpen(true);
-  };
-
-  const deleteConversation = async () => {
-    if (!conversationToDelete) return;
-    try {
-      setDeleting(true);
-      const response = await fetch(`/api/messages/conversations?booking_id=${conversationToDelete.booking_id}`, { method: "DELETE" });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to delete conversation");
-      }
-      const data = await response.json();
-      if (data.success) {
-        setConversations(prev => prev.filter(conv => conv.id !== conversationToDelete.id));
-        if (selectedConversation?.id === conversationToDelete.id) {
-          setSelectedConversation(null);
-          setMessages([]);
-        }
-        toast({ title: "Conversation deleted", description: "The conversation has been permanently deleted." });
-        setDeleteDialogOpen(false);
-        setConversationToDelete(null);
-        fetchConversations();
-      }
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to delete conversation", variant: "destructive" });
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   const formatTime = (timeString: string) => {
     try {
       const [hours, minutes] = timeString.split(':');
@@ -630,24 +583,14 @@ function MessagesPageContent() {
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between gap-2">
-                          <p className={cn(
-                            "text-xs truncate flex-1 min-w-0",
+                        <p className={cn(
+                            "text-xs truncate",
                             conversation.unread_count > 0 ? "text-gray-900 font-medium" : "text-gray-500"
                           )}>
                             {conversation.last_message
                               ? (conversation.last_message.image_url ? "📷 Image" : conversation.last_message.content)
                               : conversation.booking.service.title}
                           </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => handleDeleteClick(conversation, e)}
-                            className="h-6 w-6 p-0 text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all rounded-full"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -874,50 +817,6 @@ function MessagesPageContent() {
         </div>
       </div>
 
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md border-none rounded-2xl shadow-2xl">
-          <DialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-red-500" />
-              </div>
-              <DialogTitle className="text-xl font-bold">Delete Chat?</DialogTitle>
-            </div>
-            <DialogDescription className="text-gray-500 pt-2 text-sm leading-relaxed">
-              This will permanently delete your conversation with{" "}
-              <span className="font-bold text-gray-900">
-                {conversationToDelete?.other_person.first_name} {conversationToDelete?.other_person.last_name}
-              </span>.
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-3 sm:gap-0 mt-4">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setConversationToDelete(null);
-              }}
-              disabled={deleting}
-              className="flex-1 rounded-xl h-12 font-semibold text-gray-500 hover:bg-gray-50 transition-all"
-            >
-              Keep Chat
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={deleteConversation}
-              disabled={deleting}
-              className="flex-1 bg-red-500 hover:bg-red-600 rounded-xl h-12 font-semibold shadow-md shadow-red-100 transition-all"
-            >
-              {deleting ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                "Delete Chat"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </DashboardLayout>
   );
 }

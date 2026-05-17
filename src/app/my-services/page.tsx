@@ -61,6 +61,7 @@ export type Service = {
   education?: string | null;
   qualifications?: string | null;
   address?: string | null;
+  location_notes?: string | null;
   pricing_model?: "per_job" | "per_hour" | "quote";
   delivery_method?: string | null;
   location_type?: string | null;
@@ -277,6 +278,8 @@ export default function MyServicesPage() {
   });
 
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isQuoteBased, setIsQuoteBased] = useState(false);
   const [title, setTitle] = useState("");
@@ -365,6 +368,7 @@ export default function MyServicesPage() {
     setServiceImages([]);
     setServiceAvailability({});
     setEditingService(null);
+    setFormErrors({});
   };
 
   const openEditDialog = (service: Service) => {
@@ -383,7 +387,7 @@ export default function MyServicesPage() {
     setIsQuoteBased(service.pricing_model === 'quote');
     setDeliveryMethod((service.delivery_method as any) || "in_person");
     setLocationType((service.location_type as any) || "public_address");
-    setLocationNotes("");
+    setLocationNotes(service.location_notes || "");
     setBannerUrl(service.banner_url);
     setServiceImages(service.images || []);
     setServiceAvailability(service.availability || {});
@@ -391,6 +395,19 @@ export default function MyServicesPage() {
   };
 
   async function handleCreateService() {
+    if (isSubmitting) return;
+
+    const errors: Record<string, string> = {};
+    if (!title.trim()) errors.title = "Service title is required";
+    if (!location.trim()) errors.location = "City / Area is required";
+    if (!isQuoteBased && (!price || price <= 0)) errors.price = "Price must be greater than $0";
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+    setIsSubmitting(true);
     try {
       const payload = {
         id: editingService?.id,
@@ -404,6 +421,7 @@ export default function MyServicesPage() {
         education,
         qualifications,
         address,
+        location_notes: locationNotes || null,
         pricing_model: isQuoteBased ? "quote" : pricingModel,
         delivery_method: deliveryMethod,
         location_type: locationType,
@@ -467,6 +485,8 @@ export default function MyServicesPage() {
       fetchServices(true);
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -652,7 +672,18 @@ export default function MyServicesPage() {
                   Create your first service listing to share your skills with the neighborhood.
                 </p>
                 <Button
-                  onClick={() => setOpen(true)}
+                  onClick={async () => {
+                    if (!stripeAccountStatus.hasAccount) {
+                      toast({
+                        title: "Payment Setup Required",
+                        description: "Please connect your Stripe account first.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    resetForm();
+                    setOpen(true);
+                  }}
                   className="bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-2xl px-10 h-14 font-black shadow-lg shadow-[#434c9d]/20 transition-all active:scale-95"
                 >
                   Create Your First Listing
@@ -731,13 +762,14 @@ export default function MyServicesPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Service Title</Label>
+                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Service Title <span className="text-red-500">*</span></Label>
                     <Input
                       value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      onChange={(e) => { setTitle(e.target.value); if (formErrors.title) setFormErrors(p => ({ ...p, title: "" })); }}
                       placeholder="e.g. Mathematics Tutoring"
-                      className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-[#434c9d]/40 transition-all font-semibold text-sm"
+                      className={cn("h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-[#434c9d]/40 transition-all font-semibold text-sm", formErrors.title && "border-red-400 bg-red-50")}
                     />
+                    {formErrors.title && <p className="text-[11px] text-red-500 font-semibold">{formErrors.title}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</Label>
@@ -837,16 +869,17 @@ export default function MyServicesPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {!isQuoteBased && (
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Price ($)</Label>
+                      <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Price ($) <span className="text-red-500">*</span></Label>
                       <div className="relative">
                         <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <Input
                           type="number"
                           value={price}
-                          onChange={(e) => setPrice(Number(e.target.value))}
-                          className="h-11 pl-10 rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all font-bold"
+                          onChange={(e) => { setPrice(Number(e.target.value)); if (formErrors.price) setFormErrors(p => ({ ...p, price: "" })); }}
+                          className={cn("h-11 pl-10 rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all font-bold", formErrors.price && "border-red-400 bg-red-50")}
                         />
                       </div>
+                      {formErrors.price && <p className="text-[11px] text-red-500 font-semibold">{formErrors.price}</p>}
                     </div>
                   )}
                   <div className="space-y-1.5">
@@ -873,13 +906,14 @@ export default function MyServicesPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">City / Area</Label>
+                    <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">City / Area <span className="text-red-500">*</span></Label>
                     <Input
                       value={location}
-                      onChange={(e) => setLocation(e.target.value)}
+                      onChange={(e) => { setLocation(e.target.value); if (formErrors.location) setFormErrors(p => ({ ...p, location: "" })); }}
                       placeholder="e.g. South Windsor"
-                      className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all font-semibold text-sm"
+                      className={cn("h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all font-semibold text-sm", formErrors.location && "border-red-400 bg-red-50")}
                     />
+                    {formErrors.location && <p className="text-[11px] text-red-500 font-semibold">{formErrors.location}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Delivery Method</Label>
@@ -1001,9 +1035,17 @@ export default function MyServicesPage() {
             </Button>
             <Button
               onClick={handleCreateService}
-              className="flex-1 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-xl h-11 font-black shadow-lg shadow-[#434c9d]/20 transition-all active:scale-95"
+              disabled={isSubmitting}
+              className="flex-1 bg-[#434c9d] hover:bg-[#434c9d]/90 text-white rounded-xl h-11 font-black shadow-lg shadow-[#434c9d]/20 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {editingService ? "Save Changes" : "Create Listing"}
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  {editingService ? "Saving..." : "Creating..."}
+                </span>
+              ) : (
+                editingService ? "Save Changes" : "Create Listing"
+              )}
             </Button>
           </div>
 

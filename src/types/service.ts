@@ -19,6 +19,7 @@ export interface Service {
   education?: string | null;
   qualifications?: string | null;
   address?: string | null;
+  location_notes?: string | null;
   pricing_model: string;
   delivery_method?: string | null;
   location_type?: string | null;

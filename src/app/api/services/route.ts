@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
         education,
         qualifications,
         address,
+        location_notes,
         pricing_model,
         banner_url,
         created_at,
@@ -131,6 +132,7 @@ export async function GET(request: NextRequest) {
         education: service.education || null,
         qualifications: service.qualifications || null,
         address: service.address || null,
+        location_notes: service.location_notes || null,
         pricing_model: service.pricing_model || "per_hour",
         banner_url: service.banner_url,
         created_at: service.created_at,
@@ -194,12 +196,12 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { title, description, price, location, category, status, duration, education, qualifications, address, pricing_model, delivery_method, location_type, banner_url, availability } = body;
+    const { title, description, price, location, category, status, duration, education, qualifications, address, location_notes, pricing_model, delivery_method, location_type, banner_url, availability } = body;
 
     // Validate required fields
-    if (!title || !description || price === undefined || !location || !category || !status) {
-      return NextResponse.json({ 
-        error: "Missing required fields: title, description, price, location, category, status" 
+    if (!title || price === undefined || !location || !category || !status) {
+      return NextResponse.json({
+        error: "Missing required fields: title, price, location, category, status"
       }, { status: 400 });
     }
 
@@ -265,6 +267,7 @@ export async function POST(request: NextRequest) {
         education: education || null,
         qualifications: qualifications || null,
         address: address || null,
+        location_notes: location_notes || null,
         pricing_model: pricing_model || "per_hour",
         delivery_method: delivery_method || "in_person",
         location_type: location_type || "public_address",
@@ -363,9 +366,9 @@ export async function PUT(request: NextRequest) {
     
     // List of all possible fields that can be updated
     const fields = [
-      'title', 'description', 'price', 'location', 'category', 'status', 
-      'duration', 'education', 'qualifications', 'address', 'pricing_model', 
-      'delivery_method', 'location_type', 'banner_url', 'availability'
+      'title', 'description', 'price', 'location', 'category', 'status',
+      'duration', 'education', 'qualifications', 'address', 'location_notes',
+      'pricing_model', 'delivery_method', 'location_type', 'banner_url', 'availability'
     ];
 
     fields.forEach((field) => {
@@ -485,23 +488,16 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Only allow deletion after at least one completed booking exists
-    const { data: completedBookings, error: bookingsError } = await (supabase as any)
-      .from("bookings")
+    // Verify the service belongs to the user
+    const { data: existingService, error: fetchError } = await supabase
+      .from("services")
       .select("id")
-      .eq("service_id", id)
-      .eq("status", "completed")
-      .limit(1);
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
 
-    if (bookingsError) {
-      console.error("Error checking bookings:", bookingsError);
-      return NextResponse.json({ error: "Failed to verify service bookings" }, { status: 500 });
-    }
-
-    if (!completedBookings || completedBookings.length === 0) {
-      return NextResponse.json({
-        error: "This service can only be deleted after at least one booking has been completed.",
-      }, { status: 403 });
+    if (fetchError || !existingService) {
+      return NextResponse.json({ error: "Service not found or you don't have permission to delete it" }, { status: 404 });
     }
 
     // Delete the service
