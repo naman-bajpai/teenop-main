@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ export default function ResetPasswordPage() {
 function ResetPasswordInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [isReady, setIsReady] = useState(false);
   const [linkError, setLinkError] = useState("");
@@ -40,18 +40,43 @@ function ResetPasswordInner() {
 
   useEffect(() => {
     let sub: { unsubscribe: () => void } | null = null;
+    let cancelled = false;
+
+    const markInvalid = () => {
+      if (!cancelled) {
+        setIsReady(false);
+        setLinkError("This reset link is invalid or has expired. Please request a new one.");
+      }
+    };
+
+    const markReady = () => {
+      if (!cancelled) {
+        setLinkError("");
+        setIsReady(true);
+      }
+    };
 
     async function init() {
       const code = searchParams.get("code");
       const tokenHash = searchParams.get("token_hash");
       const type = searchParams.get("type");
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const hashError = hashParams.get("error_description") || hashParams.get("error");
+      const hashType = hashParams.get("type");
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+
+      if (hashError) {
+        markInvalid();
+        return;
+      }
 
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
-          setLinkError("This reset link is invalid or has expired. Please request a new one.");
+          markInvalid();
         } else {
-          setIsReady(true);
+          markReady();
         }
         return;
       }
@@ -59,38 +84,56 @@ function ResetPasswordInner() {
       if (tokenHash && type === "recovery") {
         const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
         if (error) {
-          setLinkError("This reset link is invalid or has expired. Please request a new one.");
+          markInvalid();
         } else {
-          setIsReady(true);
+          markReady();
         }
         return;
       }
 
-      // Implicit/hash-fragment flow: the browser client processes the hash on init,
-      // so getSession() may already have the recovery session before the listener is set up.
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setIsReady(true);
+      if (accessToken && refreshToken && (!hashType || hashType === "recovery")) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (error) {
+          markInvalid();
+        } else {
+          window.history.replaceState(null, "", window.location.pathname);
+          markReady();
+        }
         return;
       }
 
-      // Still no session — set up listener in case the event fires after mount
+      // The browser client may have already processed the recovery URL before
+      // this listener is registered, so check the current session first.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        markReady();
+        return;
+      }
+
+      // Still no session: set up a listener in case the event fires after mount.
       const { data } = supabase.auth.onAuthStateChange((event) => {
-        if (event === "PASSWORD_RECOVERY") {
-          setIsReady(true);
+        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+          markReady();
         }
       });
       sub = data.subscription;
 
       if (!window.location.hash.includes("access_token")) {
-        setLinkError("This reset link is invalid or has expired. Please request a new one.");
+        markInvalid();
       }
     }
 
     init();
 
-    return () => { sub?.unsubscribe(); };
-  }, []);
+    return () => {
+      cancelled = true;
+      sub?.unsubscribe();
+    };
+  }, [searchParams, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
