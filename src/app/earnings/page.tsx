@@ -17,11 +17,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  ExternalLink,
   Loader2,
-  CreditCard,
   Info,
-  ArrowUpRight,
   History,
 } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
@@ -29,6 +26,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { StripeAccountSetupBanner } from "@/components/stripe/StripeAccountSetupBanner";
 
 interface EarningsStats {
   totalEarned: number;
@@ -271,18 +269,25 @@ export default function EarningsPage() {
             </div>
             <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Financial Hub</span>
           </motion.div>
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div>
-              <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-slate-900">Earnings</h1>
-              <p className="mt-4 text-lg font-medium text-slate-500 max-w-2xl">
-                Track your revenue, manage your Stripe connection, and monitor your transaction history in real-time.
-              </p>
-              <div className="mt-6 max-w-3xl rounded-2xl border-2 border-[#434c9d]/20 bg-[#434c9d]/5 px-5 py-4">
-                <p className="text-sm sm:text-base font-bold text-[#434c9d] leading-relaxed">
-                  Earnings automatically transfer to your TeenOp Cash account. Click withdraw cash to transfer earnings to your bank.
-                </p>
-              </div>
-            </div>
+          <div>
+            <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-slate-900">Earnings</h1>
+            <p className="mt-4 text-lg font-medium text-slate-500 max-w-2xl">
+              Track your revenue, manage your Stripe connection, and monitor your transaction history in real-time.
+            </p>
+          </div>
+          <StripeAccountSetupBanner
+            className="mt-6"
+            loading={refreshingAccount && !accountStatus}
+            hasAccount={Boolean(accountStatus?.hasAccount)}
+            chargesEnabled={accountStatus?.accountStatus?.chargesEnabled}
+            payoutsEnabled={accountStatus?.accountStatus?.payoutsEnabled}
+            onConnect={handleStripeConnectSetup}
+            onManage={handleStripeConnectLogin}
+          />
+          <div className="mt-6 w-full rounded-2xl border-2 border-[#2f3678]/20 bg-[#eef0f8] px-5 py-4">
+            <p className="text-sm sm:text-base font-bold text-[#2f3678] leading-relaxed">
+              Earnings automatically transfer to your TeenOp Cash account. Click withdraw cash to transfer earnings to your bank.
+            </p>
           </div>
         </div>
 
@@ -391,7 +396,7 @@ export default function EarningsPage() {
                   )}
                 {!accountStatus?.hasAccount && (
                   <p className="text-xs text-amber-700 font-medium -mt-2">
-                    Connect your Stripe account in the sidebar before withdrawing.
+                    Connect your Stripe account above before withdrawing.
                   </p>
                 )}
               </DialogContent>
@@ -465,7 +470,7 @@ export default function EarningsPage() {
             </motion.div>
           </div>
 
-          {/* Sidebar Area — How it works first, then Stripe */}
+          {/* Sidebar Area — How it works */}
           <div className="lg:col-span-4 space-y-8">
             {/* Help/Info Card */}
             <motion.div
@@ -520,81 +525,6 @@ export default function EarningsPage() {
               </div>
             </motion.div>
 
-            {/* Stripe account card */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.05 }}
-              className="rounded-[40px] border border-slate-200 bg-slate-900 p-8 text-white shadow-xl shadow-slate-900/10"
-            >
-              <div className="flex items-center gap-3 mb-8">
-                <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-xl font-black">Stripe Account</h3>
-              </div>
-
-              <p className="text-sm font-medium text-slate-400 leading-relaxed mb-8">
-                After Stripe account is set up, approved withdrawals will be directly transferred to your bank account.
-                You can manage your bank details within Stripe.
-              </p>
-
-              {!accountStatus?.hasAccount ? (
-                <div className="space-y-6">
-                  <Button
-                    onClick={handleStripeConnectSetup}
-                    className="w-full h-14 rounded-2xl bg-white text-slate-900 font-black hover:bg-slate-100 transition-all shadow-lg"
-                  >
-                    Connect with Stripe
-                    <ArrowUpRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-4">
-                      Before You Connect
-                    </p>
-                    <ul className="space-y-3 text-sm font-medium text-slate-200 leading-relaxed list-disc pl-5">
-                      <li>
-                        For industry, choose the closest category to the service you will offer (does not have to be exact).
-                      </li>
-                      <li>
-                        For website, type &ldquo;www.teenop.com&rdquo;.
-                      </li>
-                      <li>
-                        For Product description, describe the services you will offer.
-                      </li>
-                      <li>
-                        After connecting your bank account for TeenOp earnings, select Manual Payouts (you will only need to manage your earnings within the TeenOp platform).
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between p-5 bg-white/5 rounded-3xl border border-white/10">
-                    <span className="text-xs font-black uppercase tracking-widest text-slate-500">Stripe Status</span>
-                    {accountStatus.accountStatus?.chargesEnabled && accountStatus.accountStatus?.payoutsEnabled ? (
-                      <div className="flex items-center gap-2 text-emerald-400">
-                        <CheckCircle className="w-4 h-4" />
-                        <span className="text-xs font-black uppercase tracking-wider">Verified</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-amber-400">
-                        <AlertCircle className="w-4 h-4" />
-                        <span className="text-xs font-black uppercase tracking-wider">Pending</span>
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleStripeConnectLogin}
-                    className="w-full h-14 rounded-2xl border-2 border-white/10 bg-transparent font-black text-white hover:bg-white/5 transition-all"
-                  >
-                    Manage Stripe Account
-                    <ExternalLink className="ml-2 h-4 w-4 opacity-50" />
-                  </Button>
-                </div>
-              )}
-            </motion.div>
           </div>
         </div>
       </div>

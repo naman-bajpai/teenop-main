@@ -43,6 +43,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
+import { StripeAccountSetupBanner } from "@/components/stripe/StripeAccountSetupBanner";
 
 export type Service = {
   id: string;
@@ -341,6 +342,52 @@ export default function MyServicesPage() {
     }
   }
 
+  async function handleStripeConnectSetup() {
+    try {
+      const res = await fetch("/api/stripe/connect/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const responseText = await res.text();
+      if (!res.ok) {
+        let err: { error?: string } = {};
+        try {
+          err = JSON.parse(responseText);
+        } catch {
+          err = { error: `Server error: ${res.status}` };
+        }
+        throw new Error(err.error || "Failed to create payment account");
+      }
+      const data = JSON.parse(responseText);
+      if (data.success && data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error(data.error || "Failed to get authorization URL");
+      }
+    } catch (e: any) {
+      toast({ title: "Setup Failed", description: e.message, variant: "destructive" });
+    }
+  }
+
+  async function handleStripeConnectLogin() {
+    try {
+      const res = await fetch("/api/stripe/connect/setup", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.accountStatus?.loginUrl) {
+          window.open(data.accountStatus.loginUrl, "_blank");
+        } else if (data.success && data.accountStatus?.type === "standard") {
+          toast({ title: "Standard Account", description: "Log in to Stripe Dashboard directly." });
+          window.open("https://dashboard.stripe.com", "_blank");
+        } else {
+          toast({ title: "Not Ready", description: "Please complete setup first.", variant: "destructive" });
+        }
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  }
+
   useEffect(() => {
     if (user) {
       fetchServices();
@@ -561,35 +608,10 @@ export default function MyServicesPage() {
   return (
     <DashboardLayout user={user}>
       <div className="max-w-7xl mx-auto px-4 py-12">
-        {/* Stripe Alert */}
-        {!stripeAccountStatus.loading && !stripeAccountStatus.hasAccount && (
-          <div className="mb-12 group">
-            <div className="relative overflow-hidden bg-white rounded-[32px] border-2 border-orange-100 p-8 shadow-sm group-hover:shadow-xl transition-all duration-500">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-orange-50 rounded-full -mr-32 -mt-32 blur-3xl opacity-50" />
-              <div className="relative flex flex-col md:flex-row items-center gap-8">
-                <div className="w-20 h-20 bg-orange-100 rounded-[24px] flex items-center justify-center shrink-0">
-                  <Sparkles className="w-10 h-10 text-orange-600" />
-                </div>
-                <div className="flex-1 text-center md:text-left">
-                  <h3 className="text-2xl font-black text-gray-900 mb-2">Complete Your Setup</h3>
-                  <p className="text-gray-500 font-medium leading-relaxed max-w-xl">
-                    You&apos;re almost ready to start earning! Connect your Stripe account to safely receive payments from your neighbors.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => window.location.href = '/earnings?setup=stripe'}
-                  className="bg-orange-500 hover:bg-orange-600 text-white rounded-[20px] px-8 h-14 font-black shadow-lg shadow-orange-200 shrink-0 transition-transform active:scale-95"
-                >
-                  Connect Now <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Page Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 mb-12">
-          <div className="space-y-4">
+          <div className="space-y-4 flex-1">
             <div className="inline-flex items-center gap-2 bg-[#434c9d]/10 text-[#434c9d] rounded-full px-4 py-1.5">
               <LayoutGrid className="w-4 h-4" />
               <span className="text-[10px] font-black uppercase tracking-[0.15em]">Provider Dashboard</span>
@@ -609,7 +631,7 @@ export default function MyServicesPage() {
               if (!stripeAccountStatus.hasAccount) {
                 toast({
                   title: "Payment Setup Required",
-                  description: "Please connect your Stripe account first.",
+                  description: "Connect Stripe above, enter all required information, and allow browser pop-ups before listing services.",
                   variant: "destructive"
                 });
                 return;
@@ -624,6 +646,15 @@ export default function MyServicesPage() {
           </Button>
         </div>
 
+        <StripeAccountSetupBanner
+          className="mb-12"
+          loading={stripeAccountStatus.loading}
+          hasAccount={stripeAccountStatus.hasAccount}
+          chargesEnabled={stripeAccountStatus.accountStatus?.chargesEnabled}
+          payoutsEnabled={stripeAccountStatus.accountStatus?.payoutsEnabled}
+          onConnect={handleStripeConnectSetup}
+          onManage={handleStripeConnectLogin}
+        />
 
         {/* Services Tabs */}
         <Tabs defaultValue="active" className="w-full">
